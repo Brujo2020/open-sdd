@@ -21,7 +21,7 @@ import { defaultIO, type CliIO } from './cli/io.js';
 import { colors, formatBox, formatError, formatHeading, formatSuccess, formatWarning } from './cli/ui/colors.js';
 import { isInteractive, promptChoice, promptConfirm } from './cli/ui/prompt.js';
 import { handleStatusCommand } from './cli/commands/status.js';
-import { handleInitCommand } from './cli/commands/init.js';
+import { handleInitCommand, handleIntegrateCommand, handleImportCommand } from './cli/commands/init.js';
 import { handleAuditBundleCommand, handleAuditCommand } from './cli/commands/audit.js';
 import { handleGapCommand } from './cli/commands/gap.js';
 import { handleGetspecsCommand } from './cli/commands/getspecs.js';
@@ -127,6 +127,12 @@ Brownfield (existing code that is the de facto source of truth):
 Experience layer (bilingual: --lang es|en, or OPEN_SDD_LANG):
   tour [target] [--write] [--lang es|en] [--json]  Guided first run: recon, constitution draft, check, status, delta
   context [feature] [--lang es|en] [--json]        The context pack the MCP server serves, in the terminal
+
+Adoption (the integration matrix and the importers):
+  integrate [host] [--write] [--json] [--dry-run]  Register the MCP server for a host and install its skills
+  integrate --list                                 The whole matrix: skills layout, invocation syntax, MCP path, verified?
+  import [kiro|spec-kit|cc-sdd] [--write] [--json] Map an incumbent's specs into .sdd (a mapping, never a promise)
+  hosts: claude-code, cursor, copilot, codex, gemini-cli, windsurf, opencode, antigravity, zed, cline
 
 Score (one number, one door):
   open-sdd                                    Inspect the repository: composite SDD score, phase and the ONE next action
@@ -328,6 +334,13 @@ const dispatchSubcommand = async (
   }
   if (cmd === 'init' || cmd === 'spec-init') {
     return handleInitCommand(subArgv, io, targetCwd);
+  }
+  // Adoption surface: the machine-checked integration matrix (`integrate`) and the importers that
+  // absorb Kiro, spec-kit and cc-sdd (`import`). Both live in the init command module.
+  if (cmd === 'integrate' || cmd === 'import') {
+    return cmd === 'integrate'
+      ? handleIntegrateCommand(subArgv, io, targetCwd)
+      : handleImportCommand(subArgv, io, targetCwd);
   }
   if (cmd === 'audit') {
     if (subArgv[0] === 'bundle' || subArgv[0] === 'sarif') return handleAuditBundleCommand(subArgv, io, targetCwd);

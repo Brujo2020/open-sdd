@@ -48,3 +48,6 @@ export * from './consistency.js';
 export { analyseEars, describeFromPlainLanguage, earsEvidencePack, renderEarsReport, mergeEarsReports, EARS_PATTERNS, EARS_NEEDS_INFORMATION, EARS_ASSISTANT_TEMPLATES, EARS_REPO_EXAMPLES, EARS_SUGGESTION_CATALOGUE, isEarsProposalApplicable } from './earsAssistant.js';
 // Assistants: the single decision point that makes the EARS/constitution helpers appear on demand.
 export * from './assistants.js';
+// Adoption surface: the machine-checked integration matrix and the importers for the incumbents.
+export * from './integrations.js';
+export * from './importers.js';

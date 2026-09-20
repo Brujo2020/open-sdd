@@ -1,33 +1,57 @@
 # open-sdd
 
-**Model-agnostic Spec-Driven Development on an enterprise agentic SDLC.**
+**The layer that makes an AI's "done" verifiable.**
 
-`open-sdd` installs a spec-driven workflow into the coding agent you already use, and ships a
-governance console that implements the reference architecture published in *Orquestación SDD-First
-Multiagente para Desarrollo Enterprise: Una Arquitectura de Referencia Zero-Trust…* (Mario Alejandro
-Ramos, NTT DATA, rev. 3, Sept 2026). Specs live in Git next to the code; the console resolves a
-Zero-Trust gate chain, reports declared-vs-executed honestly, and never invents a measurement.
+`open-sdd` installs a spec-driven workflow into the coding agent you already use, then holds that
+agent to three things a chat prompt cannot: **executable gates** that decide pass or fail, **delta
+specs** for code that already exists, and a **constitution** that every spec is validated against.
+It is model-agnostic, lives in Git next to your code, and reports what it actually inspected —
+including what it did not.
 
 - **One CLI, many hosts.** 18 agent definitions across 8 skills-based variants (168 `SKILL.md`
   templates ship in this repository).
 - **Specs in the repository.** `.sdd/specs/<feature>/` holds the Documentary Triad
   (`requirements.md` in EARS, `plan.md`, `tasks.md`), versioned and reviewed like code.
-- **Brownfield first.** `/sdd-getspecs` reverse-engineers steering and editable spec seeds from an
-  existing codebase; seeds must be reviewed before approval.
+- **Brownfield first.** The existing code is the de-facto source of truth; the unit of specification
+  is the **delta**, and `/sdd-getspecs` reverse-engineers steering and editable spec seeds from a
+  codebase that has none.
 - **Governance you can inspect.** `gates`, `govern` and `assure` expose the chain, the invariants,
   the HITL thresholds, the threat model and the declared gaps as deterministic console output.
 - **Honest by construction.** A control that is declared but not implemented is reported as such,
   not silently executed as an empty success.
+
+<!-- Only badges that resolve today are shown.
+     The npm version and install-size badges are withheld until v3.0.2 is published: the scoped
+     name @brujo2020/open-sdd exists on the registry, but `latest` is the older v2.0.0 binary (a
+     different tool — see "Published package" below). A badge reading 2.0.0 on this README would
+     advertise the wrong artifact. Uncomment both lines below on the day v3.0.2 ships. -->
+[![License: MIT](https://img.shields.io/github/license/Brujo2020/open-sdd)](https://github.com/Brujo2020/open-sdd/blob/main/LICENSE)
+[![CI — Linux + Windows](https://img.shields.io/github/actions/workflow/status/Brujo2020/open-sdd/gates.yml?branch=main)](https://github.com/Brujo2020/open-sdd/actions/workflows/gates.yml)
+
+<!-- pendiente de publicar: descomenta cuando v3.0.2 esté en el registro.
+[![npm version](https://img.shields.io/npm/v/@brujo2020/open-sdd)](https://www.npmjs.com/package/@brujo2020/open-sdd)
+[![install size](https://packagephobia.com/badge?p=@brujo2020/open-sdd)](https://packagephobia.com/result?p=@brujo2020/open-sdd)
+-->
+
+> The CI badge is live, and it is currently red on `main`: see the run for the failing job. The
+> `windows` job's three pre-existing POSIX-mode assertions are documented at the top of
+> [`.github/workflows/gates.yml`](.github/workflows/gates.yml).
+
+**English** · [Español](README.es.md)
+
+**Docs:** [60-second demo](docs/guides/quickstart-60s.md) · [Install](docs/INSTALL.md) ·
+[Existing projects](docs/guides/existing-projects.md) · [Upgrade](docs/guides/upgrade.md) ·
+[Measurements](docs/MEASUREMENTS.md) · [Paper alignment](docs/PAPER-ALIGNMENT.md)
 
 > Full traceability of the paper's architecture onto this code — including what is *not*
 > implemented — is in **[docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md)**.
 
 ---
 
-## Empieza en 60 segundos
+## 60-second demo
 
-Un repositorio desechable, cuatro incoherencias reales y el CLI diciéndote cuáles son. Sin red, sin
-`npm install`, sin escribir fuera de un directorio temporal:
+A throwaway repository, four real incoherences and the CLI naming them. No network, no `npm install`,
+nothing written outside a temp directory:
 
 ```bash
 git clone https://github.com/Brujo2020/open-sdd
@@ -37,62 +61,100 @@ npm --prefix tools/open-sdd run build
 sh scripts/demo-60s.sh
 ```
 
-El script crea un repo temporal con una spec real (`.sdd/specs/payments/`), inyecta un requisito de
-la delta sin ninguna tarea que lo implemente, una tarea marcada como completa sin la línea
-`_Evidence:`, un marcador de plantilla sin rellenar y un contrato declarado que no existe; después
-ejecuta el CLI **fijado** —`tools/open-sdd/dist/cli.js` de este checkout, nunca el `open-sdd`
-global— y muestra tres transcripciones: `status` (fase, trazabilidad, evidencia), `delta validate`
-(requisito sin tarea, marcador sin rellenar) y `gates run` (la cadena Zero-Trust y su veredicto).
+The script creates a temp repo with a real spec (`.sdd/specs/payments/`), injects a delta requirement
+with no task implementing it, a task marked complete without its `_Evidence:` line, an unfilled
+`{{REQ-AREA-002}}` template marker and a declared contract that does not exist, then runs the
+**pinned** CLI — always `tools/open-sdd/dist/cli.js` from this checkout, never the global `open-sdd`
+— and prints three transcripts: `status` (phase, traceability, evidence), `delta validate` (unmapped
+requirement, unfilled marker) and `gates run` (the Zero-Trust chain and its verdict).
 
-Sale con código distinto de cero si el motor no detecta alguna de ellas: una demo que no puede
-fallar es marketing, no una demo. Guía completa en
-**[docs/guides/quickstart-60s.md](docs/guides/quickstart-60s.md)**.
+Real output shape (trimmed; the strings are Spanish in the tool, because the CLI's console language
+is Spanish):
 
-En tu propio repositorio, los mismos tres comandos (sustituye solo la ruta del clon):
+```text
+Specification: payments — Phase: initialized · tríada completa · trazabilidad 0/1 · evidencia 0/1 tarea(s) completada(s)
+Contratos de payments — declarados por la delta que no existen: test/ledger.test.ts
+…
+Trazabilidad: 1/2 requisito(s) de la delta con tarea (50%); sin tarea: REQ-PAY-011; marcador(es) de plantilla sin rellenar (UNFILLED_REQUIREMENT_PLACEHOLDER, no es un id inexistente): T2→{{REQ-AREA-002}}.
+…
+  C3   Evidence Validation                        fail
+  C6   Claims Integrity (Doc vs Code)             fail
+  La cadena NO pasa
 
-```bash
-cd /ruta/a/tu/repositorio
-node /ruta/a/open-sdd/tools/open-sdd/dist/cli.js status
-node /ruta/a/open-sdd/tools/open-sdd/dist/cli.js delta validate <feature>
-node /ruta/a/open-sdd/tools/open-sdd/dist/cli.js gates run
+Veredicto de la demo (el script falla si el motor no ve alguno):
+  DETECTADO requisito sin tarea (REQ-PAY-011)
+  DETECTADO placeholder {{...}} sin rellenar (T2)
+  DETECTADO tarea completada sin evidencia (T1)
+  DETECTADO contrato declarado que no existe
+  DETECTADO la cadena NO pasa (score del gate)
+  DETECTADO la cadena sale con código 1 (no-cero)
 ```
 
-O en un contenedor, sin instalar Node:
+It exits non-zero if the engine fails to detect any of them: a demo that cannot fail is marketing, not
+a demo. Full guide: **[docs/guides/quickstart-60s.md](docs/guides/quickstart-60s.md)**.
+
+In your own repository, the same three commands (replace only the path to the clone):
+
+```bash
+cd /path/to/your/repository
+node /path/to/open-sdd/tools/open-sdd/dist/cli.js status
+node /path/to/open-sdd/tools/open-sdd/dist/cli.js delta validate <feature>
+node /path/to/open-sdd/tools/open-sdd/dist/cli.js gates run
+```
+
+Or in a container, with no Node on the host:
 
 ```bash
 docker build -t open-sdd .
 docker run --rm -v "$PWD:/work" open-sdd status
 ```
 
-Los números medidos —por clase, con el comando exacto y la versión de la herramienta— están en
-**[docs/MEASUREMENTS.md](docs/MEASUREMENTS.md)**: son cifras de honestidad sobre repositorios
-**sintéticos**, no datos de campo de equipos reales.
+The measured numbers — per class, with the exact command and the tool version — are in
+**[docs/MEASUREMENTS.md](docs/MEASUREMENTS.md)**: honesty figures over **synthetic** repositories,
+not field data from real teams.
+
+---
+
+## Why not spec-kit or Kiro?
+
+Both are good at what they do, and worth using. From their public documentation:
+
+- **spec-kit** has a documentation site, a much broader install and integration surface, and a
+  gentler learning curve; its workflow is delivered as prompts and skills your agent reads.
+- **Kiro** builds spec-driven development into its own IDE. That integration is smoother than
+  anything this repository ships, and if you live in that IDE it is the better authoring experience.
+
+What is different here, and verifiable in this repository:
+
+- **The verdict is executable.** `open-sdd gates run` decides pass or fail and exits non-zero, and a
+  control that is declared but not implemented is reported as declared rather than counted as green
+  (see the gaps in [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md)).
+- **Existing code is the entry point, not an afterthought.** The delta is the unit of specification
+  and the constitution is the pivot every spec is validated against — the concepts spec-kit's issue
+  #1436 names, reimplemented on this engine (gap G-21 states exactly where the coverage is narrower).
+- **No vendor and no model lock-in.** One MIT-licensed CLI writes skills for 18 agent definitions
+  (8 skills-based), and no model backend ships.
+
+What this does **not** claim: parity of ecosystem, polish or adoption. Those are spec-kit's and
+Kiro's strengths today. This is a qualitative comparison, not a benchmark.
 
 ---
 
 ## Install
 
-### Instalación sin placeholders
+The short version is below. Every path, the prerequisites, what the installer writes and how to
+verify it are in **[docs/INSTALL.md](docs/INSTALL.md)**.
 
-Estos comandos se copian y se pegan tal cual desde el clon: no hay que sustituir ninguna ruta ni
-ningún marcador. Instalan dependencias, compilan el CLI y lo dejan disponible en el `PATH`:
+### Install without placeholders
+
+These commands copy-paste as-is from the clone: no path or marker to replace. They install
+dependencies, build the CLI and put it on the `PATH`:
 
 ```bash
 npm --prefix tools/open-sdd ci
 npm --prefix tools/open-sdd run build
 npm run install:global
 open-sdd --version
-```
-
-Para instalar las skills en un repositorio de destino, el helper acepta el destino como primer
-argumento. Guarda una vez la ruta del clon y ejecútalo desde el repositorio de destino:
-
-```bash
-# 1) estando en el clon de open-sdd: guarda su ruta absoluta
-OPEN_SDD="$PWD"
-
-# 2) desde el repositorio de destino: instala las skills de Claude Code
-bash "$OPEN_SDD/install.sh" . --claude-skills -y
 ```
 
 ### From a clone (the build and CLI commands below were verified this way)
@@ -110,8 +172,8 @@ first.
 
 ### Install the skills into a project
 
-Run the CLI **inside the target repository**, or use the `install.sh` helper that takes the target
-as its first argument:
+Run the CLI **inside the target repository**, or use the `install.sh` helper that takes the target as
+its first argument:
 
 ```bash
 # In the target repo (Claude Code skills, no prompts):
@@ -128,29 +190,29 @@ agent's skill directory.
 
 ```bash
 npm run install:global          # builds, then installs this checkout globally
-open-sdd gates chain            # one of: open-sdd, sdd-open, sdd, open-sdd
+open-sdd gates chain            # one of: open-sdd, sdd-open, sdd
 ```
 
 ### Published package
 
-The npm package is **`@brujo2020/open-sdd`**. Note two facts that the earlier documentation got
-wrong — it advertised `npx open-sdd@latest`, which resolves to nothing:
+The npm package is **`@brujo2020/open-sdd`**. The registry currently carries **v2.0.0**, an older
+toolkit with different behaviour from the **v3.0.2** documented here, which is not published yet.
+Two facts the documentation has to state plainly:
 
 - The unscoped name `open-sdd` is **not** this project (it does not exist on the registry), so
   `npx open-sdd@latest` fails. The scoped name is the only correct one.
-- The scoped package is **not published yet**; `v3.0.2` is the version it will carry.
-
-Until it is published, use one of the two paths that work today:
+- `npx @brujo2020/open-sdd@latest` **runs today**, but it gives you the published v2.0.0 binary, not
+  this checkout. Until v3.0.2 is published, use one of the two paths that install this version:
 
 ```bash
 bash install.sh /path/to/your/repo            # from a clone: installs into a target repository
 npm run install:global                        # from a clone: puts open-sdd on your PATH
 ```
 
-Once published, the same entry point is available without a clone:
+Once v3.0.2 is published, the same entry point is available without a clone:
 
 ```bash
-npx @brujo2020/open-sdd@latest --cursor-skills -y
+npx @brujo2020/open-sdd@latest --cursor-skills -y   # pending publication
 ```
 
 ### CLI flags
@@ -198,33 +260,35 @@ The step-by-step path is `/sdd-steering` → `/sdd-spec-init` → `/sdd-spec-req
 
 When the code already exists, the existing code is the de facto source of truth and the unit of
 specification is not the system but the **delta**: the artifact that describes only what changes.
-Three mechanisms implement that, all in the `open-sdd` console.
+Three mechanisms implement that, all in the `open-sdd` console. The full on-ramp, with what it reads,
+what it never touches and the honest list of what it does not do, is
+**[docs/guides/existing-projects.md](docs/guides/existing-projects.md)**.
 
-### Brownfield en 5 pasos
+### Brownfield in 5 steps
 
-La regla que manda: **el código existente es la fuente de verdad de facto: no reinventes la
-arquitectura, gobiérnala.** La ruta corta, en orden, con los mnemónicos del *Manual Maestro SDD
-v3.0* (**ADSR** para la delta, **EARS** para la forma comprobable del requisito, **EGTAV** para las
-cinco capas: Especificación, Generación, Tareas, Artefactos, Validación):
+The rule that governs: **the existing code is the de-facto source of truth: do not reinvent the
+architecture, govern it.** The short path, in order, with the mnemonics of the *Manual Maestro SDD
+v3.0* (**ADSR** for the delta, **EARS** for the checkable form of a requirement, **EGTAV** for the
+five layers: Specification, Generation, Tasks, Artifacts, Validation):
 
-| Paso | Comando | Qué produce |
+| Step | Command | What it produces |
 |---|---|---|
-| 1. Reconocer | `open-sdd brownfield bootstrap .` | stack, módulos, evidencia y el plan ordenado de pasos |
-| 2. Anclar | `open-sdd brownfield constitution . --write` | `.sdd/steering/constitution.md` descriptiva, con evidencia |
-| 3. Describir el cambio | `open-sdd delta init <feature> "..."` → `open-sdd delta validate <feature>` | la delta ADSR: el contrato del cambio, no la spec de todo el sistema |
-| 4. Comprobar | `open-sdd status --check`, `brownfield impact\|contracts\|reuse`, `govern rigor` | pivote constitucional, impacto, oráculo de regresión, reutilización |
-| 5. Entregar | `open-sdd status` | la evidencia en las tareas, los gates del nivel declarado y un único panel |
+| 1. Recon | `open-sdd brownfield bootstrap .` | stack, modules, evidence and the ordered plan of steps |
+| 2. Anchor | `open-sdd brownfield constitution . --write` | the descriptive `.sdd/steering/constitution.md`, with evidence |
+| 3. Describe the change | `open-sdd delta init <feature> "..."` → `open-sdd delta validate <feature>` | the ADSR delta: the contract of change, not the spec of the whole system |
+| 4. Check | `open-sdd status --check`, `brownfield impact\|contracts\|reuse`, `govern rigor` | constitutional pivot, impact, regression oracle, reuse |
+| 5. Deliver | `open-sdd status` | the evidence in the tasks, the gates of the declared level, and a single dashboard |
 
-El detalle está en el skill **`/sdd-brownfield`**
-(`tools/open-sdd/templates/agents/*/skills/sdd-brownfield/SKILL.md`) y en la guía de 10 minutos
-[docs/guides/brownfield-quickstart.md](docs/guides/brownfield-quickstart.md). La constitución es el
-**pivote**: cada spec se valida contra ella con `open-sdd status --check`.
+The detail is in the **`/sdd-brownfield`** skill
+(`tools/open-sdd/templates/agents/*/skills/sdd-brownfield/SKILL.md`) and in the 10-minute guide
+[docs/guides/brownfield-quickstart.md](docs/guides/brownfield-quickstart.md). The constitution is the
+**pivot**: every spec is validated against it with `open-sdd status --check`.
 
 ### 1. The delta is the contract of change
 
 A delta has four sections — `ADDED`, `MODIFIED`, `REMOVED`, `RENAMED` (ADSR) — and every entry
-carries a delta-scoped identifier `REQ-<AREA>-<NNN>` rather than an id for the whole system, which
-is what keeps the obligation finite.
+carries a delta-scoped identifier `REQ-<AREA>-<NNN>` rather than an id for the whole system, which is
+what keeps the obligation finite.
 
 | Section | Extra obligation |
 |---|---|
@@ -233,8 +297,8 @@ is what keeps the obligation finite.
 | `REMOVED` | `previous` + `rationale` + `contracts` (all required) |
 | `RENAMED` | `previous` required |
 
-Each entry also declares a strangulation state (`legacy → both → new`), so moving a piece of the
-old system into the new one is visible progress instead of an implied rewrite.
+Each entry also declares a strangulation state (`legacy → both → new`), so moving a piece of the old
+system into the new one is visible progress instead of an implied rewrite.
 
 ```bash
 open-sdd delta init <feature> "what changes"    # scaffold .sdd/specs/<feature>/delta.md
@@ -242,12 +306,12 @@ open-sdd delta validate <feature>               # ids, EARS, targets, ADSR oblig
 open-sdd delta status <feature>                 # counts, strangulation progress, traceability
 ```
 
-Three reports back the change before it is written. `brownfield contracts <feature> [--verify]`
-turns the delta's declared tests into the regression oracle: it lists which tests protect the
-changed files, names the changed files **no** contract covers, and with `--verify` runs the test
-command — exit code 0 with a declared contract missing is not a pass. `brownfield impact <feature>`
-reports the reachable set, the touched API surface and the breaking changes; `brownfield reuse
-<feature>` reports the symbols a reuse-first search would have found first.
+Three reports back the change before it is written. `brownfield contracts <feature> [--verify]` turns
+the delta's declared tests into the regression oracle: it lists which tests protect the changed
+files, names the changed files **no** contract covers, and with `--verify` runs the test command —
+exit code 0 with a declared contract missing is not a pass. `brownfield impact <feature>` reports the
+reachable set, the touched API surface and the breaking changes; `brownfield reuse <feature>` reports
+the symbols a reuse-first search would have found first.
 
 ### 2. The reverse constitution
 
@@ -261,12 +325,12 @@ open-sdd brownfield survey .                    # what the project is: stack, to
 open-sdd brownfield constitution . --write      # write .sdd/steering/constitution.md
 ```
 
-### 3. Niveles de exigencia (la escalera)
+### 3. Rigor levels (the ladder)
 
 The three SDD rigor levels are a **cumulative ladder**: every level only *adds* demands and gates,
 and a valid constitution is required at **every** level, because a blocking verdict must be able to
-cite an authority. The default is **Spec-First**, and it is deliberately fluid: it runs the two
-gates you can never self-authorize, not the whole audit.
+cite an authority. The default is **Spec-First**, and it is deliberately fluid: it runs the two gates
+you can never self-authorize, not the whole audit.
 
 | Level | What it adds | Active gates |
 |---|---|---|
@@ -299,7 +363,7 @@ code lived in a nested workspace.
 ## Supported host agents
 
 The authoritative list is `tools/open-sdd/src/agents/registry.ts` (`agentDefinitions`). Eight variants
-are skills-based and carry the full 20-skill suite.
+are skills-based and carry the full 21-skill suite.
 
 | Agent | `--agent` id | Alias flags | Installs into |
 |---|---|---|---|
@@ -461,7 +525,7 @@ Stated here so the reference section is not read as a claim of completeness:
   host, so level A is a ceiling and not a guarantee. `git commit --no-verify` bypasses level B and
   that bypass is not recorded.
 
-Each of these is a numbered gap (G-01 … G-14) with its paper citation and code location in
+Each of these is a numbered gap (G-01 … G-23) with its paper citation and code location in
 [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
 
 ---
@@ -483,12 +547,12 @@ advisory), C2 (secrets and destructive commands, blocking) and C3 (evidence lock
 task is marked complete without its captured proof). If the CLI itself is missing, the hook **fails
 closed** and prints how to fix it. Legitimate false positives are declared per (path, pattern) with a
 reason in `.sdd/settings/security-allowlist.json`, and every run reports how many findings it
-suppressed — a suppression is never silent. `git commit --no-verify` also bypasses the hook, and
-that bypass is **not** recorded; the allow-list is the channel an audit can read.
+suppressed — a suppression is never silent. `git commit --no-verify` also bypasses the hook, and that
+bypass is **not** recorded; the allow-list is the channel an audit can read.
 
 Level C is `.github/workflows/gates.yml` (`templates/hooks/open-sdd-gates.yml` for target projects):
-the chain runs against the pull-request diff via `--base`, because a gate run that inspects nothing
-is activation without measurement.
+the chain runs against the pull-request diff via `--base`, because a gate run that inspects nothing is
+activation without measurement.
 
 ---
 
@@ -504,22 +568,28 @@ open-sdd/
 │   └── dist/                compiled CLI (committed)
 ├── docs/
 │   ├── PAPER-ALIGNMENT.md   traceability report (paper → code → gaps)
+│   ├── INSTALL.md           every install path, verified
 │   ├── QUICK-START.md       5-minute path
-│   ├── INSTALLATION.md      installation reference
+│   ├── INSTALLATION.md      legacy installation reference
 │   ├── claims/              paper-claims.yaml (§9.6 registry)
-│   └── guides/              workflow, governance, brownfield, git, skills
+│   └── guides/              workflow, governance, brownfield, upgrade, git, skills
 ├── .sdd/                    settings + templates (project memory lives here)
 ├── install.sh               install the CLI artifacts into a target repo
-└── package.json             bin: open-sdd, sdd-open, sdd, open-sdd
+└── package.json             bin: open-sdd, sdd-open, sdd
 ```
 
 ---
 
 ## Documentation
 
+- **[docs/guides/quickstart-60s.md](docs/guides/quickstart-60s.md)** — the demo, step by step.
+- **[docs/INSTALL.md](docs/INSTALL.md)** — every install path, verification and uninstall.
+- **[docs/guides/upgrade.md](docs/guides/upgrade.md)** — upgrading between versions and refreshing the gate.
+- **[docs/guides/existing-projects.md](docs/guides/existing-projects.md)** — the brownfield on-ramp.
 - **[docs/QUICK-START.md](docs/QUICK-START.md)** — install and run in five minutes.
-- **[docs/INSTALLATION.md](docs/INSTALLATION.md)** — every install path and flag.
+- **[docs/INSTALLATION.md](docs/INSTALLATION.md)** — the legacy installation reference.
 - **[docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md)** — paper-to-code traceability and gaps.
+- **[docs/MEASUREMENTS.md](docs/MEASUREMENTS.md)** — the honesty numbers, with their commands.
 - **[docs/guides/governance-profiles.md](docs/guides/governance-profiles.md)** — what blocks, and when.
 - **[docs/guides/spec-driven.md](docs/guides/spec-driven.md)** — the SDD workflow end to end.
 - **[docs/guides/skill-reference.md](docs/guides/skill-reference.md)** — the 21 skills.

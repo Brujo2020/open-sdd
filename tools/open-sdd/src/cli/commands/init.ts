@@ -27,6 +27,7 @@
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { colors } from '../ui/colors.js';
 import type { CliIO } from '../io.js';
@@ -45,6 +46,20 @@ import { scanProject } from '../../core/reverseEngineering.js';
 import { buildDescriptiveConstitution, collectRepoFacts } from '../../core/reverseConstitution.js';
 import { parseConstitution, renderConstitution } from '../../core/constitution.js';
 import { inspectCommitHook, resolveCliExecutable } from '../../core/doctor.js';
+import {
+  HOST_INTEGRATIONS,
+  detectIntegration,
+  integrationById,
+  mcpRegistration,
+  type HostIntegration,
+} from '../../core/integrations.js';
+import {
+  IMPORT_SOURCES,
+  applyImport,
+  planImport,
+  type ImportPlan,
+  type ImportSource,
+} from '../../core/importers.js';
 
 // ---------------------------------------------------------------------------------------------
 // Tipos del plan
@@ -583,28 +598,35 @@ const writeConstitution = async (plan: InitPlan): Promise<{ action: 'create' | '
   }
 };
 
-const installAgentSkills = async (
-  plan: InitPlan,
+/**
+ * El instalador existente, invocado por comportamiento. Es la ÚNICA forma en que este archivo
+ * instala un conjunto de skills: no reimplementa la copia de plantillas. Se comparte entre
+ * `init --skills` e `integrate --write`, para que ambos deleguen exactamente igual.
+ *
+ * `--overwrite=prompt` con stdio no interactivo es el único modo que hace lo correcto: escribe lo
+ * que falta y conserva lo existente. `--overwrite=skip` NO sirve: su política de categoría también
+ * salta los ficheros que NO existen, así que en un proyecto recién creado instalaría 0 de 62
+ * ficheros y saldría con 0 (bug reportado, fuera del alcance de este archivo).
+ */
+export const installAgentSkillSet = async (
+  root: string,
+  agent: AgentType,
+  lang: 'es' | 'en',
 ): Promise<{ action: 'create' | 'keep'; failure?: string; detail?: string }> => {
-  if (!plan.skills) return { action: 'keep' };
-  const cliPath = await resolveCliExecutable(plan.root);
+  const cliPath = await resolveCliExecutable(root);
   if (cliPath === null) {
     return {
       action: 'keep',
       failure:
-        'se pidió --skills pero no se encontró el instalador (CLI) alcanzable: la instalación del agente NO se ha ejecutado. Instálalo con `npx open-sdd@latest --version` o compílalo con `npm --prefix tools/open-sdd run build`.',
+        'no se encontró el instalador (CLI) alcanzable: la instalación del agente NO se ha ejecutado. Instálalo con `npx open-sdd@latest --version` o compílalo con `npm --prefix tools/open-sdd run build`.',
     };
   }
-  const definition = getAgentDefinition(plan.agent.id);
-  const alias = (definition.aliasFlags[0] ?? `--${plan.agent.id}`).replace(/^--/, '');
-  // `--overwrite=prompt` con stdio no interactivo es el único modo que hace lo correcto:
-  // escribe lo que falta y conserva lo existente. `--overwrite=skip` NO sirve: su política de
-  // categoría también salta los ficheros que NO existen, así que en un proyecto recién creado
-  // instalaría 0 de 62 ficheros y saldría con 0 (bug reportado, fuera del alcance de este archivo).
+  const definition = getAgentDefinition(agent);
+  const alias = (definition.aliasFlags[0] ?? `--${agent}`).replace(/^--/, '');
   const result = spawnSync(
     process.execPath,
-    [cliPath, `--${alias}`, '--lang', plan.language.lang, '--overwrite=prompt'],
-    { cwd: plan.root, encoding: 'utf8', timeout: 300_000 },
+    [cliPath, `--${alias}`, '--lang', lang, '--overwrite=prompt'],
+    { cwd: root, encoding: 'utf8', timeout: 300_000 },
   );
   if (result.status !== 0) {
     return {
@@ -614,8 +636,15 @@ const installAgentSkills = async (
   }
   return {
     action: 'create',
-    detail: `instalado con \`open-sdd --${alias} --lang ${plan.language.lang} --overwrite=prompt\` (no interactivo: crea lo ausente, conserva lo existente)`,
+    detail: `instalado con \`open-sdd --${alias} --lang ${lang} --overwrite=prompt\` (no interactivo: crea lo ausente, conserva lo existente)`,
   };
+};
+
+const installAgentSkills = async (
+  plan: InitPlan,
+): Promise<{ action: 'create' | 'keep'; failure?: string; detail?: string }> => {
+  if (!plan.skills) return { action: 'keep' };
+  return installAgentSkillSet(plan.root, plan.agent.id, plan.language.lang);
 };
 
 const applyInit = async (plan: InitPlan): Promise<InitOutcome> => {
@@ -894,4 +923,592 @@ export const handleInitCommand = async (
 ): Promise<number> => {
   if (isProjectInitInvocation(args, cwd)) return handleProjectInit(args, io, cwd);
   return handleSpecInitCommand(args, io, cwd);
+};
+
+// ---------------------------------------------------------------------------------------------
+// `open-sdd integrate` — la superficie de adopción, anfitrión por anfitrión
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * De qué anfitrión instala las skills `integrate --write`. Es la variante NO desaconsejada del
+ * registro; Zed y Cline no tienen instalador de skills (modo prompt-file) y por eso no aparecen.
+ */
+const HOST_SKILL_AGENT: Record<string, AgentType | undefined> = {
+  'claude-code': 'claude-code-skills',
+  cursor: 'cursor-skills',
+  copilot: 'github-copilot-skills',
+  codex: 'codex-skills',
+  'gemini-cli': 'gemini-cli-skills',
+  windsurf: 'windsurf-skills',
+  opencode: 'opencode-skills',
+  antigravity: 'antigravity-skills',
+};
+
+export interface IntegrateArtifact {
+  kind: 'mcp-config' | 'agent-skills';
+  path: string;
+  action: 'create' | 'update' | 'keep';
+  reason: string;
+  verified: boolean;
+}
+
+export interface IntegratePlan {
+  cwd: string;
+  host: { id: string; label: string; source: 'declarado' | 'detectado'; evidence: string[]; alternatives: string[] };
+  skills: HostIntegration['skills'];
+  invocation: string;
+  mcp: {
+    /** La ruta tal y como la declara la matriz (puede ser relativa o llevar `~`). */
+    path: string | null;
+    /** La ruta absoluta que `--write` tocaría, o null cuando no se escribe. */
+    resolvedPath: string | null;
+    format: 'json' | 'toml';
+    verified: boolean;
+    snippet: string;
+  };
+  cliPath: string;
+  language: 'es' | 'en';
+  write: boolean;
+  artifacts: IntegrateArtifact[];
+  steps: string[];
+  nextCommands: string[];
+  detail: string;
+  complete: boolean;
+}
+
+/** `~/x`, `%USERPROFILE%\x` y `%APPDATA%\x` son rutas reales que hay que expandir antes de escribir. */
+const expandConfigPath = (declared: string, cwd: string): string => {
+  if (declared.startsWith('~/') || declared === '~') {
+    return path.join(homedir(), declared.slice(2));
+  }
+  const expandEnv = (prefix: string, base: string | undefined): string | null =>
+    base === undefined ? null : path.join(base, declared.slice(prefix.length).replace(/^[\\/]+/, ''));
+  if (declared.startsWith('%USERPROFILE%')) {
+    return expandEnv('%USERPROFILE%', homedir()) ?? declared;
+  }
+  if (declared.startsWith('%APPDATA%')) {
+    return expandEnv('%APPDATA%', process.env.APPDATA) ?? declared;
+  }
+  return path.isAbsolute(declared) ? declared : path.resolve(cwd, declared);
+};
+
+/** Fusión de un nivel: las claves ajenas del objeto sobreviven; solo se toca la nuestra. */
+const mergeTopLevel = (
+  current: Record<string, unknown>,
+  incoming: Record<string, unknown>,
+): Record<string, unknown> => {
+  const merged: Record<string, unknown> = { ...current };
+  for (const [key, value] of Object.entries(incoming)) {
+    const prior = merged[key];
+    const bothPlainObjects =
+      prior !== null &&
+      typeof prior === 'object' &&
+      !Array.isArray(prior) &&
+      value !== null &&
+      typeof value === 'object' &&
+      !Array.isArray(value);
+    merged[key] = bothPlainObjects
+      ? { ...(prior as Record<string, unknown>), ...(value as Record<string, unknown>) }
+      : value;
+  }
+  return merged;
+};
+
+const CODEX_TABLE = /\[mcp_servers\s*\.\s*"?open-sdd"?\s*\]/;
+
+export interface McpMerge {
+  action: 'create' | 'update' | 'keep';
+  path: string | null;
+  resolvedPath: string | null;
+  content: string;
+  reason: string;
+  verified: boolean;
+}
+
+/**
+ * Calcula el estado del artefacto MCP sin escribir nada. `applyIntegrate` vuelve a llamarlo para
+ * obtener el contenido exacto, así que el plan y la escritura no pueden divergir.
+ *
+ * Reglas duras: un snippet NO verificado no se escribe jamás; un archivo que no parsea no se toca;
+ * una clave ajena no se borra nunca.
+ */
+export const mergeMcpConfig = async (
+  host: HostIntegration,
+  cliPath: string,
+  cwd: string,
+): Promise<McpMerge> => {
+  const registration = mcpRegistration(host.id, { cliPath });
+  const base = { path: registration.path, verified: registration.verified };
+
+  if (registration.path === null) {
+    return {
+      ...base,
+      action: 'keep',
+      resolvedPath: null,
+      content: registration.content,
+      reason:
+        'el anfitrión no declara una ruta de configuración MCP conocida: open-sdd no inventa un archivo. Configúralo desde la interfaz del anfitrión; el snippet se imprime como NO VERIFICADO.',
+    };
+  }
+  if (!registration.verified) {
+    return {
+      ...base,
+      action: 'keep',
+      resolvedPath: null,
+      content: registration.content,
+      reason:
+        'el snippet de este anfitrión está NO VERIFICADO: open-sdd no escribe a ciegas una configuración que no puede garantizar. Cópialo y compruébalo contra la documentación del anfitrión.',
+    };
+  }
+
+  const resolvedPath = expandConfigPath(registration.path, cwd);
+  const existing = await readIfExists(resolvedPath);
+
+  if (existing === null) {
+    return {
+      ...base,
+      action: 'create',
+      resolvedPath,
+      content: registration.content,
+      reason: `no existe: se crea con el snippet verificado (${registration.format.toUpperCase()}).`,
+    };
+  }
+
+  if (registration.format === 'json') {
+    try {
+      const current = JSON.parse(existing) as Record<string, unknown>;
+      const incoming = JSON.parse(registration.content) as Record<string, unknown>;
+      const merged = mergeTopLevel(current, incoming);
+      const serialized = `${JSON.stringify(merged, null, 2)}\n`;
+      if (serialized === `${JSON.stringify(current, null, 2)}\n`) {
+        return {
+          ...base,
+          action: 'keep',
+          resolvedPath,
+          content: serialized,
+          reason: 'el servidor open-sdd ya está registrado con esta misma configuración: no se toca.',
+        };
+      }
+      return {
+        ...base,
+        action: 'update',
+        resolvedPath,
+        content: serialized,
+        reason:
+          'se añade o actualiza SOLO la entrada del servidor open-sdd dentro de su objeto: el resto de claves del archivo se conserva.',
+      };
+    } catch (error) {
+      return {
+        ...base,
+        action: 'keep',
+        resolvedPath,
+        content: registration.content,
+        reason: `el archivo existe pero no parsea como JSON (${(error as Error).message}): NO se toca, porque reescribirlo borraría lo que no entendemos. Pega el snippet a mano.`,
+      };
+    }
+  }
+
+  if (CODEX_TABLE.test(existing)) {
+    return {
+      ...base,
+      action: 'keep',
+      resolvedPath,
+      content: existing,
+      reason: 'la tabla [mcp_servers.open-sdd] ya existe: no se toca.',
+    };
+  }
+  return {
+    ...base,
+    action: 'update',
+    resolvedPath,
+    content: `${existing.replace(/\s*$/, '')}\n\n${registration.content}`,
+    reason: 'se AÑADE la tabla [mcp_servers.open-sdd] al final del archivo: ninguna otra clave se modifica.',
+  };
+};
+
+export interface PlanIntegrateInput {
+  cwd: string;
+  host?: string;
+  write?: boolean;
+  lang?: string;
+}
+
+export const planIntegrate = async (input: PlanIntegrateInput): Promise<IntegratePlan> => {
+  const { cwd } = input;
+
+  let host: HostIntegration;
+  let source: 'declarado' | 'detectado';
+  let evidence: string[];
+  let alternatives: string[];
+
+  if (input.host !== undefined && input.host.trim().length > 0) {
+    const declared = integrationById(input.host.trim());
+    if (!declared) {
+      throw new Error(
+        `Anfitrión desconocido: "${input.host}". Admitidos: ${HOST_INTEGRATIONS.map((item) => item.id).join(', ')}. Consulta la matriz con \`open-sdd integrate --list\`.`,
+      );
+    }
+    host = declared;
+    source = 'declarado';
+    evidence = [`host declarado: ${input.host}`];
+    alternatives = [];
+  } else {
+    const detected = await detectIntegration(cwd);
+    if (!detected) {
+      throw new Error(
+        `No se observó ningún anfitrión en ${cwd}. Pasa uno explícito (${HOST_INTEGRATIONS.map((item) => item.id).join(', ')}) o consulta la matriz con \`open-sdd integrate --list\`.`,
+      );
+    }
+    host = integrationById(detected.id)!;
+    source = 'detectado';
+    evidence = detected.evidence;
+    alternatives = detected.alternatives;
+  }
+
+  const language: 'es' | 'en' =
+    input.lang === 'es' || input.lang === 'en'
+      ? input.lang
+      : (await detectLanguage(cwd, await resolveSddDir(cwd))).lang;
+
+  const resolvedCli = await resolveCliExecutable(cwd);
+  const cliPath =
+    resolvedCli ?? (process.argv[1]?.endsWith('cli.js') === true ? process.argv[1] : '<ruta-al-cli-open-sdd>');
+
+  const merge = await mergeMcpConfig(host, cliPath, cwd);
+  const registration = mcpRegistration(host.id, { cliPath });
+
+  const artifacts: IntegrateArtifact[] = [
+    {
+      kind: 'mcp-config',
+      path: merge.path ?? '(sin ruta documentada)',
+      action: merge.action,
+      reason: merge.reason,
+      verified: merge.verified,
+    },
+  ];
+
+  const agent = HOST_SKILL_AGENT[host.id];
+  if (agent) {
+    const definition = getAgentDefinition(agent);
+    const skillsDir = definition.layout.commandsDir;
+    const present = await exists(path.join(cwd, skillsDir));
+    const alias = definition.aliasFlags[0] ?? `--${agent}`;
+    artifacts.push({
+      kind: 'agent-skills',
+      path: skillsDir,
+      action: present ? 'update' : 'create',
+      reason: present
+        ? `el conjunto ya está presente: el instalador existente completa lo ausente y NO sobrescribe lo editado (\`open-sdd ${alias} --lang ${language} --overwrite=prompt\`)`
+        : `instalación delegada al instalador existente: \`open-sdd ${alias} --lang ${language} --overwrite=prompt\``,
+      verified: true,
+    });
+  } else {
+    artifacts.push({
+      kind: 'agent-skills',
+      path: host.skills.layout,
+      action: 'keep',
+      reason: `${host.label} no tiene un instalador de skills en el registro de agentes (modo ${host.skills.mode}): open-sdd no escribe reglas de un anfitrión cuyo layout no puede verificar.`,
+      verified: false,
+    });
+  }
+
+  const steps: string[] = [
+    `1. En el chat de ${host.label}, escribe exactamente: ${host.invocation}`,
+    `2. Comprueba la instalación: \`open-sdd doctor\``,
+    `3. Registro MCP: ${merge.path ?? '(sin ruta documentada)'} — ${merge.verified ? 'forma verificada' : 'forma NO VERIFICADA'}`,
+  ];
+
+  const created = artifacts.filter((artifact) => artifact.action === 'create').length;
+  const updated = artifacts.filter((artifact) => artifact.action === 'update').length;
+  const kept = artifacts.filter((artifact) => artifact.action === 'keep').length;
+  const detail = [
+    `Plan de integración para ${host.label} (${host.id}, ${source}) en ${cwd}: ${created} artefacto(s) por crear, ${updated} por actualizar, ${kept} conservado(s).`,
+    merge.verified
+      ? 'El snippet MCP está verificado para este anfitrión.'
+      : 'El snippet MCP NO está verificado: se imprime como NO VERIFICADO y --write no lo escribe.',
+    input.write === true ? 'Se escribirá lo indicado.' : 'Sin --write no se escribe nada: este es el plan.',
+  ].join(' ');
+
+  return {
+    cwd,
+    host: { id: host.id, label: host.label, source, evidence, alternatives },
+    skills: host.skills,
+    invocation: host.invocation,
+    mcp: {
+      path: merge.path,
+      resolvedPath: merge.resolvedPath,
+      format: registration.format,
+      verified: merge.verified,
+      snippet: merge.content,
+    },
+    cliPath,
+    language,
+    write: input.write === true,
+    artifacts,
+    steps,
+    nextCommands: [
+      `open-sdd integrate ${host.id} --write`,
+      'open-sdd doctor',
+      host.invocation,
+    ],
+    detail,
+    complete: merge.verified,
+  };
+};
+
+export const applyIntegrate = async (plan: IntegratePlan, cwd: string): Promise<InitOutcome> => {
+  const outcome: InitOutcome = { written: [], kept: [], failures: [], details: [] };
+  const host = integrationById(plan.host.id);
+  if (!host) {
+    outcome.failures.push(`anfitrión desconocido al aplicar: ${plan.host.id}`);
+    return outcome;
+  }
+
+  const mcpArtifact = plan.artifacts.find((artifact) => artifact.kind === 'mcp-config');
+  if (mcpArtifact && (mcpArtifact.action === 'create' || mcpArtifact.action === 'update')) {
+    const merge = await mergeMcpConfig(host, plan.cliPath, cwd);
+    if (merge.resolvedPath === null || merge.action === 'keep') {
+      outcome.kept.push(mcpArtifact.path);
+      outcome.details.push(merge.reason);
+    } else {
+      try {
+        await mkdir(path.dirname(merge.resolvedPath), { recursive: true });
+        await writeFile(merge.resolvedPath, merge.content, 'utf8');
+        outcome.written.push(mcpArtifact.path);
+        outcome.details.push(merge.reason);
+      } catch (error) {
+        outcome.failures.push(`no se pudo escribir ${merge.resolvedPath} (${(error as Error).message})`);
+      }
+    }
+  } else if (mcpArtifact) {
+    outcome.kept.push(mcpArtifact.path);
+    outcome.details.push(mcpArtifact.reason);
+  }
+
+  const agent = HOST_SKILL_AGENT[plan.host.id];
+  const skillsArtifact = plan.artifacts.find((artifact) => artifact.kind === 'agent-skills');
+  if (agent && skillsArtifact) {
+    const skills = await installAgentSkillSet(cwd, agent, plan.language);
+    if (skills.failure) outcome.failures.push(skills.failure);
+    else if (skills.action === 'create') outcome.written.push(skillsArtifact.path);
+    else outcome.kept.push(skillsArtifact.path);
+    if (skills.detail) outcome.details.push(skills.detail);
+  } else if (skillsArtifact) {
+    outcome.kept.push(skillsArtifact.path);
+    outcome.details.push(skillsArtifact.reason);
+  }
+
+  return outcome;
+};
+
+const printIntegrationMatrix = (io: CliIO): number => {
+  io.log('');
+  io.log(formatHeading(colors.cyan('Matriz de integración open-sdd — un anfitrión por fila')));
+  io.log('');
+  io.log(
+    `  ${'host'.padEnd(14)} ${'skills layout'.padEnd(34)} ${'invocación'.padEnd(30)} ${'MCP config'.padEnd(46)} verificado`,
+  );
+  for (const host of HOST_INTEGRATIONS) {
+    const registration = mcpRegistration(host.id, { cliPath: '<cli>' });
+    const configPath = registration.path ?? '(sin ruta documentada)';
+    io.log(
+      `  ${host.id.padEnd(14)} ${host.skills.layout.padEnd(34)} ${host.invocation.padEnd(30)} ${configPath.padEnd(46)} ${
+        host.mcp.verified ? 'verificado' : 'NO VERIFICADA'
+      }`,
+    );
+  }
+  io.log('');
+  io.log(
+    colors.dim(
+      '  «NO VERIFICADA» significa que este proyecto no conoce con certeza la forma o la ruta del archivo del anfitrión: se imprime para que la pegues y la compruebes, y `--write` no la escribe. Las rutas son las de la matriz; el archivo que `--write` toca puede ser el de proyecto o el de usuario según el anfitrión.',
+    ),
+  );
+  io.log('');
+  return 0;
+};
+
+export const handleIntegrateCommand = async (
+  args: string[],
+  io: CliIO,
+  cwd: string = process.cwd(),
+): Promise<number> => {
+  if (args.includes('--list')) return printIntegrationMatrix(io);
+
+  const json = args.includes('--json');
+  const write = args.includes('--write') && !args.includes('--dry-run');
+  const hostArg = args.find((arg) => !arg.startsWith('-'));
+  const lang = flagValue(args, 'lang');
+
+  let plan: IntegratePlan;
+  try {
+    plan = await planIntegrate({
+      cwd,
+      ...(hostArg !== undefined ? { host: hostArg } : {}),
+      ...(lang !== undefined ? { lang } : {}),
+      write,
+    });
+  } catch (error) {
+    io.error(colors.red(`Error: ${(error as Error).message}`));
+    return 1;
+  }
+
+  let outcome: InitOutcome = { written: [], kept: [], failures: [], details: [] };
+  if (write) outcome = await applyIntegrate(plan, cwd);
+
+  if (json) {
+    io.log(JSON.stringify({ ...plan, outcome }, null, 2));
+    return outcome.failures.length > 0 ? 1 : 0;
+  }
+
+  io.log('');
+  io.log(formatHeading(colors.cyan(`Integración open-sdd — ${plan.host.label} (${plan.host.id})`)));
+  io.log('');
+  io.log(`  anfitrión: ${colors.bold(plan.host.id)} ${colors.dim(`[${plan.host.source}]`)}`);
+  for (const item of plan.host.evidence) io.log(colors.dim(`      por qué: ${item}`));
+  if (plan.host.alternatives.length > 0) {
+    io.log(`      alternativas detectadas: ${plan.host.alternatives.join(', ')} — elige con \`open-sdd integrate <host>\``);
+  }
+  io.log('');
+  io.log(`  skills: ${colors.bold(plan.skills.layout)} ${colors.dim(`(modo ${plan.skills.mode})`)}`);
+  io.log(
+    `  invocación en el chat de ${plan.host.label}: ${colors.bold(colors.cyan(plan.invocation))}`,
+  );
+  io.log('');
+  io.log(`  ${colors.bold('MCP')} ${plan.mcp.verified ? colors.green('verificado') : colors.yellow('NO VERIFICADO')}`);
+  io.log(`    ruta declarada: ${plan.mcp.path ?? '(sin ruta documentada)'}`);
+  if (plan.mcp.resolvedPath) io.log(`    ruta a escribir: ${plan.mcp.resolvedPath}`);
+  io.log(`    formato: ${plan.mcp.format}`);
+  io.log('');
+  io.log(`  ${colors.bold('Snippet')}`);
+  for (const line of plan.mcp.snippet.split('\n')) io.log(`    ${line}`);
+
+  io.log('');
+  io.log(`  ${colors.bold('Artefactos')}`);
+  for (const artifact of plan.artifacts) {
+    const mark =
+      artifact.action === 'create'
+        ? colors.green(artifact.action)
+        : artifact.action === 'update'
+          ? colors.yellow(artifact.action)
+          : colors.dim(artifact.action);
+    io.log(`    ${mark.padEnd(18)} ${artifact.path} ${artifact.verified ? '' : colors.yellow('(no verificado)')}`);
+    io.log(`        ${colors.dim(artifact.reason)}`);
+  }
+
+  io.log('');
+  io.log(`  ${colors.bold('Pasos')}`);
+  for (const step of plan.steps) io.log(`    ${step}`);
+
+  if (write) {
+    io.log('');
+    io.log(`  ${colors.bold('Resultado de --write')}`);
+    for (const item of outcome.written) io.log(`    ${colors.green('✓')} escrito: ${item}`);
+    for (const item of outcome.kept) io.log(colors.dim(`    = conservado: ${item}`));
+    for (const detail of outcome.details) io.log(colors.dim(`    · ${detail}`));
+    for (const failure of outcome.failures) io.log(`    ${colors.red('✗')} ${failure}`);
+  } else {
+    io.log('');
+    io.log(colors.dim('  Sin --write no se ha escrito nada: este es solo el plan. Añade --write para ejecutarlo.'));
+  }
+
+  if (!plan.mcp.verified) {
+    io.log('');
+    io.log(
+      colors.yellow(
+        '  ! El snippet MCP de este anfitrión está NO VERIFICADO: no se escribe automáticamente. Cópialo, compruébalo contra la documentación del anfitrión y pégalo tú.',
+      ),
+    );
+  }
+
+  io.log('');
+  io.log(colors.dim(`  ${plan.detail}`));
+  io.log('');
+  return outcome.failures.length > 0 ? 1 : 0;
+};
+
+// ---------------------------------------------------------------------------------------------
+// `open-sdd import` — absorber a los incumbentes (Kiro, spec-kit, cc-sdd)
+// ---------------------------------------------------------------------------------------------
+
+export const handleImportCommand = async (
+  args: string[],
+  io: CliIO,
+  cwd: string = process.cwd(),
+): Promise<number> => {
+  const json = args.includes('--json');
+  const write = args.includes('--write') && !args.includes('--dry-run');
+  const sourceFlag = flagValue(args, 'source');
+  const sourceArg = (sourceFlag && sourceFlag.length > 0 ? sourceFlag : args.find((arg) => !arg.startsWith('-'))) || undefined;
+
+  if (sourceArg !== undefined && !(IMPORT_SOURCES as readonly string[]).includes(sourceArg)) {
+    io.error(
+      colors.red(`Error: fuente desconocida "${sourceArg}". Admitidas: ${IMPORT_SOURCES.join(', ')}.`),
+    );
+    return 1;
+  }
+
+  let plans: ImportPlan[];
+  try {
+    plans = await planImport(cwd, sourceArg as ImportSource | undefined);
+  } catch (error) {
+    io.error(colors.red(`Error: ${(error as Error).message}`));
+    return 1;
+  }
+
+  const outcomes = write
+    ? await Promise.all(plans.map((plan) => applyImport(cwd, plan, { write: true })))
+    : [];
+
+  if (json) {
+    io.log(JSON.stringify({ cwd, write, plans, outcomes }, null, 2));
+    return 0;
+  }
+
+  io.log('');
+  io.log(formatHeading(colors.cyan(`Importación open-sdd — ${cwd}`)));
+  io.log('');
+
+  if (plans.length === 0) {
+    io.log(
+      colors.dim(
+        '  No se observó ningún incumbente (Kiro, spec-kit, cc-sdd): ni `.kiro/`, ni `.specify/`, ni `specs/` con `spec.md`, ni un marcador de cc-sdd.',
+      ),
+    );
+    io.log('');
+    return 0;
+  }
+
+  plans.forEach((plan, index) => {
+    const outcome = outcomes[index];
+    io.log(`  ${colors.bold(plan.source)} ${plan.complete ? colors.green('(completo)') : colors.yellow('(incompleto: hay omisiones o advertencias)')}`);
+    for (const item of plan.found) io.log(`      encontrado: ${item.kind} → ${item.path}`);
+    if (plan.conversions.length > 0) {
+      io.log(`      ${colors.bold('conversiones')}`);
+      for (const conversion of plan.conversions) {
+        const mark =
+          conversion.action === 'skip'
+            ? colors.dim('skip')
+            : conversion.action === 'convert'
+              ? colors.yellow('convert')
+              : colors.green('copy');
+        const arrow = conversion.action === 'skip' ? '' : ` → ${conversion.to}`;
+        io.log(`        ${mark.padEnd(16)} ${conversion.from}${arrow}`);
+        io.log(`            ${colors.dim(conversion.reason)}`);
+      }
+    }
+    for (const warning of plan.warnings) io.log(`      ${colors.yellow('!')} ${warning}`);
+    if (outcome) {
+      for (const item of outcome.written) io.log(`      ${colors.green('✓')} escrito: ${item}`);
+      for (const item of outcome.skipped) io.log(colors.dim(`      = omitido: ${item}`));
+      io.log(colors.dim(`      · ${outcome.detail}`));
+    }
+    io.log(colors.dim(`      ${plan.detail}`));
+    io.log('');
+  });
+
+  if (!write) {
+    io.log(colors.dim('  Sin --write no se ha escrito nada: este es solo el plan. Añade --write para ejecutarlo.'));
+    io.log('');
+  }
+  return 0;
 };
