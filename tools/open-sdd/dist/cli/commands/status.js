@@ -46,9 +46,13 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { colors } from '../ui/colors.js';
 import { getSpecStatus, listSpecs, resolveSddDir } from '../../core/specManager.js';
-import { alignFeature, buildStatus, constitutionCandidates, loadConstitution, renderStatus, worstTone, } from '../../core/status.js';
+import { alignFeature, buildStatus, constitutionCandidates, inspectFeature, loadConstitution, renderStatus, worstTone, } from '../../core/status.js';
 import { principlesInForce } from '../../core/constitution.js';
 import { assist, renderAssist } from '../../core/assistants.js';
+import { analyseEars } from '../../core/earsAssistant.js';
+import { getModifiedFiles, isGitRepo } from '../../core/git.js';
+import { runChain } from '../../core/gateRunner.js';
+import { celebrationsToJson, celebrateFeature, playCelebration, readCelebrations, renderCelebrations, } from '../../core/celebrate.js';
 import { hashConstitution, runAdhesionRatchet } from '../../core/ratchet.js';
 import { adhesionHistoryEntry, adhesionScore, adhesionTrend, readAdhesionHistory, recordAdhesionHistory, } from '../../core/specConstitution.js';
 import { jsonEnvelope } from '../jsonOut.js';
@@ -213,6 +217,121 @@ const legacySpecList = async (cwd, sddDir) => {
     const specs = await listSpecs(cwd, dir);
     return Promise.all(specs.map((feature) => getSpecStatus(cwd, feature, dir)));
 };
+/**
+ * `status --celebrations`: el libro de validaciones registradas (`.sdd/state/celebrations.json`).
+ *
+ * Solo LEE. Un libro ilegible se avisa y se muestra vacío —`renderCelebrations` lo hace— pero nunca
+ * se rellena ni se convierte en un error: no hay nada que el usuario deba arreglar para poder leer
+ * un historial que no existe. `--json` emite el sobre del módulo (`celebrationsToJson`), que es
+ * también lo que sirve `--lang`-agnóstico a un script.
+ */
+const handleCelebrations = async (args, io, cwd) => {
+    const sddArg = args.find((arg) => arg.startsWith('--sdd-dir='));
+    const sddDir = sddArg ? sddArg.slice('--sdd-dir='.length) : await resolveSddDir(cwd);
+    // `readCelebrations` construye la ruta y la abre tal cual: se le pasa ABSOLUTA para que el `cwd`
+    // del comando (una fixture, en los tests) sea el que manda y no el del proceso.
+    const read = await readCelebrations(path.resolve(cwd, sddDir));
+    if (args.includes('--json')) {
+        io.log(JSON.stringify(celebrationsToJson(read), null, 2));
+        return 0;
+    }
+    for (const line of renderCelebrations(read, { noColor: args.includes('--no-color') }))
+        io.log(line);
+    return 0;
+};
+/**
+ * El momento verde de una ejecución de `--check`, impreso DESPUÉS del informe y ANTES del pie de
+ * puntuación (el pie lo emite el despachador al volver este comando).
+ *
+ * NO HAY CELEBRACIÓN SIN LAS TRES VERDADES MEDIDAS, y aquí se miden las tres: EARS se analiza sobre
+ * `requirements.md`, el pivote lo acaba de medir `runPivot` y la cadena de gates del nivel declarado
+ * se ejecuta SOLO cuando las dos primeras ya están en verde (así una ejecución que no puede celebrar
+ * no paga el coste de la cadena). Un veredicto que no sea `celebrate` no imprime nada: un `refused`
+ * o un `plain` no son noticias y no deben añadir ruido a un panel que ya dijo lo suyo.
+ *
+ * La racha se DERIVA de la serie de adhesión que el trinquete escribe (`adhesion-history.json`): es
+ * la misma serie, no una segunda verdad. `core/celebrate.ts` no inventa N —sin racha no imprime
+ * racha— y `core/ratchet.ts` no lo expone hoy, así que la única fuente real es la serie medida.
+ */
+const celebrateValidatedFeature = async (io, root, sddDir, requestedFeature, pivot, declaredGates) => {
+    if (!pivot.alignment || pivot.errorCount > 0)
+        return;
+    const feature = requestedFeature ?? pivot.alignment.feature;
+    const inspection = await inspectFeature(root, feature, sddDir);
+    if (!inspection || inspection.requirements === null)
+        return;
+    const ears = analyseEars(inspection.requirements, { source: 'requirements.md' });
+    const earsErrors = ears.suggestions.filter((suggestion) => suggestion.severity === 'error').length;
+    if (ears.total === 0 || earsErrors > 0 || ears.conforming !== ears.total)
+        return;
+    let gates;
+    let gateRun;
+    try {
+        gateRun = await runChain(declaredGates, {
+            cwd: root,
+            sddDir,
+            feature,
+            changedFiles: isGitRepo(root) ? getModifiedFiles(root) : [],
+            declaredScope: [],
+        });
+        if (gateRun.findings.length === 0)
+            return;
+        gates = {
+            passed: gateRun.findings.filter((finding) => finding.outcome === 'pass' || finding.outcome === 'advisory').length,
+            total: gateRun.findings.length,
+            failed: gateRun.findings.filter((finding) => finding.outcome === 'fail').map((finding) => finding.gateId),
+            evaluated: true,
+        };
+    }
+    catch {
+        // No poder ejecutar la cadena es NO MEDIDO, y sin gates medidos no hay celebración: se calla.
+        return;
+    }
+    // El número compuesto se mide reutilizando la MISMA ejecución de la cadena (`gateRun`): el módulo
+    // de puntuación no la vuelve a correr, así que el pie y la celebración no pueden discrepar.
+    let score;
+    let phase;
+    try {
+        const report = await computeSddScore(root, { feature, sddDir, gateRun });
+        score = report.total;
+        phase = report.phase;
+    }
+    catch {
+        // Sin número medido no se apunta nada: `appendCelebration` exige score y fase reales. El
+        // veredicto de tres verdades sigue siendo válido, pero el libro no puede inventar el número.
+        return;
+    }
+    const history = await readAdhesionHistory(root, sddDir);
+    const series = history.entries.filter((entry) => entry.feature === feature);
+    let streak = 0;
+    for (let i = series.length - 1; i > 0; i -= 1) {
+        if (series[i].score >= series[i - 1].score)
+            streak += 1;
+        else
+            break;
+    }
+    const celebration = await celebrateFeature(path.resolve(root, sddDir), {
+        feature,
+        requirements: { conforming: ears.conforming, total: ears.total, errors: earsErrors, evaluated: true },
+        pivot: { alignment: pivot.alignment.alignment, errors: pivot.errorCount, evaluated: true },
+        gates,
+        score,
+        phase,
+        streak,
+    }, { anim: false, isTty: false, json: false, quiet: false });
+    if (celebration.report.verdict !== 'celebrate')
+        return;
+    await playCelebration(celebration.report, {
+        out: {
+            write: (chunk) => {
+                for (const line of chunk.split('\n'))
+                    if (line.length > 0)
+                        io.log(line);
+                return true;
+            },
+        },
+    });
+};
 export const handleStatusCommand = async (args, io, cwd = process.cwd()) => {
     const isJson = args.includes('--json');
     const isCheck = args.includes('--check');
@@ -220,6 +339,10 @@ export const handleStatusCommand = async (args, io, cwd = process.cwd()) => {
     const isQuiet = args.includes('--quiet');
     const sddArg = args.find((arg) => arg.startsWith('--sdd-dir='));
     const sddDir = sddArg ? sddArg.slice('--sdd-dir='.length) : undefined;
+    // El libro de validaciones tiene su propia superficie y se atiende ANTES que la lista heredada de
+    // `--json`: si no, `status --celebrations --json` devolvería la lista por spec en su lugar.
+    if (args.includes('--celebrations'))
+        return handleCelebrations(args, io, cwd);
     // Un flag con valor no puede confundir a la detección de la feature: `--accept-drop "<razón>"`
     // tiene un token suelto que NO es el nombre de la spec.
     const flagValue = (flag) => {
@@ -376,6 +499,14 @@ export const handleStatusCommand = async (args, io, cwd = process.cwd()) => {
         });
         for (const line of renderAssist(assistant.suggestions))
             io.log(colors.dim(`  ${line}`));
+        // ── El momento verde: DESPUÉS del informe, ANTES del pie de puntuación ────────────────────
+        // El pie lo emite el despachador al volver de aquí, así que imprimir ahora es imprimir antes
+        // de él. Solo aparece si la feature valida de verdad (tres verdades medidas) y el veredicto es
+        // `celebrate`. El guardia `exitCode === 0` es el invariante: el comando NUNCA celebra mientras
+        // su propio veredicto dice que algo falla.
+        if (exitCode === 0) {
+            await celebrateValidatedFeature(io, report.root, sddRel, feature, pivot, report.gates);
+        }
     }
     io.log('');
     return exitCode;

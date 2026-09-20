@@ -37,6 +37,10 @@ import {
 } from './cli/commands/paper.js';
 import { handleDeltaCommand, handleBrownfieldCommand } from './cli/commands/brownfield.js';
 import { handleTourCommand, handleContextCommand } from './cli/commands/tour.js';
+import { handleGitflowCommand } from './cli/commands/gitflow.js';
+import { handleProgressCommand } from './cli/commands/progress.js';
+import { handleBackupCommand } from './cli/commands/backup.js';
+import { handleBiographyCommand } from './cli/commands/biography.js';
 import { SCORE_FOOTER_FLAG, emitScoreFooter } from './cli/jsonOut.js';
 import { computeSddScore, explainNextAction, renderScoreFooter } from './core/sddScore.js';
 
@@ -107,32 +111,62 @@ In-Chat Skills (The Apple-grade Experience):
 
 Zero-Trust console (reference architecture):
   gates [chain|crosswalk|list|enforcement|run]  Resolve and run the gate chain
-  govern [invariants|conformance|hitl|rigor|appeal|meta-eval|budget]
-  assure [threats|lab|claims|skills|memory]
+  govern [invariants|conformance|hitl|rigor|constitution|appeal|meta-eval|budget|discipline]  Invariants, conformance, rigor and the constitution draft/ratify
+  assure [threats|lab|claims|skills|memory]    OWASP/ATLAS threats, claims registry, skills and memory
   waves <feature>                             Transactional wave plan with git commands
   floor [status|install] [target] [--ci]       Enforcement floor: commit hook + PR gate matrix
-  audit bundle [feature] [--out <dir>] [--json] [--sarif <path>]  Evidence bundle with a sha256 per artifact; SARIF 2.1.0 for code scanning
+  audit [bundle|sarif] [feature] [--out <dir>] [--json] [--sarif <path>]  Audit report; evidence bundle with a sha256 per artifact; SARIF 2.1.0 for code scanning
+  doctor [--json] [--fix] [target]             Self-diagnosis: Node, CLI, commit gate, stop hooks, rigor, constitution, specs
+  mcp                                          Model Context Protocol over stdio (a server, not a one-shot command)
+  help [command]                               This help, or the help of one command
+  init [target] [--agent <id>] [--level <l>] [--skills] [--mcp] [--write] [--json]  One-shot project bootstrap; "init <feature>" still creates a spec
+  status [feature] [--check] [--quiet] [--json] [--celebrations]  Whole state on one screen, with the next command to run
 Brownfield (existing code that is the de facto source of truth):
+  brownfield [survey|bootstrap|constitution|templates|specify|requirements|clarify|converge|analyze|impact|contracts|reuse|forecast|repair]  The brownfield console
   brownfield survey [target]                    Detect the stack, boundaries and evidence
   brownfield bootstrap [target] [--focus F] [--write]  One entry point: recon + constitution + module map + code intelligence + steps
+  brownfield constitution [target] [--write] [--draft]  Reverse-engineer the descriptive constitution
+  brownfield templates [target] [--write] [--json]  Brownfield requirement/design/task templates
+  brownfield specify <feature> "<descripción>" [--area A] [--write] [--json]  Derive EARS requirements from a description
+  brownfield requirements <feature> [--suggest] [--apply <i>] [--write] [--json]  EARS assistant over requirements.md
+  brownfield clarify <feature> [--max N] [--write] [--json]  Clarifying questions before specifying
+  brownfield converge <feature> [--write] [--json]  Convergence of the delta against the base
+  brownfield analyze <feature> [--base R] [--json]  Change impact of a feature
   brownfield impact <feature> [--base R]        Dependents, breaking changes, migrations, public API surface
   brownfield contracts <feature> [--write] [--verify]  The regression oracle: which tests protect the change
   brownfield reuse <feature> [--symbols A,B]    Search for existing symbols before creating new ones
-  status [feature] [--check] [--quiet] [--json] Whole state on one screen, with the next command to run
-  brownfield constitution [target] [--write]   Reverse-engineer the descriptive constitution
+  brownfield forecast "<descripción>" [--symbols A,B] [--json]  Expected blast radius before writing code
+  brownfield repair <feature> --target <artefacto> [--write] [--json]  Repair a failing artifact with evidence
+  delta [init|validate|status|render|merge]  The contract of change (brownfield: the delta, not the system)
   delta init <feature> "<title>"                Scaffold a delta spec (ADDED/MODIFIED/REMOVED/RENAMED)
   delta validate <feature>                      Validate ids, EARS, targets, contracts and traceability
   delta status <feature>                        Change counts, strangulation progress, traceability
+  delta render <feature>                        Render the delta spec
+  delta merge <feature> [--write]               Merge the delta into the base spec
 
 Experience layer (bilingual: --lang es|en, or OPEN_SDD_LANG):
   tour [target] [--write] [--lang es|en] [--json]  Guided first run: recon, constitution draft, check, status, delta
   context [feature] [--lang es|en] [--json]        The context pack the MCP server serves, in the terminal
 
 Adoption (the integration matrix and the importers):
-  integrate [host] [--write] [--json] [--dry-run]  Register the MCP server for a host and install its skills
+  integrate [host] [--write] [--json] [--dry-run]  Register the MCP server, install its skills and its Stop hook
   integrate --list                                 The whole matrix: skills layout, invocation syntax, MCP path, verified?
   import [kiro|spec-kit|cc-sdd] [--write] [--json] Map an incumbent's specs into .sdd (a mapping, never a promise)
   hosts: claude-code, cursor, copilot, codex, gemini-cli, windsurf, opencode, antigravity, zed, cline
+
+Daily drivers (read-only reports: none of these runs the gate chain):
+  gitflow [--level <l>] [--greenfield] [--json]  The branch's role and what that role requires
+  progress [--json] [--limit N]                 The append-only progress ledger
+  progress record --kind <tipo> --summary "<una línea>" --score <0..100> --phase <1|2|3> [--evidence <p>] [--json]  Record a milestone
+  backup [create|verify|restore]  The restorable backup of .sdd/ with a verifiable manifest
+  backup create [--out <dir>] [--force] [--json]  A restorable copy of .sdd/ with a sha256 per file
+  backup verify <archive> [--json]              Recompute every sha256 against the manifest
+  backup restore <archive> [--write] [--only <ruta>] [--json]  Restore; without --write it is a dry run
+  biography <feature> [--limit N] [--json]      The rhythm of a living specification (git, amendments, ratifications)
+  gap <feature> [--json]                        Blast radius and gap analysis
+  getspecs [focus] [--json]                     Reverse-engineer steering + roadmap + spec seeds
+  verify <feature> [--json]                     Standalone integration verification gate
+  impl <feature> [tasks] [--review required|inline|off]  Autonomous implementation with review
 
 Score (one number, one door):
   open-sdd                                    Inspect the repository: composite SDD score, phase and the ONE next action
@@ -401,6 +435,21 @@ const dispatchSubcommand = async (
   if (cmd === 'context') {
     return handleContextCommand(subArgv, io, targetCwd);
   }
+  // Superficie de lectura del día a día: el rol de la rama, el libro de progreso, el respaldo
+  // restaurable y la biografía de una especificación. Los cuatro SOLO informan: ninguno ejecuta la
+  // cadena de gates (por eso `runsGateChain` no los conoce) ni cambia de rama.
+  if (cmd === 'gitflow') {
+    return handleGitflowCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'progress') {
+    return handleProgressCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'backup') {
+    return handleBackupCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'biography') {
+    return handleBiographyCommand(subArgv, io, targetCwd);
+  }
   return undefined;
 };
 
@@ -437,6 +486,12 @@ export const runCli = async (
       // comando tiene que acordarse. `--json`, `--quiet` y `--no-footer` lo suprimen. Cuando el
       // comando acaba de ejecutar la cadena, el pie declara los gates NO MEDIDOS en vez de arriesgar
       // un «gates OK» que el propio comando desmiente.
+      //
+      // El pie NO se reescribe con `renderCelebrationFooter`/`levelFor` (`core/celebrate.ts`): ese
+      // render tiene OTRA forma (`nivel X · fase N/3 · score N/100 · racha: …`), la racha la aporta
+      // el trinquete —que aquí no se ejecuta— y sustituir la línea `SDD n% · Fase n · …` rompería un
+      // contrato ya fijado por `cliJsonOut`/`cliSddScore`. La celebración vive donde SÍ hay veredicto
+      // medido: `status --check` la imprime antes de este pie.
       await emitScoreFooter(
         argv,
         io,

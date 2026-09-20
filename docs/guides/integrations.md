@@ -1,11 +1,13 @@
 # Integrations
 
-> Verification status: the snippets for **Copilot** (VS Code surface), **OpenCode** and **Zed**
-> were checked against those hosts' own documentation and each carries the URL it was checked against
-> (see the matrix in `tools/open-sdd/src/core/integrations.ts`). **Antigravity** is verified only in part:
-> its documented paths are real, but its documentation is JavaScript-rendered and the entry shape could
-> not be confirmed, so `--write` still refuses to touch its configuration. `open-sdd integrate --list`
-> is the live source of truth.
+> Verification status: **all four** hosts whose shape needed its own documentation — **Copilot**
+> (VS Code surface), **OpenCode**, **Zed** and **Google Antigravity** — were checked against those
+> hosts' own documentation, and each carries the URL it was checked against (see the matrix in
+> `tools/open-sdd/src/core/integrations.ts`). Antigravity's page is JavaScript-rendered, but the page
+> advertises a Markdown sibling (`https://antigravity.google/docs/mcp.md`, the target of its own
+> `View Markdown` link) which documents the entry shape: a single top-level `mcpServers` object with
+> `command` (string) + `args` (array) for stdio. `open-sdd integrate --list` is the live source of
+> truth.
 
 Open-SDD installs into the host you already use. This guide is the human face of the
 machine-checked matrix in `tools/open-sdd/src/core/integrations.ts`: one section per host with how
@@ -39,15 +41,17 @@ pretending it was detected. An explicit host always wins.
 | Gemini CLI | `gemini-cli` | `.gemini/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.gemini/settings.json` | **yes** |
 | Windsurf | `windsurf` | `.windsurf/skills/sdd-*/SKILL.md` | `@sdd-brownfield` | `~/.codeium/windsurf/mcp_config.json` | **yes** |
 | OpenCode | `opencode` | `.opencode/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `opencode.json` | yes |
-| Google Antigravity | `antigravity` | `.agent/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `~/.gemini/config/mcp_config.json` (global), `.agents/mcp_config.json` (workspace) | paths verified, entry shape NOT |
+| Google Antigravity | `antigravity` | `.agent/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.agents/mcp_config.json` (workspace), `~/.gemini/config/mcp_config.json` (global) | **yes** |
 | Zed | `zed` | `AGENTS.md` | `@AGENTS.md run the sdd-brownfield workflow` | Zed `settings.json` | yes |
 | Cline | `cline` | `.clinerules/sdd-*.md` | `@.clinerules/sdd-brownfield.md` | `cline_mcp_settings.json` | **yes** |
 
 **Verified** means the snippet shape (and the file the tool writes) is one this project is confident
-about, and the `notes` in the matrix say how we know. **No** means it is not confirmed: the CLI
-prints it as **NO VERIFICADO**, `--write` refuses to touch that config file, and you paste the
-snippet yourself after checking it against the host's own documentation. A snippet that looks right
-and is wrong is worse than an acknowledged gap.
+about, and the `notes` in the matrix say how we know. Every host in the shipped matrix is verified
+today, so `open-sdd integrate --list` prints no **NO VERIFICADA** row — the legend stays because the
+rule still governs any host added later. **No** means not confirmed: the CLI prints it as
+**NO VERIFICADO**, `--write` refuses to touch that config file, and you paste the snippet yourself
+after checking it against the host's own documentation. A snippet that looks right and is wrong is
+worse than an acknowledged gap.
 
 ## How installation works
 
@@ -316,9 +320,13 @@ Windsurf documents MCP in a user-level file, so `--write` writes outside the rep
 - **What gets written:** `.agent/skills/sdd-*/SKILL.md`, `.sdd/settings/`, `AGENTS.md`.
   Detection markers: `.agent/`, `.agent/skills/`, `.agent/rules/`.
 - **Invocation in chat:** `/sdd-brownfield`.
-- **MCP registration (NOT verified, no path).** No documented MCP configuration path is known to
-  this project, so the matrix declares none and `--write` writes nothing. Configure the server from
-  the host's own interface and paste the entry there. The best-known shape, unverified:
+- **MCP registration (VERIFIED), workspace `.agents/mcp_config.json` and global
+  `~/.gemini/config/mcp_config.json`.** The file holds a single top-level `mcpServers` object, one
+  entry per server, and a stdio entry carries a STRING `command` plus an `args` ARRAY (optional
+  `env`, `cwd`, `disabled`, `disabledTools`). Remote entries use `serverUrl` — legacy `url`/`httpUrl`
+  are explicitly unsupported. `--write` merges into the workspace file; checked against
+  `https://antigravity.google/docs/mcp` and its Markdown sibling
+  `https://antigravity.google/docs/mcp.md`:
 
 ```json
 {
@@ -331,8 +339,10 @@ Windsurf documents MCP in a user-level file, so `--write` writes outside the rep
 }
 ```
 
+- **Also available:** the Interactive MCP Manager (`/mcp` in the prompt) shows live server status, and
+  `Manage MCP Servers` → `View raw config` opens the same `mcp_config.json`.
 - **Verify:** `open-sdd doctor`, then `/sdd-help` in the chat.
-- **Uninstall:** `rm -rf .agent/skills/sdd-*` and remove any entry you added by hand.
+- **Uninstall:** `rm -rf .agent/skills/sdd-*` and delete the `open-sdd` key from `mcp_config.json`.
 
 ## Zed
 

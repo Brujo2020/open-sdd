@@ -29,8 +29,11 @@
  *   • Zed: `context_servers` in `settings.json` with a STRING `command` and a sibling `args` array
  *     (verified against the Zed docs; an earlier guess nested `{ path, args }` inside `command`).
  *   • Antigravity: the two config PATHS are verified (`~/.gemini/config/mcp_config.json` global and
- *     `.agents/mcp_config.json` workspace) but the docs page is JS-rendered and did not yield the
- *     inner entry shape, so the snippet stays `verified: false`.
+ *     `.agents/mcp_config.json` workspace) AND the inner entry shape is now verified too: the page's
+ *     advertised Markdown sibling (`https://antigravity.google/docs/mcp.md`, the `View Markdown`
+ *     target the rendered page itself links to) documents a single top-level `mcpServers` object whose
+ *     stdio entries carry `command` (string) + `args` (array), so it joins the `mcpServers` family and
+ *     uses the same snippet as Claude Code. Remote entries use `serverUrl`, not `url`/`httpUrl`.
  */
 
 import { stat } from 'node:fs/promises';
@@ -260,9 +263,11 @@ export const HOST_INTEGRATIONS: HostIntegration[] = [
     skills: { layout: '.agent/skills/sdd-*/SKILL.md', mode: 'skills' },
     invocation: '/sdd-brownfield',
     mcp: {
-      // The two documented paths are known; the INNER ENTRY SHAPE is not, so the snippet stays
-      // unverified. The workspace path is the one declared here (it is the repo-local one, matching
-      // the `.agents/` markers); the global path is recorded in the notes.
+      // The two documented paths are known AND the inner entry shape is now verified: the page's
+      // advertised Markdown sibling documents a single top-level `mcpServers` object with
+      // `command` (string) + `args` (array) for stdio entries, so it joins that family. The workspace
+      // path is the one declared here (it is the repo-local one, matching the `.agents/` markers);
+      // the global path is recorded in the notes.
       configPaths: {
         linux: '.agents/mcp_config.json',
         darwin: '.agents/mcp_config.json',
@@ -270,13 +275,14 @@ export const HOST_INTEGRATIONS: HostIntegration[] = [
       },
       snippetFormat: 'json',
       snippet: mcpServersSnippet,
-      verified: false,
+      verified: true,
       docUrl: DOC_ANTIGRAVITY,
     },
     detect: ['.agent/', '.agent/skills/', '.agent/rules/'],
     notes: [
-      'RUTAS VERIFICADAS (contra https://antigravity.google/docs/mcp): global `~/.gemini/config/mcp_config.json` (en Windows `%USERPROFILE%\\.gemini\\config\\mcp_config.json`) y de espacio de trabajo `.agents/mcp_config.json`. La matriz declara la de espacio de trabajo como `configPath`.',
-      'FORMA DE LA ENTRADA NO CONFIRMADA: la página oficial se renderiza con JavaScript y su sección "MCP Configuration Structure" no expone la clave ni la estructura en una lectura simple, así que el snippet NO se presenta como un hecho y `--write` NO lo escribe. Para ver la forma exacta que genera el anfitrión, usa el Gestor MCP interactivo (`/mcp` en el prompt) → `View raw config`.',
+      'Forma VERIFICADA (contra el Markdown que la propia página anuncia en `View Markdown`): `https://antigravity.google/docs/mcp.md` documenta un ÚNICO objeto de primer nivel `mcpServers` con una entrada por servidor; para stdio, `command` es una CADENA y `args` un ARRAY (`{"command":"node","args":["<cli>","mcp"]}`), opcionalmente con `env`, `cwd`, `disabled` y `disabledTools`. Es la misma familia que Claude Code/Cursor, así que el snippet es el `mcpServersSnippet` compartido. Documentación: https://antigravity.google/docs/mcp.',
+      'Rutas VERIFICADAS: global `~/.gemini/config/mcp_config.json` (en Windows `%USERPROFILE%\\.gemini\\config\\mcp_config.json`) y de espacio de trabajo `.agents/mcp_config.json`. La matriz declara la de espacio de trabajo como `configPath`, que es la única que `--write` puede fusionar sin adivinar el home del usuario.',
+      'Conexiones remotas: el campo documentado es `serverUrl`; `url` y `httpUrl` quedan explícitamente NO soportados. Nuestro servidor es stdio, así que el snippet no emite ninguno de los tres.',
       'El layout de skills sí está verificado por el instalador de este repositorio: `.agent/skills/sdd-*/SKILL.md` (bandera `--antigravity-skills`).',
     ],
   },

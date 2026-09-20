@@ -42,6 +42,7 @@ import { colors } from '../cli/ui/colors.js';
 import { parseConstitution, principlesInForce, validateConstitution } from './constitution.js';
 import { DEFAULT_RIGOR_LEVEL, RIGOR_LEVELS, effectiveGates, isRigorLevel, resolveRigorSettings, } from './rigor.js';
 import { resolveSddDir } from './specManager.js';
+import { STOP_HOOKS, STOP_HOOK_GATE_ARGS, installStopHook } from './stopHook.js';
 import { evaluateTriad } from './triad.js';
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 /** Rango asumido cuando ningún manifiesto declara `engines.node`. */
@@ -802,6 +803,62 @@ const checkEnvironment = (cwd, sddDir, repoRoot) => {
 // ---------------------------------------------------------------------------------------------
 // API pública
 // ---------------------------------------------------------------------------------------------
+/**
+ * Estado de los Stop hooks, SIN escribir nada: se reutiliza `installStopHook` en modo plan, que es
+ * el mismo código que los instala, así que «instalado» significa exactamente lo que significará
+ * cuando `integrate --write` corra. Solo se recorren los anfitriones VERIFICADOS (`STOP_HOOKS`):
+ * para el resto no se reporta nada, porque no hay mecanismo que comprobar.
+ *
+ * Un `refused` de un anfitrión verificado (configuración ilegible o con forma inesperada) se reporta
+ * como no instalado con su motivo; nunca se aprueba lo que no se pudo comprobar.
+ *
+ * La PRESENCIA se comprueba por estructura, no por identidad byte a byte: un hook que ejecuta la
+ * MISMA invocación del gate (`STOP_HOOK_GATE_ARGS`) desde otra ruta del CLI está instalado, y decir
+ * lo contrario sería un falso negativo por una diferencia que no cambia el comportamiento. El
+ * `action` del instalador se conserva para poder decir qué haría `integrate --write`.
+ */
+const inspectStopHooks = async (cwd) => {
+    const cliPath = (await resolveCliExecutable(cwd)) ?? '<ruta-al-cli-open-sdd>';
+    const reports = [];
+    for (const hook of STOP_HOOKS) {
+        const install = await installStopHook({ cwd, host: hook.host, cliPath, write: false });
+        const relative = install.path.length > 0 ? path.relative(cwd, install.path) || install.path : '(sin ruta)';
+        let present = false;
+        if (install.path.length > 0) {
+            const raw = await readFile(install.path, 'utf8').catch(() => null);
+            if (raw !== null) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    const stop = parsed?.hooks?.Stop;
+                    if (Array.isArray(stop)) {
+                        present = stop.some((entry) => {
+                            const serialized = JSON.stringify(entry);
+                            return STOP_HOOK_GATE_ARGS.every((arg) => serialized.includes(arg));
+                        });
+                    }
+                }
+                catch {
+                    // Un JSON inválido ya lo declara `install.reason`; aquí solo significa «no comprobado».
+                }
+            }
+        }
+        const installed = present || install.action === 'keep';
+        reports.push({
+            host: hook.host,
+            path: install.path,
+            installed,
+            action: install.action,
+            detail: installed
+                ? install.action === 'keep'
+                    ? `instalado e idéntico en ${relative}.`
+                    : `instalado en ${relative} (ejecuta la misma invocación del gate; --write lo dejaría idéntico).`
+                : install.action === 'refused'
+                    ? `no se pudo comprobar en ${relative}: ${install.reason}`
+                    : `no instalado en ${relative}: ${install.reason}`,
+        });
+    }
+    return reports;
+};
 const computeDoctor = async (cwd, options = {}) => {
     const platform = options.platform ?? process.platform;
     const sddDir = options.sddDir ?? (await resolveSddDir(cwd));
@@ -810,6 +867,7 @@ const computeDoctor = async (cwd, options = {}) => {
     const hook = await checkHook(cwd, platform);
     const settings = await checkSettings(cwd, sddDir);
     const portability = await checkHookPortability(cwd, platform, hook);
+    const stopHooks = await inspectStopHooks(cwd);
     const checks = [
         await checkNode(cwd, options.manifestPaths),
         await checkCli(cwd),
@@ -833,6 +891,7 @@ const computeDoctor = async (cwd, options = {}) => {
             ok,
             counts,
             detail: `Diagnóstico de ${cwd}: ${counts.ok} ok · ${counts.warn} aviso(s) · ${counts.fail} fallo(s) — ${ok ? 'sin fallos' : 'hay fallos que bloquean'}.`,
+            stopHooks,
         },
         facts: {
             sddDir,
@@ -856,6 +915,15 @@ export const renderDoctor = (report) => {
         lines.push(`${mark[check.status]} [${check.status.padEnd(4)}] ${check.label}: ${check.detail}`);
         if (check.status !== 'ok' && check.fix)
             lines.push(`      fix: ${check.fix}`);
+    }
+    if (report.stopHooks && report.stopHooks.length > 0) {
+        lines.push('');
+        lines.push('Stop hooks (el veredicto del gate dentro del bucle del agente; solo anfitriones verificados):');
+        for (const hook of report.stopHooks) {
+            lines.push(`${hook.installed ? '✓' : '!'} [${hook.installed ? 'ok' : 'warn'}] ${hook.host}: ${hook.detail}`);
+            if (!hook.installed)
+                lines.push(`      fix: open-sdd integrate ${hook.host} --write`);
+        }
     }
     lines.push('');
     const failed = report.checks.filter((check) => check.status === 'fail');
@@ -955,6 +1023,15 @@ export const handleDoctorCommand = async (args, io, cwd = process.cwd()) => {
             io.log(colors.dim(`      fix: ${check.fix}`));
     }
     io.log('');
+    if (computed.report.stopHooks && computed.report.stopHooks.length > 0) {
+        io.log(colors.bold(colors.cyan('Stop hooks (el gate dentro del bucle del agente; solo anfitriones verificados):')));
+        for (const hook of computed.report.stopHooks) {
+            io.log(`${hook.installed ? colors.green('✓') : colors.yellow('!')} ${colors.bold(hook.host)}: ${hook.detail}`);
+            if (!hook.installed)
+                io.log(colors.dim(`      fix: open-sdd integrate ${hook.host} --write`));
+        }
+        io.log('');
+    }
     if (repaired.length > 0) {
         io.log(colors.bold(colors.cyan('Reparaciones de --fix (solo seguras e idempotentes):')));
         for (const item of repaired)

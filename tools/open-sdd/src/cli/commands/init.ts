@@ -53,6 +53,7 @@ import {
   mcpRegistration,
   type HostIntegration,
 } from '../../core/integrations.js';
+import { installStopHook, stopHookFor } from '../../core/stopHook.js';
 import {
   COMMAND_TEMPLATE_IDS,
   commandHostById,
@@ -1095,9 +1096,13 @@ const HOST_SKILL_AGENT: Record<string, AgentType | undefined> = {
 };
 
 export interface IntegrateArtifact {
-  kind: 'mcp-config' | 'agent-skills';
+  kind: 'mcp-config' | 'agent-skills' | 'stop-hook';
   path: string;
-  action: 'create' | 'update' | 'keep';
+  /**
+   * `refused` es un veredicto de primera clase: un anfitrión sin mecanismo Stop verificado NO recibe
+   * un hook inventado, y esa negativa viaja en el informe en vez de desaparecer.
+   */
+  action: 'create' | 'update' | 'keep' | 'refused';
   reason: string;
   verified: boolean;
 }
@@ -1374,10 +1379,26 @@ export const planIntegrate = async (input: PlanIntegrateInput): Promise<Integrat
     });
   }
 
+  // ── Stop hook: el veredicto del gate de commit, dentro del bucle del agente ─────────────────
+  // Misma disciplina que el registro MCP: se calcula SIN escribir (`write: false`) para que el plan
+  // y la escritura no puedan divergir, y un anfitrión sin mecanismo Stop verificado se reporta
+  // `refused` con su motivo —nunca se emite un hook inventado—. El propio `installStopHook` decide.
+  const stopHook = await installStopHook({ cwd, host: host.id, cliPath, write: false });
+  artifacts.push({
+    kind: 'stop-hook',
+    path: stopHook.path.length > 0 ? path.relative(cwd, stopHook.path) || stopHook.path : '(sin mecanismo Stop verificado)',
+    action: stopHook.action,
+    reason: stopHook.reason,
+    verified: stopHook.action !== 'refused',
+  });
+
   const steps: string[] = [
     `1. En el chat de ${host.label}, escribe exactamente: ${host.invocation}`,
     `2. Comprueba la instalación: \`open-sdd doctor\``,
     `3. Registro MCP: ${merge.path ?? '(sin ruta documentada)'} — ${merge.verified ? 'forma verificada' : 'forma NO VERIFICADA'}`,
+    stopHook.action === 'refused'
+      ? `4. Stop hook: NO se instala para ${host.id} — ${stopHook.reason}`
+      : `4. Stop hook: ${stopHook.action} en ${stopHook.path} — el agente no podrá declarar «terminado» mientras el gate de commit falle.`,
   ];
   if (source === 'defecto') {
     steps.push(
@@ -1468,6 +1489,32 @@ export const applyIntegrate = async (plan: IntegratePlan, cwd: string): Promise<
   } else if (skillsArtifact) {
     outcome.kept.push(skillsArtifact.path);
     outcome.details.push(skillsArtifact.reason);
+  }
+
+  // ── Stop hook: se instala (o se conserva) con la misma disciplina que el MCP ────────────────
+  // `refused` NO es un fallo del comando: es la negativa deliberada a emitir un mecanismo no
+  // verificado para ese anfitrión, y su motivo entra en el informe como detalle. Un anfitrión
+  // verificado cuya configuración no se pudo leer SÍ es un fallo, porque entonces el hook no quedó
+  // instalado y el usuario tiene que enterarse.
+  const stopArtifact = plan.artifacts.find((artifact) => artifact.kind === 'stop-hook');
+  if (stopArtifact) {
+    const stop = await installStopHook({ cwd, host: plan.host.id, cliPath: plan.cliPath, write: true });
+    if (stop.action === 'refused') {
+      outcome.kept.push(stopArtifact.path);
+      outcome.details.push(`stop hook NO instalado: ${stop.reason}`);
+      // Un anfitrión SIN mecanismo verificado se rechaza a propósito (detalle, no fallo). Un
+      // anfitrión verificado que se rechaza es que su configuración no se pudo leer o no tiene la
+      // forma documentada: entonces el hook NO quedó instalado y eso sí es un fallo que reportar.
+      if (stopHookFor(plan.host.id)) {
+        outcome.failures.push(`no se pudo instalar el Stop hook de ${plan.host.id}: ${stop.reason}`);
+      }
+    } else if (stop.action === 'keep') {
+      outcome.kept.push(stopArtifact.path);
+      outcome.details.push(stop.reason);
+    } else {
+      outcome.written.push(stopArtifact.path);
+      outcome.details.push(stop.reason);
+    }
   }
 
   return outcome;

@@ -163,19 +163,42 @@ describe('integrations — MCP registration is real or declared unverified', () 
     expect(registration.content).toContain('args = ["/opt/open-sdd/dist/cli.js", "mcp"]');
   });
 
-  it('an unverified host is marked `verified:false`, printed as NO VERIFICADO and never written', async () => {
+  it('a host whose shape is unverified is marked `verified:false`, printed as NO VERIFICADO and never written', async () => {
+    // Every host in the shipped matrix is verified today, so the refusal path is exercised with a
+    // synthetic unverified row pushed for the duration of the test and popped in `finally`. The
+    // behaviour under test is what a FUTURE unverified host gets, not any current host's status.
     const dir = await makeRoot();
-    const registration = mcpRegistration('antigravity', { cliPath: '/opt/open-sdd/dist/cli.js' });
-    expect(registration.verified).toBe(false);
+    const synthetic = {
+      id: 'unverified-fixture',
+      label: 'Unverified Fixture',
+      skills: { layout: '.fixture/skills/sdd-*/SKILL.md', mode: 'skills' as const },
+      invocation: '/sdd-brownfield',
+      mcp: {
+        configPaths: { linux: '.fixture/mcp.json', darwin: '.fixture/mcp.json', win32: '.fixture/mcp.json' },
+        snippetFormat: 'json' as const,
+        snippet: (cliPath: string) =>
+          `${JSON.stringify({ mcpServers: { 'open-sdd': { command: 'node', args: [cliPath, 'mcp'] } } }, null, 2)}\n`,
+        verified: false,
+      },
+      detect: ['.fixture/'],
+      notes: ['fixture: forma deliberadamente no verificada'],
+    };
+    HOST_INTEGRATIONS.push(synthetic);
+    try {
+      const registration = mcpRegistration('unverified-fixture', { cliPath: '/opt/open-sdd/dist/cli.js' });
+      expect(registration.verified).toBe(false);
 
-    const plan = await planIntegrate({ cwd: dir, host: 'antigravity' });
-    expect(plan.mcp.verified).toBe(false);
-    expect(plan.artifacts.find((artifact) => artifact.kind === 'mcp-config')?.action).toBe('keep');
+      const plan = await planIntegrate({ cwd: dir, host: 'unverified-fixture' });
+      expect(plan.mcp.verified).toBe(false);
+      expect(plan.artifacts.find((artifact) => artifact.kind === 'mcp-config')?.action).toBe('keep');
 
-    const ctx = makeIO();
-    expect(await handleIntegrateCommand(['antigravity'], ctx.io, dir)).toBe(0);
-    expect(ctx.text()).toContain('NO VERIFICADO');
-    expect(ctx.text()).toContain('no se escribe automáticamente');
+      const ctx = makeIO();
+      expect(await handleIntegrateCommand(['unverified-fixture'], ctx.io, dir)).toBe(0);
+      expect(ctx.text()).toContain('NO VERIFICADO');
+      expect(ctx.text()).toContain('no se escribe automáticamente');
+    } finally {
+      HOST_INTEGRATIONS.pop();
+    }
   });
 
   it('copilot (VS Code surface) is verified: `servers` object, `type: "stdio"`, STRING command + args array', () => {
@@ -242,19 +265,41 @@ describe('integrations — MCP registration is real or declared unverified', () 
     expect(entry.args).toEqual([cliPath, 'mcp']);
   });
 
-  it('antigravity records its two verified paths but keeps the entry shape unconfirmed', () => {
+  it('antigravity is verified: `mcpServers` object with STRING command + args array, per the docs Markdown sibling', () => {
+    const cliPath = '/opt/open-sdd/dist/cli.js';
     const host = integrationById('antigravity')!;
-    expect(host.mcp.verified).toBe(false);
-    expect(host.mcp.docUrl).toBe('https://antigravity.google/docs/mcp');
+    const registration = mcpRegistration('antigravity', { cliPath });
 
-    // Both documented paths are recorded; the entry shape is explicitly not.
+    expect(registration.verified).toBe(true);
+    expect(registration.path).toBe('.agents/mcp_config.json');
+    expect(host.mcp.docUrl).toBe('https://antigravity.google/docs/mcp');
+    expect(registration.content).toContain('"mcpServers"');
+
+    const parsed = JSON.parse(registration.content) as {
+      mcpServers: Record<string, { command: unknown; args: unknown }>;
+    };
+    const entry = parsed.mcpServers['open-sdd'];
+    expect(typeof entry.command).toBe('string');
+    expect(entry.command).toBe('node');
+    expect(Array.isArray(entry.args)).toBe(true);
+    expect(entry.args).toEqual([cliPath, 'mcp']);
+
+    // Both documented paths are recorded, and the note names the field a remote entry would use.
     expect(host.mcp.configPaths.linux).toBe('.agents/mcp_config.json');
     const notes = host.notes.join(' ');
     expect(notes).toContain('~/.gemini/config/mcp_config.json');
     expect(notes).toContain('.agents/mcp_config.json');
-    expect(notes).toContain('NO CONFIRMADA');
-    expect(notes).toContain('/mcp');
-    expect(notes).toContain('View raw config');
+    expect(notes).toContain('serverUrl');
+    expect(notes).toContain('docs/mcp.md');
+  });
+
+  it('every host in the shipped matrix carries a verified MCP shape', () => {
+    const unverified = HOST_INTEGRATIONS.filter((host) => !host.mcp.verified).map((host) => host.id);
+    expect(unverified).toEqual([]);
+    // A docUrl, when present, is the page a reader can re-fetch; it must be a real https URL.
+    for (const host of HOST_INTEGRATIONS.filter((entry) => entry.mcp.docUrl !== undefined)) {
+      expect(host.mcp.docUrl, `docUrl of ${host.id}`).toMatch(/^https:\/\/\S+$/);
+    }
   });
 
   it('an unknown id never yields a plausible-looking snippet', () => {
