@@ -70,6 +70,46 @@ What the install writes, in general:
 - `.sdd/steering/` and `.sdd/specs/` are **not** created by the install — they are project memory
   and specs you author afterwards.
 
+## Two paths: prompt templates (default) and MCP (opt-in)
+
+There are two ways to give the host the open-sdd workflow, and they are not equivalent:
+
+| Path | Command | What you get |
+|---|---|---|
+| **Templates only — default, works anywhere** | `open-sdd init . --write` | The 22 prompt templates in the host's commands directory. Each one points at the real engine (`open-sdd status --json`, `open-sdd brownfield analyze <feature> --json`, `open-sdd delta validate <feature> --json`, `open-sdd gates run`, …) instead of describing what it would do. No MCP, no network, nothing a security policy can block. |
+| **Templates + MCP — opt-in, richer** | `open-sdd init . --write --mcp` (or `open-sdd integrate <host> --write`) | Everything above **plus** the MCP server registration, so the host can call the engine directly instead of shelling out. |
+
+MCP is opt-in because it is not universally available: some hosts do not implement it, and some
+security policies block or allow-list it. The default path must work on every host and under every
+policy, so it does not depend on MCP at all. `open-sdd integrate <host> --write` still registers MCP
+and installs the skills for one host; `init --write` is the project-wide default.
+
+The prompt templates live in the host's own convention, and only **verified** conventions are
+written:
+
+| Host | Commands directory | File | Verified |
+|---|---|---|---|
+| Claude Code | `.claude/commands/` | `sdd-<id>.md` | yes |
+| Cursor | `.cursor/commands/` | `sdd-<id>.md` | yes |
+| GitHub Copilot | `.github/prompts/` | `sdd-<id>.prompt.md` | yes |
+| Gemini CLI | `.gemini/commands/` | `sdd-<id>.toml` | yes |
+| OpenCode | `.opencode/commands/` | `sdd-<id>.md` | yes |
+| Codex CLI | `.codex/prompts/` (declared) | `sdd-<id>.md` | **NO** — Codex no longer loads that directory |
+| Windsurf | `.windsurf/workflows/` (declared) | `sdd-<id>.md` | **NO** — docs redirect; layout not re-confirmed |
+| Qwen Code | `.qwen/commands/` (declared) | `sdd-<id>.toml` | **NO** — fork format not re-confirmed |
+| Antigravity | `.agent/workflows/` (declared) | `sdd-<id>.md` | **NO** — no readable documentation page |
+| Zed | none | — | **NO** — Zed has no `/` commands; it uses file mentions |
+| Cline | none | — | **NO** — Cline steers customization to Skills |
+
+An unverified host is printed as **NO VERIFICADA** and `--write` refuses to write into it, exactly as
+the MCP matrix refuses an unverified snippet. The source of truth for this table is
+`tools/open-sdd/src/core/commandTemplates.ts`; the MCP matrix is
+`tools/open-sdd/src/core/integrations.ts`.
+
+Templates are idempotent and never overwrite a human edit: each artifact carries a sha256 signature
+of the body it was generated from, so a second run reports `keep`, an unedited older template is
+refreshed (`update`), and an edited template is reported `keep` with the reason.
+
 ## How to verify any install
 
 ```bash
