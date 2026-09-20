@@ -2,7 +2,7 @@
 id: constitution
 description: Establish, amend or ratify the project constitution that every other open-sdd command cites as authority.
 writes:
-  - ".sdd/steering/constitution.md"
+  - ".sdd/steering/constitution.draft.md"
   - ".sdd/settings/constitution/"
   - ".sdd/settings/extensions.yml"
 mustNotTouch:
@@ -26,14 +26,15 @@ moves:
   - constitution
 commands:
   - "open-sdd brownfield survey ."
-  - "open-sdd brownfield constitution . --draft"
-  - "open-sdd brownfield constitution . --write"
+  - "open-sdd brownfield constitution . --draft --write"
+  - "open-sdd brownfield constitution . --interview --answers <path> --write"
+  - "open-sdd govern constitution --ratify --by \"<name>\" --rationale \"<reason>\" --write"
   - "open-sdd status --json"
   - "open-sdd status --check --json"
 scripts:
   - "open-sdd brownfield survey ."
-  - "open-sdd brownfield constitution . --draft"
-  - "open-sdd status --json"
+  - "open-sdd brownfield constitution . --draft --write"
+  - "open-sdd govern constitution --ratify --by \"<name>\" --rationale \"<reason>\" --write"
 ---
 
 # Constitution — the project's ratified authority
@@ -98,19 +99,31 @@ open-sdd brownfield constitution . --draft
    - **Open questions** — the decisions no instrument can answer. Ask the human; do not answer for them.
 4. Ask **only** the questions a human must decide. For each, offer the evidence and the consequence of
    each option. Never fabricate a decision to keep moving.
-5. Write the draft to `.sdd/steering/constitution.md`. When the repository has code, prefer the
-   engine's own derived document:
+5. Write the draft. The engine writes it to `.sdd/steering/constitution.draft.md` and **never** to
+   `constitution.md`; if an in-force document already exists it is left untouched:
 
 ```bash
-open-sdd brownfield constitution . --write
+open-sdd brownfield constitution . --draft --write
 ```
 
-Then edit it — the engine writes structure and evidence, the human writes intent.
-6. Mark the document's ratification state at the top. A draft is `Status: DRAFT`; a ratified
-   constitution is `Status: RATIFIED` with the ratifying human named. **An unratified draft has no
-   authority**: no gate may cite it and no blocking verdict may rest on it.
-7. Record who ratifies and what changed. Ratification is a human act performed outside this command;
-   this command prepares the document and the diff, it does not ratify itself.
+   When the draft leaves questions a human must answer, use the interview cycle instead — it applies
+   the answers and re-validates the produced text:
+
+```bash
+open-sdd brownfield constitution . --interview --answers <path> --write
+```
+
+6. **Hand over.** Ask the human to ratify, and give them the exact command. Do not run it for them:
+   only a named person with a non-empty rationale can promote the draft, and the draft is consumed in
+   the process so it cannot silently re-ratify old text later:
+
+```bash
+open-sdd govern constitution --ratify --by "<name>" --rationale "<reason>" --write
+```
+
+7. A draft carries `Status: DRAFT`; a ratified constitution carries `Status: RATIFIED` with the
+   ratifying human named. **An unratified draft has no authority**: no gate may cite it and no
+   blocking verdict may rest on it.
 
 ## The constitution is the pivot
 
