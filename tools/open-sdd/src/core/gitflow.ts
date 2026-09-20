@@ -431,6 +431,7 @@ export const branchPolicy = (
           'Rol main: pivote de fusiones, no de trabajo. El pivote debe pasar la cadena completa, pero hoy nada impide un commit directo en main.',
       };
 
+    // Razón de la política de develop: es la rama de INTEGRACIÓN —exige el pivote verde y la integración de las features, pero NO el paquete de release (versión/changelog/bundle)—, y por eso difiere de feature.
     case 'develop':
       return {
         role: 'develop',

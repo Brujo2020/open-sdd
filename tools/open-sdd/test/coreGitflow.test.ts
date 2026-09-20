@@ -6,7 +6,7 @@
  * desechables, nunca contra el checkout.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -19,6 +19,11 @@ import {
 } from '../src/core/gitflow.js';
 
 const temps: string[] = [];
+
+// Cada fixture es un `git init` real y la suite completa corre 122 archivos en paralelo: bajo esa
+// contención, un `git init` puede tardar segundos. El timeout por defecto de 5 s convertiría la
+// carga de la máquina en un rojo falso, así que aquí se mide el test, no la contención.
+vi.setConfig({ testTimeout: 30_000 });
 
 const run = (cwd: string, args: string[]): void => {
   execFileSync('git', args, { cwd, stdio: 'pipe' });
@@ -241,6 +246,13 @@ describe('branchPolicy — el rol decide qué se exige', () => {
     expect(develop.role).toBe('develop');
     expect(new Set(develop.required)).not.toEqual(new Set(feature.required));
     expect(develop.required.join('\n')).toContain('integración');
+    // El título promete el pivote y una frontera con release: se fijan ambos, porque «difiere de
+    // feature» por sí solo lo cumpliría hasta una política que cargara el paquete de release encima.
+    const required = develop.required.join('\n');
+    expect(required).toContain('pivote');
+    expect(required).toContain('gates run');
+    expect(required).not.toContain('bundle de auditoría');
+    expect(required).not.toContain('CHANGELOG');
   });
 
   it('el nivel de rigor decide los gates de una rama de cambio', async () => {

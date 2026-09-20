@@ -116,7 +116,8 @@ repository**.
 | Goal | Command | Writes |
 |---|---|---|
 | Agent skills + settings | `open-sdd --claude-skills -y` | `.sdd/settings/`, the agent's skill directory, the agent documentation file |
-| Project scaffold (rigor + commit gate) | `open-sdd init . --agent claude-code-skills --write` | `.sdd/settings/rigor.json`, `.git/hooks/pre-commit` |
+| Project scaffold (templates + rigor + commit gate) | `open-sdd init . --agent claude-code-skills --write` | the host's **prompt templates**, `.sdd/settings/rigor.json`, `.git/hooks/pre-commit` |
+| Project scaffold + MCP (opt-in) | `open-sdd init . --agent claude-code-skills --write --mcp` | everything above **plus** the host's MCP server registration |
 | Commit gate + PR workflow | `open-sdd floor install . --ci` | `.git/hooks/pre-commit`, `.github/workflows/open-sdd-gates.yml` |
 
 Known agent flags include `--claude-skills`, `--codex-skills`, `--cursor-skills`,
@@ -124,6 +125,34 @@ Known agent flags include `--claude-skills`, `--codex-skills`, `--cursor-skills`
 `--antigravity`. The full table (ids, aliases, install directories) is the README's
 [Supported host agents](../README.md) section and
 `tools/open-sdd/src/agents/registry.ts`.
+
+### Two paths: prompt templates (default) or templates + MCP (opt-in)
+
+`open-sdd init . --write` installs the **prompt templates** for the host it detected. That is the
+default because it works anywhere: the templates are plain files in the directory the host already
+reads, they need no network, and no security policy can block them. Each template points at the real
+engine (`open-sdd status --json`, `open-sdd delta validate <feature> --json`, …) instead of guessing.
+
+| Path | Command | What you get |
+|---|---|---|
+| **Templates only — default, works anywhere** | `open-sdd init . --write` | The 22 prompt templates in the host's commands directory — `/sdd-onboard`, `/sdd-constitution`, `/sdd-specify`, `/sdd-plan`, `/sdd-tasks`, `/sdd-implement`, `/sdd-analyze`, `/sdd-converge`, `/sdd-release`, and the rest. No MCP, no network, nothing a security policy can block. |
+| **Templates + MCP — opt-in, richer** | `open-sdd init . --write --mcp` | Everything above **plus** the MCP server registration, so the host can call the engine directly instead of shelling out. `open-sdd integrate <host> --write` is the host-by-host equivalent. |
+
+MCP is **opt-in** because it is not universally available: some hosts do not implement it, and some
+security policies block or allow-list it. The default path must work on every host and under every
+policy, so it does not depend on MCP at all.
+
+The template install is idempotent and never overwrites a file you edited. Every artifact carries a
+sha256 signature of the body it was generated from: a second `init --write` reports `keep`, an
+unedited older template is refreshed (`update`), and an edited template is reported `keep` with the
+reason instead of being replaced. A host whose prompt-template convention is **not verified** (Codex
+CLI, Windsurf, Qwen Code, Antigravity, Zed, Cline) is marked `NO VERIFICADA` and `--write` refuses to
+write into it — the same rule the MCP matrix follows. `open-sdd integrate --list` is the live matrix
+for MCP; the prompt-template matrix is `tools/open-sdd/src/core/commandTemplates.ts`.
+
+The per-host commands directories are: Claude Code `.claude/commands/`, Cursor `.cursor/commands/`,
+GitHub Copilot `.github/prompts/` (`.prompt.md`), Gemini CLI `.gemini/commands/` (`.toml`), OpenCode
+`.opencode/commands/`.
 
 Preview before writing with `--dry-run`:
 
