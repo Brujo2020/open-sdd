@@ -17,6 +17,13 @@
  *     línea base persistida y un descenso no aceptado es un error. `--accept-drop "<razón>"` lo
  *     autoriza para ESA ejecución y lo registra con autor y fecha. El trinquete forma parte del
  *     veredicto: no es una anotación al margen del gate.
+ *  5. La ADHESIÓN constitucional (`core/specConstitution.ts`) puntúa el pivote 0..100 y lleva su
+ *     TENDENCIA append-only en `.sdd/state/adhesion-history.json`. La línea `Constitucional` del
+ *     panel carga el número y el movimiento, y `--check` añade la medición a la serie. Dos ficheros
+ *     y dos escalas que NO deben confundirse: `core/ratchet.ts` posee `.sdd/state/adhesion.json`
+ *     con ratios 0..1 y bloquea descensos; aquí solo se lee/escribe `adhesion-history.json`, con
+ *     puntuaciones 0..100. La conversión 0..1 → 0..100 la hace `adhesionScore`, nunca una división a
+ *     ojo en esta capa.
  *
  * ── Compatibilidad heredada (documentada, no silenciosa) ────────────────────────────────────────
  * `test/cliSubcommands.test.ts` fija dos contratos anteriores que este comando conserva:
@@ -49,12 +56,22 @@ import {
   renderStatus,
   worstTone,
   type StatusLine,
+  type StatusReport,
   type StatusTone,
 } from '../../core/status.js';
 import { principlesInForce } from '../../core/constitution.js';
 import { hashConstitution, runAdhesionRatchet, type RatchetRun } from '../../core/ratchet.js';
+import {
+  adhesionHistoryEntry,
+  adhesionScore,
+  adhesionTrend,
+  readAdhesionHistory,
+  recordAdhesionHistory,
+  type AdhesionScore,
+  type AdhesionTrend,
+  type SpecAlignment,
+} from '../../core/specConstitution.js';
 import { jsonEnvelope } from '../jsonOut.js';
-import type { SpecAlignment } from '../../core/specConstitution.js';
 
 const TONE_PAINT: Record<StatusTone, (value: string) => string> = {
   ok: colors.green,
@@ -79,6 +96,10 @@ interface PivotRun {
   alignment: SpecAlignment | null;
   error?: string;
   ratchet: RatchetRun | null;
+  /** Puntuación 0..100 y tendencia contra la serie previa; null cuando el pivote no se ejecutó. */
+  adhesion: AdhesionView | null;
+  /** Medición recién añadida a la serie (solo `--check`); null cuando no hubo nada que registrar. */
+  adhesionRecord: { file: string; entries: number; warning?: string } | null;
   /** Hallazgos del pivote + del trinquete, ya combinados: es lo que decide el veredicto. */
   findings: PivotFinding[];
   errorCount: number;
@@ -94,6 +115,70 @@ interface PivotOptions {
   acceptDrop?: string;
   actor?: string;
 }
+
+/**
+ * La vista de adhesión de una ejecución: la puntuación (función pura de `SpecAlignment`) y la
+ * tendencia contra la última medición de la MISMA feature. Se calcula SIEMPRE antes de registrar,
+ * para que la tendencia compare contra el pasado y no contra la fila que se acaba de añadir.
+ */
+interface AdhesionView {
+  score: AdhesionScore;
+  trend: AdhesionTrend;
+  feature: string;
+  historyFile: string;
+  /** Aviso de historia ilegible/corrupta: la serie se reinicia y la tendencia no es comparable. */
+  warning?: string;
+}
+
+const adhesionView = async (
+  root: string,
+  sddDir: string,
+  alignment: SpecAlignment,
+): Promise<AdhesionView> => {
+  const score = adhesionScore(alignment);
+  const history = await readAdhesionHistory(root, sddDir);
+  const trend = adhesionTrend(score.score, history.entries, { feature: alignment.feature });
+  return {
+    score,
+    trend,
+    feature: alignment.feature,
+    historyFile: history.file,
+    ...(history.warning ? { warning: history.warning } : {}),
+  };
+};
+
+/** `adhesión N/100 · tendencia <first-run|up|down|flat> (…)`: número y movimiento en una línea. */
+const formatAdhesion = (view: AdhesionView): string => {
+  const { score, trend } = view;
+  const value = score.inputs.declaredAny
+    ? `adhesión ${score.score}/100`
+    : `adhesión ${score.score}/100 (la spec no declara principios: 0 NO es un aprobado)`;
+  const movement =
+    trend.status === 'first-run'
+      ? 'first-run (sin medición previa)'
+      : `${trend.status} (${trend.delta > 0 ? '+' : ''}${trend.delta} puntos vs ${trend.previous} del ${
+          trend.comparedTo?.slice(0, 10) ?? 'sin fecha'
+        })`;
+  return `${value} · tendencia ${movement}`;
+};
+
+/**
+ * Añadir la adhesión a la línea `Constitucional` del panel.
+ *
+ * Una historia ilegible o un `0` sin principios declarados NUNCA pueden quedar teñidos de aprobado:
+ * en ambos casos la línea se fuerza al menos a `warn` y el motivo viaja escrito. Devolver `false`
+ * significa que el panel no tenía línea de alineación (pivote no ejecutado) y no hay nada que anexar.
+ */
+const applyAdhesion = (report: StatusReport, view: AdhesionView): boolean => {
+  const line = report.lines.find(
+    (candidate) => candidate.label === 'Constitucional' && candidate.value.startsWith('declarados:'),
+  );
+  if (!line) return false;
+  line.value = `${line.value} · ${formatAdhesion(view)}`;
+  if (view.warning) line.value = `${line.value} · historia de adhesión: ${view.warning}`;
+  if (!view.score.inputs.declaredAny || view.warning) line.tone = worstTone([line.tone, 'warn']) ?? 'warn';
+  return true;
+};
 
 /** Hash del contenido de la constitución tal y como está en disco (o del vacío si no se pudo leer). */
 const constitutionHashAt = async (root: string, sddDir: string): Promise<string> => {
@@ -127,6 +212,8 @@ const runPivot = async (
       alignment: null,
       error: message,
       ratchet: null,
+      adhesion: null,
+      adhesionRecord: null,
       findings: [{ severity: 'error', code: 'PIVOT_UNAVAILABLE', message }],
       errorCount: 1,
       warningCount: 0,
@@ -142,16 +229,28 @@ const runPivot = async (
     ? principlesInForce(constitution.constitution).map((principle) => principle.id)
     : [];
   const constitutionHash = await constitutionHashAt(outcome.root, sddRel);
+  const featureName = outcome.feature ?? feature ?? '(sin-feature)';
 
   const ratchet = await runAdhesionRatchet({
     sddDir: path.resolve(outcome.root, sddRel),
-    feature: outcome.feature ?? feature ?? '(sin-feature)',
+    feature: featureName,
     alignment: outcome.alignment.alignment,
     principles,
     constitutionHash,
     ...(options.acceptDrop ? { acceptDrop: options.acceptDrop } : {}),
     ...(options.actor ? { actor: options.actor } : {}),
   });
+
+  // ── Adhesión: puntuar, comparar contra la serie y AÑADIR la medición (append-only) ───────────
+  // La tendencia se calcula ANTES de registrar: si se registrara primero, toda ejecución parecería
+  // `flat` contra su propia fila. El registro es de `--check` por construcción (este camino solo se
+  // recorre con `--check`), así que el panel informativo nunca escribe.
+  const adhesion = await adhesionView(outcome.root, sddRel, outcome.alignment);
+  const record = await recordAdhesionHistory(
+    outcome.root,
+    adhesionHistoryEntry(adhesion.score, { feature: featureName }),
+    sddRel,
+  );
 
   const findings: PivotFinding[] = [
     ...outcome.alignment.findings.map((finding) => ({
@@ -168,12 +267,28 @@ const runPivot = async (
       ...(finding.principleId ? { principleId: finding.principleId } : {}),
     })),
   ];
+  if (record.warning) {
+    // Una historia ilegible se declara: no poder leer la serie no puede parecer «sin tendencia».
+    findings.push({
+      severity: 'warning',
+      code: record.warning.includes('no se pudo escribir')
+        ? 'ADHESION_HISTORY_UNWRITABLE'
+        : 'ADHESION_HISTORY_CORRUPT',
+      message: record.warning,
+    });
+  }
   const errorCount = findings.filter((finding) => finding.severity === 'error').length;
   const warningCount = findings.filter((finding) => finding.severity === 'warning').length;
 
   return {
     alignment: outcome.alignment,
     ratchet,
+    adhesion,
+    adhesionRecord: {
+      file: record.file,
+      entries: record.entries,
+      ...(record.warning ? { warning: record.warning } : {}),
+    },
     findings,
     errorCount,
     warningCount,
@@ -225,6 +340,24 @@ export const handleStatusCommand = async (
     ...(feature ? { feature } : {}),
     ...(sddDir ? { sddDir } : {}),
   });
+
+  // ── Adhesión: el panel dice CUÁNTO, no solo qué falla ────────────────────────────────────────
+  // `buildStatus` pinta la línea `Constitucional` con el detalle del pivote; aquí se le anexa la
+  // puntuación 0..100 y su tendencia. Se calcula ANTES del registro de `--check` para que el
+  // movimiento se mida contra la serie previa y no contra la fila que esa ejecución va a añadir.
+  // Sin línea de alineación (pivote no ejecutado) no se llama al pivote una segunda vez.
+  const alignmentLine = report.lines.some(
+    (line) => line.label === 'Constitucional' && line.value.startsWith('declarados:'),
+  );
+  const sddRel = sddDir ?? (await resolveSddDir(report.root));
+  const adhesionOutcome = alignmentLine
+    ? await alignFeature(report.root, { ...(feature ? { feature } : {}), sddDir: sddRel })
+    : null;
+  const adhesion = adhesionOutcome?.alignment
+    ? await adhesionView(report.root, sddRel, adhesionOutcome.alignment)
+    : null;
+  if (adhesion) applyAdhesion(report, adhesion);
+
   const rendered = renderStatus(report);
   const hasErrorLine = report.lines.some((line) => line.tone === 'err');
 
@@ -320,6 +453,12 @@ export const handleStatusCommand = async (
       }
       if (pivot.ratchet) {
         io.log(`  ${colors.dim(`Trinquete: ${pivot.ratchet.verdict} · base ${(pivot.ratchet.baseline.alignment * 100).toFixed(0)}%${pivot.ratchet.droppedPrinciples.length > 0 ? ` · salieron ${pivot.ratchet.droppedPrinciples.join(', ')}` : ''}`)}`);
+      }
+      if (pivot.adhesionRecord) {
+        // Lo que `--check` acaba de añadir a la serie, dicho en voz alta: es un acto de registro.
+        io.log(
+          `  ${colors.dim(`Adhesión: ${pivot.adhesionRecord.entries} medición(es) en ${pivot.adhesionRecord.file} · score ${pivot.adhesion?.score.score ?? '(no calculado)'}/100`)}`,
+        );
       }
       io.log(`  ${colors.dim(alignment.detail)}`);
       // Monótono: el veredicto del pivote/trinquete solo puede ENDURECER el del panel, nunca perdonar

@@ -65,17 +65,30 @@ export const writeSpecMetadata = async (
   await writeFile(specJsonPath, JSON.stringify(meta, null, 2) + '\n', 'utf8');
 };
 
-export const parseTasksMarkdown = (content: string): TaskItem[] => {
+/**
+ * A parsed task plus the flags the line itself carries. It is a `TaskItem` (the extra field is
+ * optional), so every existing consumer keeps working.
+ */
+export interface ParsedTaskItem extends TaskItem {
+  /** `- [ ]*`: the older generic template's marker for deferrable test work. */
+  deferred?: boolean;
+}
+
+export const parseTasksMarkdown = (content: string): ParsedTaskItem[] => {
   const lines = content.split('\n');
-  const tasks: TaskItem[] = [];
+  const tasks: ParsedTaskItem[] = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
-    const taskMatch = trimmed.match(/^-\s*\[([ x\-])\]\s*(.+)$/i);
+    // `(\*)?` is the deferred-test marker the older generic template documented as `- [ ]*`.
+    // Without it the `*` fell into the title and broke the id regex, so the task silently became
+    // `task-1`. It is a marker, not part of the task text.
+    const taskMatch = trimmed.match(/^-\s*\[([ x-])\]\s*(\*)?\s*(.+)$/i);
     if (!taskMatch) continue;
 
     const marker = taskMatch[1].toLowerCase();
-    const rest = taskMatch[2].trim();
+    const deferred = taskMatch[2] === '*';
+    const rest = taskMatch[3].trim();
 
     let status: TaskItem['status'] = 'pending';
     if (marker === 'x') status = 'completed';
@@ -113,6 +126,7 @@ export const parseTasksMarkdown = (content: string): TaskItem[] => {
       boundary,
       depends,
       raw: trimmed,
+      ...(deferred ? { deferred: true } : {}),
     });
   }
 

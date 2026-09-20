@@ -849,6 +849,49 @@ export const bootstrapSteering = async (
     }
   };
 
+  // ── What reconnaissance actually observed about testing ────────────────────────────────────
+  // This file used to assert `Native test runner` and `TDD required` whatever the scan saw, and
+  // `structure.md` invented a `test/` directory. Those are claims nothing observed. Steering is
+  // cited as authority by later gates, so a fabricated line here is a lie the whole chain repeats.
+  const runner = proj.testFramework?.trim() || undefined;
+  const declaredTestScript = await readFile(path.join(cwd, 'package.json'), 'utf8')
+    .then((raw) => {
+      const scripts = (JSON.parse(raw) as { scripts?: Record<string, unknown> }).scripts;
+      return typeof scripts?.test === 'string' ? scripts.test : undefined;
+    })
+    .catch(() => undefined);
+  // Non-Node toolchains declare their test command as the ecosystem interface (e.g. `go test`),
+  // so the observed string is already the command; only Node runner LABELS need a command derived.
+  const nativeCommand =
+    runner && /^(go test|cargo test|mvn test|gradle test|\.?\/?gradlew test|dotnet test|pytest|ctest)$/i.test(runner)
+      ? runner
+      : undefined;
+
+  const testLines: string[] = [];
+  if (runner) {
+    testLines.push(`- **Testing Framework**: ${runner} (observado por el reconocimiento)`);
+    if (declaredTestScript) {
+      const manager = ['npm', 'pnpm', 'yarn', 'bun'].includes(proj.packageManager ?? '')
+        ? proj.packageManager
+        : 'npm';
+      testLines.push(
+        `- **Comando de test**: \`${manager} test\` (declarado en package.json: script "test" = "${declaredTestScript}")`,
+      );
+    } else if (nativeCommand) {
+      testLines.push(`- **Comando de test**: \`${nativeCommand}\` (comando nativo del ecosistema observado)`);
+    } else {
+      const { testCommandFor } = await import('./executionContract.js');
+      testLines.push(
+        `- **Comando de test**: \`${testCommandFor(runner).command}\` (derivado del runner observado, no verificado ejecutándolo)`,
+      );
+    }
+  } else {
+    testLines.push(
+      '- **Testing Framework**: no se observó ningún runner de test (ni dependencia, ni configuración, ni script `test`).',
+    );
+    testLines.push('- **Comando de test**: ninguno; nada en el repositorio declara cómo ejecutar pruebas.');
+  }
+
   // product.md
   const productMd = `# Product Steering: ${proj.name}
 
@@ -857,7 +900,7 @@ Reverse-engineered architecture foundation for ${proj.name}.
 
 ## Domain Boundaries
 - Core Application: ${proj.name}
-- Detected Modules: ${proj.modules.length > 0 ? proj.modules.join(', ') : 'Standard architecture'}
+- Detected Modules: ${proj.modules.length > 0 ? proj.modules.join(', ') : 'ninguno observado (no se detectaron módulos bajo los directorios de código)'}
 `;
   await checkAndWrite('product.md', productMd);
 
@@ -866,13 +909,17 @@ Reverse-engineered architecture foundation for ${proj.name}.
 
 ## Architecture & Technology Stack
 - **Primary Language**: ${proj.language}
-- **Frameworks**: ${proj.frameworks.length > 0 ? proj.frameworks.join(', ') : 'Standard standard library'}
-- **Package Manager**: ${proj.packageManager ?? 'Native'}
-- **Testing Framework**: ${proj.testFramework ?? 'Native test runner'}
+- **Frameworks**: ${proj.frameworks.length > 0 ? proj.frameworks.join(', ') : 'no se observó ningún framework en las dependencias'}
+- **Package Manager**: ${proj.packageManager ?? 'no se observó ningún gestor de paquetes'}
+${testLines.join('\n')}
 
 ## Development Conventions
 - Strict boundaries: modifications must stay within task \`_Boundary:_\` definitions.
-- TDD required: tests written before implementation code.
+- Test discipline: ${
+    runner
+      ? `ninguna declarada. El runner observado (${runner}) puede ejecutar pruebas, pero el repositorio no declara que las pruebas se escriban antes que el código, así que esa disciplina no se afirma.`
+      : 'ninguna. Sin runner de test observado, nada en el repositorio puede hacerla cumplir.'
+  }
 - Zero-Trust validation: all specs require review and validation gates before release.
 `;
   await checkAndWrite('tech.md', techMd);
@@ -881,8 +928,8 @@ Reverse-engineered architecture foundation for ${proj.name}.
   const structureMd = `# Structure Steering: ${proj.name}
 
 ## Directory Topology
-- Source directories: ${proj.sourceDirs.length > 0 ? proj.sourceDirs.join(', ') : 'Root'}
-- Test directories: ${proj.testDirs.length > 0 ? proj.testDirs.join(', ') : 'test/'}
+- Source directories: ${proj.sourceDirs.length > 0 ? proj.sourceDirs.join(', ') : 'no se observó ningún directorio de código convencional'}
+- Test directories: ${proj.testDirs.length > 0 ? proj.testDirs.join(', ') : 'no se observó ningún directorio de test'}
 - Specifications: \`${resolvedDir}/specs/\`
 - Persistent Steering: \`${resolvedDir}/steering/\`
 `;

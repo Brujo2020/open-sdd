@@ -78,13 +78,62 @@ const MAX_TEST_FILES = 2000;
 const norm = (p: string): string => p.replace(/\\/g, '/').replace(/^\.\//, '');
 const stem = (p: string): string => norm(p).replace(SOURCE_EXT, '');
 
-/** Comando que CI ejecuta, derivado del framework detectado. Derivado, no verificado. */
-export const testCommandFor = (testFramework?: string): { command: string; derived: boolean } => {
+/**
+ * `[surface in `scanProject().testFramework`, the command that ecosystem actually runs]`.
+ *
+ * Source of truth: the SAME table `templateAdaptation` already uses for the adapted templates
+ * (`NATIVE_TEST_COMMAND` and `DERIVED_RUNNER_COMMAND`), where this problem was solved for the
+ * brownfield templates. The left column holds the exact labels `scanProject()` emits
+ * (`reverseEngineering.ts`): `Vitest`, `Jest`, `Mocha`, `Jasmine`, `AVA`, `Playwright`, `Cypress`,
+ * `go test`, `cargo test`, `mvn test`, `gradle test`, `dotnet test` — plus `pytest`, the native
+ * command `templateAdaptation` recognises for Python. `AVA` is anchored with word boundaries so a
+ * label such as "javascript" cannot match it by accident.
+ */
+const ECOSYSTEM_TEST_COMMANDS: [RegExp, string][] = [
+  [/vitest/i, 'npx vitest run'],
+  [/jest/i, 'npx jest'],
+  [/\bmocha\b/i, 'npx mocha'],
+  [/playwright/i, 'npx playwright test'],
+  [/cypress/i, 'npx cypress run'],
+  [/\bava\b/i, 'npx ava'],
+  [/jasmine/i, 'npx jasmine'],
+  [/\bgo\s+test\b/i, 'go test'],
+  [/cargo\s+test/i, 'cargo test'],
+  [/\bmvn\s+test\b/i, 'mvn test'],
+  [/gradle\s+test/i, 'gradle test'],
+  [/dotnet\s+test/i, 'dotnet test'],
+  [/pytest/i, 'pytest'],
+  [/\bctest\b/i, 'ctest'],
+];
+
+/**
+ * Comando que CI ejecuta, derivado del ECOSISTEMA detectado por `scanProject`.
+ *
+ * La tabla de ecosistemas es la misma que `templateAdaptation` usa para las plantillas adaptadas: un
+ * proyecto Go no ejecuta `npm test`, ejecuta `go test`; uno Rust, `cargo test`. Devolver `npm test`
+ * para todos ellos era el mismo defecto de familia que este módulo existe para no cometer: un comando
+ * inventado presentado como el del proyecto.
+ *
+ * `derived: true` SIEMPRE, salvo que `declaredScript` traiga el comando de un script de manifiesto
+ * (p. ej. `package.json` → `scripts.test`): ese comando lo declaró un humano en el manifiesto, no se
+ * deriva del nombre del runner. Un ecosistema desconocido o ausente sigue cayendo en `npm test`, que
+ * es una SUPOSICIÓN que nadie declaró y por eso también se marca derivada — el defecto anterior
+ * devolvía `derived: false` para ese caso, y la CLI imprimía `npm test` sin la marca «(derivado, no
+ * verificado)»: una invención presentada como hecho.
+ */
+export const testCommandFor = (
+  testFramework?: string,
+  declaredScript?: string,
+): { command: string; derived: boolean } => {
+  const declared = (declaredScript ?? '').trim();
+  if (declared) return { command: declared, derived: false };
+
   const framework = (testFramework ?? '').trim();
-  if (/vitest/i.test(framework)) return { command: 'npx vitest run', derived: true };
-  if (/jest/i.test(framework)) return { command: 'npx jest', derived: true };
-  if (/mocha/i.test(framework)) return { command: 'npx mocha', derived: true };
-  return { command: 'npm test', derived: false };
+  for (const [pattern, command] of ECOSYSTEM_TEST_COMMANDS) {
+    if (pattern.test(framework)) return { command, derived: true };
+  }
+  // Unknown or absent: nobody declared this command. `derived: true` is the honest label.
+  return { command: 'npm test', derived: true };
 };
 
 /** Nombre del fichero donde el conjunto de contratos se publica para CI. */
@@ -192,11 +241,17 @@ export const extractContracts = async (input: ExtractContractsInput): Promise<Co
   const feature = input.feature ?? input.delta?.feature ?? 'sin-feature';
 
   const derived = testCommandFor(testFramework);
-  notes.push(
-    derived.derived
-      ? `Comando de test derivado del framework detectado (${testFramework}), no verificado ejecutándolo: \`${derived.command}\`.`
-      : `No se detectó framework de test: se propone \`${derived.command}\` como comando por defecto; es una suposición, no una verificación.`,
-  );
+  // The only fallback `testCommandFor` returns is `npm test`; any other command came from a
+  // recognised runner. The fallback is a guess nobody declared, and the note says exactly that.
+  if (derived.command === 'npm test') {
+    notes.push(
+      `No se detectó framework de test con un comando asociado: se propone \`${derived.command}\` como comando por defecto. Nadie lo declaró, así que es una suposición derivada (derivado, no verificado), no una verificación.`,
+    );
+  } else {
+    notes.push(
+      `Comando de test derivado del framework detectado (${testFramework}), no verificado ejecutándolo: \`${derived.command}\`.`,
+    );
+  }
 
   // ── Contratos descubiertos ──────────────────────────────────────────────────────────────────
   const walk: TestWalk =

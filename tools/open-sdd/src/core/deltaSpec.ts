@@ -251,9 +251,21 @@ export interface DeltaTraceability {
   unmapped: string[];
   /** Tasks that claim a delta requirement id the delta does not define. */
   phantomTasks: { taskId: string; cited: string }[];
+  /**
+   * Tasks whose `_Requirements:_` value is still the template placeholder (`{{...}}`).
+   *
+   * Distinct from `phantomTasks` on purpose: an unfilled placeholder is a gap the author must fill
+   * in, while a phantom is an id the author wrote that does not exist. Reporting the first as the
+   * second tells the author "this id does not exist" when the truth is "you never replaced it".
+   */
+  unfilledPlaceholders: { taskId: string; cited: string; code: 'UNFILLED_REQUIREMENT_PLACEHOLDER' }[];
   coverage: number;
   detail: string;
 }
+
+/** The placeholder convention the generic templates ship: a token wrapped in `{{ }}`. */
+const TEMPLATE_PLACEHOLDER_RE = /\{\{[^{}]*\}\}/g;
+const isTemplatePlaceholder = (token: string): boolean => /^\{\{.*\}\}$/.test(token.trim());
 
 /**
  * Trace a delta to its tasks.
@@ -264,26 +276,43 @@ export interface DeltaTraceability {
  * usually checked.
  */
 export const traceDelta = (delta: DeltaSpec, tasks: DeltaTask[]): DeltaTraceability => {
-  const ids = new Set(delta.entries.map((e) => e.id));
+  const requirementIds = new Set(delta.entries.map((e) => e.id));
   const mapped: DeltaTraceability['mapped'] = [];
   const unmapped: string[] = [];
   const phantomTasks: { taskId: string; cited: string }[] = [];
+  const unfilledPlaceholders: DeltaTraceability['unfilledPlaceholders'] = [];
   const matchedTasks = new Set<string>();
 
-  const declaredIds = (task: DeltaTask): string[] => {
-    const declared = task.raw.match(/_Requirements:\s*([^_\n]+)_/i);
+  /**
+   * Requirement ids a task declares, plus any `{{...}}` placeholder it still carries.
+   *
+   * Placeholders are removed BEFORE scanning for id-shaped tokens: a braced `{{REQ-ORD-001}}`
+   * contains an id-shaped string, and scanning the raw text would report that inner id as a
+   * phantom even though the author never wrote it — the placeholder is the whole token.
+   */
+  const declaredRequirementTokens = (task: DeltaTask): { ids: string[]; placeholders: string[] } => {
+    const placeholders = Array.from(
+      new Set(Array.from(task.raw.matchAll(TEMPLATE_PLACEHOLDER_RE)).map((m) => m[0])),
+    );
+    const residual = task.raw.replace(TEMPLATE_PLACEHOLDER_RE, ' ');
+    const declared = residual.match(/_Requirements:\s*([^_\n]+)_/i);
     const fromMetadata = declared
       ? declared[1]
           .split(/[,;]/)
           .map((s) => s.trim())
-          .filter(Boolean)
+          .filter((token) => token.length > 0 && !isTemplatePlaceholder(token))
       : [];
-    const fromRaw = Array.from(task.raw.matchAll(/REQ-[A-Z0-9-]+-\d{3}/gi)).map((m) => m[0].toUpperCase());
-    return Array.from(new Set([...fromMetadata, ...fromRaw]));
+    const fromRaw = Array.from(residual.matchAll(/REQ-[A-Z0-9-]+-\d{3}/gi)).map((m) => m[0].toUpperCase());
+    return {
+      ids: Array.from(new Set([...fromMetadata, ...fromRaw])),
+      placeholders,
+    };
   };
 
   for (const entry of delta.entries) {
-    const owners = tasks.filter((t) => declaredIds(t).some((cited) => cited.toUpperCase() === entry.id));
+    const owners = tasks.filter((t) =>
+      declaredRequirementTokens(t).ids.some((cited) => cited.toUpperCase() === entry.id),
+    );
     if (owners.length === 0) {
       unmapped.push(entry.id);
     } else {
@@ -293,8 +322,12 @@ export const traceDelta = (delta: DeltaSpec, tasks: DeltaTask[]): DeltaTraceabil
   }
 
   for (const task of tasks) {
-    for (const cited of declaredIds(task)) {
-      if (!ids.has(cited.toUpperCase())) phantomTasks.push({ taskId: task.id, cited });
+    const { ids, placeholders } = declaredRequirementTokens(task);
+    for (const cited of ids) {
+      if (!requirementIds.has(cited.toUpperCase())) phantomTasks.push({ taskId: task.id, cited });
+    }
+    for (const cited of placeholders) {
+      unfilledPlaceholders.push({ taskId: task.id, cited, code: 'UNFILLED_REQUIREMENT_PLACEHOLDER' });
     }
   }
 
@@ -303,13 +336,18 @@ export const traceDelta = (delta: DeltaSpec, tasks: DeltaTask[]): DeltaTraceabil
     mapped,
     unmapped,
     phantomTasks,
+    unfilledPlaceholders,
     coverage,
     detail:
       delta.entries.length === 0
         ? 'Delta sin entradas que trazar.'
         : `${mapped.length}/${delta.entries.length} requisito(s) de la delta con tarea (${Math.round(coverage * 100)}%)${
             unmapped.length > 0 ? `; sin tarea: ${unmapped.join(', ')}` : ''
-          }${phantomTasks.length > 0 ? `; tareas citando ids inexistentes: ${phantomTasks.map((p) => `${p.taskId}→${p.cited}`).join(', ')}` : ''}.`,
+          }${phantomTasks.length > 0 ? `; tareas citando ids inexistentes: ${phantomTasks.map((p) => `${p.taskId}→${p.cited}`).join(', ')}` : ''}${
+            unfilledPlaceholders.length > 0
+              ? `; marcador(es) de plantilla sin rellenar (UNFILLED_REQUIREMENT_PLACEHOLDER, no es un id inexistente): ${unfilledPlaceholders.map((p) => `${p.taskId}→${p.cited}`).join(', ')}`
+              : ''
+          }.`,
   };
 };
 

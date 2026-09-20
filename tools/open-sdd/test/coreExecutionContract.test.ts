@@ -89,8 +89,11 @@ describe('extractContracts — contratos descubiertos', () => {
       testDirs: ['test'],
     });
 
-    expect(set.testCommand).toBe('npm test');
-    expect(set.detail).toContain('No se detectó framework');
+    // What must hold is that the oracle DECLARES the command a supposition when no manifest declares it.
+    // Pinning the exact string made this test fail the moment the command stopped being an invented
+    // `npm test` for every unknown framework — which was the defect being fixed, not a regression.
+    expect(set.testCommand.length).toBeGreaterThan(0);
+    expect(set.detail).toMatch(/no verificado|no lo declaró|No se detectó/i);
   });
 
   it('marca completo:false cuando el directorio de test declarado no se puede leer', async () => {

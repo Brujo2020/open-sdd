@@ -161,10 +161,37 @@ export const runGate = async (gateId, ctx, regime = 'flexible') => {
                     ...new Set(decision.suppressed.map((s) => s.id)),
                 ].join(', ')}).`
                 : '';
+            // ── Gobernanza de excepciones (REQ-MAT-012) ───────────────────────────────────────────────
+            // `securityAllowlist` ya devuelve `decision.waivers` con dueño y caducidad, pero un veredicto
+            // que solo imprime `kind:id file:line` deja «el gate falla y dice a quién preguntar» como una
+            // promesa de la API, no del producto. Aquí se NOMBRA cada caso: una excepción caducada
+            // devuelve el hallazgo con dueño y fecha, y una sin dueño se declara débil sin convertirse en
+            // fallo (eso rompería listas heredadas el día del despliegue). `kept`/`suppressed` no se tocan:
+            // su forma la fija `test/enforcementFloor.test.ts`.
+            const expiredWaivers = decision.waivers.filter((waiver) => waiver.code === 'waiverExpired');
+            const weakWaivers = decision.waivers.filter((waiver) => waiver.code === 'waiverWeak');
+            const expiredNote = expiredWaivers.length > 0
+                ? ` ${expiredWaivers.length} hallazgo(s) se mantienen porque su excepción CADUCÓ: ${expiredWaivers
+                    .map((waiver) => `«excepción caducada el ${waiver.expires ?? '(sin fecha)'}; responsable: ${waiver.owner ?? '(sin dueño declarado)'}» (${waiver.id} en ${waiver.file}:${waiver.line})`)
+                    .join('; ')}.`
+                : '';
+            const weakNote = weakWaivers.length > 0
+                ? ` Aviso: ${weakWaivers.length} excepción(es) sin dueño declarado (waiverWeak) en ${[
+                    ...new Set(weakWaivers.map((waiver) => waiver.waiverPath)),
+                ].join(', ')}: nadie responde de la supresión; añade "owner" en .sdd/settings/security-allowlist.json.`
+                : '';
+            const evidence = [
+                ...findings.map((f) => f.waiverExpired
+                    ? `${f.kind}:${f.id} ${f.file}:${f.line} — excepción caducada el ${f.expires ?? '(sin fecha)'}; responsable: ${f.owner ?? '(sin dueño declarado)'}`
+                    : `${f.kind}:${f.id} ${f.file}:${f.line}`),
+                ...weakWaivers.map((waiver) => `waiverWeak ${waiver.id} ${waiver.file}:${waiver.line} — excepción sin dueño ("owner") en ${waiver.waiverPath}`),
+            ];
             return finalize(true, findings.length > 0, (findings.length > 0
                 ? `${findings.length} hallazgo(s) de línea base de seguridad.`
                 : `${files.length} fichero(s) del cambio sin secretos, comandos destructivos ni patrones de inyección.`) +
-                suppressedNote, findings.map((f) => `${f.kind}:${f.id} ${f.file}:${f.line}`));
+                suppressedNote +
+                expiredNote +
+                weakNote, evidence);
         }
         case 'C3': {
             const tasksText = await readIfExists(path.join(specDir, 'tasks.md'));

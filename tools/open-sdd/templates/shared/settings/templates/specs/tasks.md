@@ -21,4 +21,7 @@ Use whichever pattern fits the work breakdown:
 
 > **Parallel marker**: Append ` (P)` only to tasks that can be executed in parallel. Omit the marker when running in `--sequential` mode.
 >
-> **Optional test coverage**: When a sub-task is deferrable test work tied to acceptance criteria, mark the checkbox as `- [ ]*` and explain the referenced requirements in the detail bullets.
+> **Optional test coverage**: Keep the standard `- [ ]` checkbox and name the deferral in a detail bullet (for example `_Deferred: post-MVP_` plus the acceptance criteria it covers). Do **not** append `*` to the checkbox: an older revision of this template documented `- [ ]*`, and `parseTasksMarkdown` now reads that only as a legacy deferred marker, not as the supported form.
+>
+> **Placeholders**: Replace every `{{...}}` token with a real value. An `_Requirements:_` value still wrapped in `{{ }}` is reported as an UNFILLED PLACEHOLDER (it is not a requirement id), so an unfilled template fails loudly instead of producing a phantom id.
+

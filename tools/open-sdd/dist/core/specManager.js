@@ -55,11 +55,15 @@ export const parseTasksMarkdown = (content) => {
     const tasks = [];
     for (const line of lines) {
         const trimmed = line.trim();
-        const taskMatch = trimmed.match(/^-\s*\[([ x\-])\]\s*(.+)$/i);
+        // `(\*)?` is the deferred-test marker the older generic template documented as `- [ ]*`.
+        // Without it the `*` fell into the title and broke the id regex, so the task silently became
+        // `task-1`. It is a marker, not part of the task text.
+        const taskMatch = trimmed.match(/^-\s*\[([ x-])\]\s*(\*)?\s*(.+)$/i);
         if (!taskMatch)
             continue;
         const marker = taskMatch[1].toLowerCase();
-        const rest = taskMatch[2].trim();
+        const deferred = taskMatch[2] === '*';
+        const rest = taskMatch[3].trim();
         let status = 'pending';
         if (marker === 'x')
             status = 'completed';
@@ -93,6 +97,7 @@ export const parseTasksMarkdown = (content) => {
             boundary,
             depends,
             raw: trimmed,
+            ...(deferred ? { deferred: true } : {}),
         });
     }
     return tasks;

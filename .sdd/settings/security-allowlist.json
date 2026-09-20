@@ -168,6 +168,16 @@
       "owner": "mantenimiento (plantillas)",
       "actor": "spec:tool-maturity",
       "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreGateWaivers.test.ts",
+      "ids": [
+        "aws-access-key"
+      ],
+      "reason": "FIXTURE del test de waivers: necesita una cadena con forma de credencial para comprobar que una excepcion CADUCADA deja de suprimir el hallazgo y que el gate nombra al responsable. Sin ese valor el propio mecanismo de governance no se puede probar.",
+      "owner": "mantenimiento (tests)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
     }
   ]
 }

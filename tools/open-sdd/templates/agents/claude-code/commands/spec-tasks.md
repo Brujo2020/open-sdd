@@ -48,7 +48,7 @@ Generate implementation tasks for feature **$1** based on approved requirements 
 - Verify task progression is logical and incremental
 - Collapse single-subtask structures by promoting them to major tasks and avoid duplicating details on container-only major tasks (use template patterns accordingly)
 - Apply `(P)` markers to tasks that satisfy parallel criteria (omit markers in sequential mode)
-- Mark optional test coverage subtasks with `- [ ]*` only when they strictly cover acceptance criteria already satisfied by core implementation and can be deferred post-MVP
+- Mark optional test coverage subtasks with the plain `- [ ]` checkbox and name the deferral in a detail bullet (for example `_Deferred: post-MVP_`), never with a `*` suffix; only when they strictly cover acceptance criteria already satisfied by core implementation and can be deferred post-MVP
 - If existing tasks.md found, merge with new content
 
 ### Step 3: Finalize

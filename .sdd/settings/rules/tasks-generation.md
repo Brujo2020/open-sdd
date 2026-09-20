@@ -141,9 +141,9 @@ Before writing `tasks.md`, review the draft task plan and repair local issues un
 
 ### Optional Test Coverage Tasks
 
-- When the design already guarantees functional coverage and rapid MVP delivery is prioritized, mark purely test-oriented follow-up work (e.g., baseline rendering/unit tests) as **optional** using the `- [ ]*` checkbox form.
-- Only apply the optional marker when the sub-task directly references acceptance criteria from requirements.md in its detail bullets.
-- Never mark implementation work or integration-critical verification as optional—reserve `*` for auxiliary/deferrable test coverage that can be revisited post-MVP.
+- When the design already guarantees functional coverage and rapid MVP delivery is prioritized, mark purely test-oriented follow-up work (e.g., baseline rendering/unit tests) as **optional** using the plain `- [ ]` checkbox and naming the deferral in a detail bullet (for example `_Deferred: post-MVP_`).
+- Only apply the deferral when the sub-task directly references acceptance criteria from requirements.md in its detail bullets.
+- Never mark implementation work or integration-critical verification as optional—reserve the deferral for auxiliary/deferrable test coverage that can be revisited post-MVP.
 
 ## Task Hierarchy Rules
 

@@ -27,7 +27,7 @@
  */
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { RIGOR_LEVELS, alignFeature, alignSpecWithConstitution, analyzeChangeImpact, assessRigor, buildModuleMap, buildStatus, constitutionCandidates, deltaCounts, effectiveGates, extractContracts, findReuseCandidates, focusFeature, getModifiedFiles, inspectFeature, listSpecs, loadConstitution, loadRigorSettings, parseDeltaSpec, parseTasksMarkdown, planBootstrap, principlesInForce, runChain, scanProject, strangulationReport, traceDelta, validateConstitution, validateDeltaSpec, } from '../core/index.js';
+import { RIGOR_LEVELS, alignFeature, alignSpecWithConstitution, analyzeChangeImpact, assessRigor, buildContextPack, buildModuleMap, buildStatus, constitutionCandidates, deltaCounts, effectiveGates, extractContracts, findReuseCandidates, getModifiedFiles, listSpecs, loadConstitution, loadRigorSettings, parseDeltaSpec, parseTasksMarkdown, planBootstrap, runChain, scanProject, strangulationReport, traceDelta, validateDeltaSpec, } from '../core/index.js';
 import { RPC_ERROR_CODES, RpcFault } from './protocol.js';
 // ---------------------------------------------------------------------------------------------
 // Utilidades de argumentos: validación estricta, mensajes claros
@@ -572,143 +572,16 @@ const TOOL_DEFINITIONS = [
         },
         handler: async (args, context) => {
             const requested = optionalString(args, 'feature');
-            const feature = requested ?? (await focusFeature(context.cwd, context.sddDir));
-            const absent = [];
-            // ── Constitución ────────────────────────────────────────────────────────────────────────
-            const constitutionRead = await loadConstitution(context.cwd, context.sddDir);
-            let constitution;
-            if (constitutionRead.exists && constitutionRead.constitution !== null) {
-                const text = await readTextIfPresent(path.join(context.cwd, constitutionRead.path ?? ''));
-                constitution = {
-                    present: true,
-                    path: constitutionRead.path,
-                    text: text ?? '',
-                    principlesInForce: principlesInForce(constitutionRead.constitution).map((principle) => ({
-                        id: principle.id,
-                        title: principle.title,
-                        level: principle.level,
-                        restriction: principle.restriction,
-                    })),
-                    issues: validateConstitution(constitutionRead.constitution),
-                };
-            }
-            else {
-                const candidate = constitutionCandidates(context.sddDir)[0];
-                constitution = {
-                    present: false,
-                    path: candidate,
-                    text: '',
-                    principlesInForce: [],
-                    issues: [],
-                    reason: constitutionRead.exists ? 'existe pero no se pudo leer' : 'no presente',
-                };
-                absent.push('constitution');
-            }
-            // ── Especificación aplicable ────────────────────────────────────────────────────────────
-            let spec;
-            if (!feature) {
-                spec = {
-                    present: false,
-                    feature: null,
-                    path: path.join(context.sddDir, 'specs'),
-                    reason: `no hay ninguna especificación en ${path.join(context.sddDir, 'specs')}`,
-                };
-                absent.push('spec');
-            }
-            else {
-                const inspection = await inspectFeature(context.cwd, feature, context.sddDir);
-                const specPath = relativeSpecDir(context, feature);
-                if (!inspection.dirExists) {
-                    spec = { present: false, feature, path: specPath, reason: 'la feature no existe en el repositorio' };
-                    absent.push('spec');
-                }
-                else {
-                    const piece = async (file) => {
-                        const rel = path.join(specPath, file);
-                        const text = await readTextIfPresent(path.join(context.cwd, rel));
-                        if (text === null)
-                            return { present: false, path: rel, text: null, reason: 'no presente' };
-                        if (text.trim().length === 0)
-                            return { present: true, path: rel, text, reason: 'presente pero vacío' };
-                        return { present: true, path: rel, text };
-                    };
-                    const planFile = inspection.files.includes('plan.md') ? 'plan.md' : 'design.md';
-                    const requirements = await piece('requirements.md');
-                    const plan = await piece(planFile);
-                    const tasks = await piece('tasks.md');
-                    const delta = await piece('delta.md');
-                    if (delta.present)
-                        delta.parsed = inspection.delta;
-                    for (const [key, value] of [
-                        ['requirements', requirements],
-                        ['plan', plan],
-                        ['tasks', tasks],
-                        ['delta', delta],
-                    ]) {
-                        if (value.present !== true)
-                            absent.push(`spec.${key}`);
-                    }
-                    if (requirements.present !== true && plan.present !== true && tasks.present !== true)
-                        absent.push('spec.triad');
-                    spec = { present: true, feature, path: specPath, requirements, plan, tasks, delta };
-                }
-            }
-            // ── Mapa de módulos ─────────────────────────────────────────────────────────────────────
-            let moduleMap;
-            try {
-                const map = await buildModuleMap(context.cwd);
-                moduleMap = {
-                    present: map.modules.length > 0,
-                    modules: map.modules,
-                    complete: map.complete,
-                    detail: map.detail,
-                    ...(map.modules.length > 0 ? {} : { reason: 'no se observó ningún módulo en el repositorio' }),
-                };
-                if (map.modules.length === 0)
-                    absent.push('moduleMap');
-            }
-            catch (error) {
-                moduleMap = { present: false, modules: [], complete: false, reason: `no se pudo construir: ${errorMessage(error)}` };
-                absent.push('moduleMap');
-            }
-            // ── Rigor declarado ─────────────────────────────────────────────────────────────────────
-            let rigor;
-            try {
-                const settings = await loadRigorSettings(context.cwd, context.sddDir);
-                rigor = {
-                    present: true,
-                    level: settings.level,
-                    brownfield: settings.brownfield,
-                    rationale: settings.rationale,
-                    activeGates: effectiveGates(settings.level, settings.gates),
-                };
-            }
-            catch (error) {
-                rigor = {
-                    present: false,
-                    reason: `el rigor declarado no se pudo leer (${errorMessage(error)}): no se degrada a spec-first`,
-                    level: null,
-                    activeGates: [],
-                };
-                absent.push('rigor');
-            }
-            return {
-                data: {
-                    root: context.cwd,
-                    sddDir: context.sddDir,
-                    feature: feature ?? null,
-                    complete: absent.length === 0,
-                    absent,
-                    constitution,
-                    spec,
-                    moduleMap,
-                    rigor,
-                },
-                isError: false,
-                detail: absent.length === 0
-                    ? `Context pack completo: constitución, spec "${feature}", mapa de módulos y rigor declarado.`
-                    : `Context pack INCOMPLETO: ausente ${absent.join(', ')}. Las claves siguen presentes con present=false para que el host no confunda «falta» con «no se preguntó».`,
-            };
+            // Delegación al motor de `core/contextPack.ts`: el CLI (`open-sdd context`) y esta piel MCP
+            // leen el mismo repositorio con el MISMO código, así que no pueden divergir. `pack` conserva
+            // clave por clave la forma que este handler construía en línea (`root`, `sddDir`, `feature`,
+            // `complete`, `absent`, `constitution`, `spec`, `moduleMap`, `rigor`); ninguna clave se
+            // omite, y una pieza ausente sigue declarando `present: false` + `reason`.
+            const { pack, isError, detail } = await buildContextPack(context.cwd, {
+                ...(requested ? { feature: requested } : {}),
+                sddDir: context.sddDir,
+            });
+            return { data: pack, isError, detail };
         },
     },
 ];

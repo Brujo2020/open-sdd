@@ -1,5 +1,9 @@
 # Requirements Document
 
+<!-- Every `{{...}}` token is a placeholder and MUST be replaced before this document is approved.
+     A `{{...}}` value is never a requirement id: traceability reports it as an UNFILLED PLACEHOLDER,
+     not as an id that does not exist. -->
+
 ## Introduction
 {{INTRODUCTION}}
 

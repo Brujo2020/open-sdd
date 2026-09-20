@@ -47,7 +47,7 @@ Instruction highlights:
 - Map all requirements to tasks and list requirement IDs only (comma-separated) without extra narration
 - Promote single actionable sub-tasks to major tasks and keep container summaries concise
 - Apply `(P)` markers only when parallel criteria met (omit in sequential mode)
-- Mark optional acceptance-criteria-focused test coverage subtasks with `- [ ]*` only when deferrable post-MVP
+- Mark optional acceptance-criteria-focused test coverage subtasks with the plain `- [ ]` checkbox and name the deferral in a detail bullet (for example `_Deferred: post-MVP_`), never with a `*` suffix; only when deferrable post-MVP
 """
 )
 ```

@@ -658,7 +658,7 @@ export const buildStatus = async (
       lines.push(
         content(
           `Contratos de ${focus}`,
-          `${contractSet.contracts.length} contrato(s): ${discovered} descubierto(s), ${declared.length} declarado(s) · ${uncovered.length} cambio(s) sin cobertura · comando ${derived.command}${derived.derived ? '' : ' (derivado, no verificado)'}`,
+          `${contractSet.contracts.length} contrato(s): ${discovered} descubierto(s), ${declared.length} declarado(s) · ${uncovered.length} cambio(s) sin cobertura · comando ${derived.command}${derived.derived ? ' (derivado, no verificado)' : ''}`,
           uncovered.length > 0
             ? contractsDemand === 'required'
               ? 'err'
