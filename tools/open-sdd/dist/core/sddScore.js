@@ -14,6 +14,9 @@
  *   evidencia      `triad.checkEvidenceLock`    → tarea completada con `_Evidence:` capturada
  *   contratos      `executionContract.extractContracts` → contrato declarado vs. oráculo real
  *   gates          `gateRunner.runChain`        → la cadena que activa el nivel declarado
+ *                    (si el comando de la MISMA invocación ya ejecutó la cadena con sus propios ids,
+ *                     perfil y alcance, el pie no la reproduce: la declara NO MEDIDA en vez de
+ *                     arriesgar un «gates OK» que ese comando desmiente — ver el invariante abajo)
  *   alineación     `specConstitution.alignSpecWithConstitution` → el pivote constitucional
  * Las lecturas del repositorio (raíz, constitución, spec, rigor) se apoyan en `status.ts` y
  * `specManager.ts`, que ya resuelven las mismas rutas: una segunda resolución de rutas sería una
@@ -96,11 +99,12 @@ const measured = (id, score, evidence) => ({
     score: Math.max(0, Math.min(1, score)),
     evidence,
 });
-const unmeasured = (id, reason) => ({
+const unmeasured = (id, reason, name) => ({
     id,
     measured: false,
     score: 0,
     evidence: `NO MEDIDO (peso ${SDD_SCORE_WEIGHTS[id]} excluido del total): ${reason}`,
+    ...(name ? { name } : {}),
 });
 /** Comparación de referencias de contrato (`ruta::prueba`, `./ruta`) tolerante a prefijos. */
 const sameContractRef = (a, b) => {
@@ -252,42 +256,72 @@ export const computeSddScore = async (cwd, opts = {}) => {
             outcomes.push(unmeasured('contracts', `no evaluables (${err.message})`));
         }
     }
-    // ── 6. Gates: la cadena que activa el nivel declarado ───────────────────────────────────────
     let gatesPassed = false;
-    let gateReport = null;
     let gatesMeasured = false;
-    try {
-        const settings = await loadRigorSettings(root, sddDir);
-        const gates = effectiveGates(settings.level, settings.gates);
-        if (gates.length === 0) {
-            outcomes.push(unmeasured('gates', `el nivel ${settings.level} no activa ningún gate`));
+    /** Ids de la cadena realmente puntuada; se guarda aparte para que el análisis de flujo los vea. */
+    let gatesAssessed = [];
+    /**
+     * Puntuar una ejecución de la cadena. Existe como función para que el MISMO código puntúe la
+     * cadena que corre el pie y la que le inyecta un llamante (o un test): dos caminos distintos
+     * producirían dos veredictos distintos, que es exactamente el defecto que se está corrigiendo.
+     */
+    const applyGateReport = (report) => {
+        gatesAssessed = report.findings.map((finding) => finding.gateId);
+        if (report.findings.length === 0) {
+            outcomes.push(unmeasured('gates', 'la cadena no produjo ningún hallazgo: no se inspeccionó nada'));
+            return;
         }
-        else {
-            gateReport = await runChain(gates, {
-                cwd: root,
-                sddDir,
-                feature: feature ?? '(sin-feature)',
-                changedFiles,
-                declaredScope: [],
-            });
-            const selfAuthorized = gateReport.findings.filter((finding) => finding.outcome === 'self-authorized');
-            for (const finding of selfAuthorized)
-                extraNotMeasured.push(`gate ${finding.gateId} (auto-autorizado)`);
-            if (gateReport.findings.length > 0 && selfAuthorized.length === gateReport.findings.length) {
-                outcomes.push(unmeasured('gates', `todos los gates se auto-autorizaron (sensores no disponibles): ${gates.join(', ')}`));
+        const selfAuthorized = report.findings.filter((finding) => finding.outcome === 'self-authorized');
+        for (const finding of selfAuthorized)
+            extraNotMeasured.push(`gate ${finding.gateId} (auto-autorizado)`);
+        if (selfAuthorized.length === report.findings.length) {
+            outcomes.push(unmeasured('gates', `todos los gates se auto-autorizaron (sensores no disponibles): ${report.findings.map((finding) => finding.gateId).join(', ')}`));
+            return;
+        }
+        gatesMeasured = true;
+        gatesPassed = report.passed && report.unavailable.length === 0;
+        const credit = report.findings.filter((finding) => finding.outcome === 'pass' || finding.outcome === 'advisory').length;
+        const failed = report.findings.filter((finding) => finding.outcome === 'fail').length;
+        const assessed = report.findings.map((finding) => finding.gateId).join(', ');
+        outcomes.push(measured('gates', credit / report.findings.length, `${credit}/${report.findings.length} gate(s) acreditan el control (${assessed}) · ${failed} fallo(s)` +
+            `${selfAuthorized.length > 0 ? ` · ${selfAuthorized.length} auto-autorizado(s) sin acreditar` : ''}`));
+    };
+    // ── 6. Gates: la cadena que activa el nivel declarado ───────────────────────────────────────
+    //
+    // INVARIANTE: el pie NUNCA puede decir «gates OK» mientras el comando de esta misma invocación
+    // acaba de decir que la cadena NO pasa. Por eso hay tres caminos, y solo uno corre la cadena:
+    //   · `gateRun` inyectado → se puntúa ESA ejecución (el comando la produjo; opción (a)).
+    //   · `gateContext: 'external'` → el comando acaba de ejecutar la cadena con SUS ids, su perfil,
+    //     su régimen y su alcance (`--staged`/`--base`); el pie no puede reproducirla, así que la
+    //     declara NO MEDIDA en vez de inventarse un veredicto (opción (c)).
+    //   · por defecto → el pie mide la cadena del nivel declarado (`effectiveGates`), que es lo que
+    //     documenta este componente.
+    if (opts.gateContext === 'external') {
+        outcomes.push(unmeasured('gates', 'la cadena la ejecutó este comando en esta invocación (sus ids, su perfil, su alcance): el pie no puede conocer su veredicto', 'gates (no medidos en esta ejecución)'));
+    }
+    else if (opts.gateRun) {
+        applyGateReport(opts.gateRun);
+    }
+    else {
+        try {
+            const settings = await loadRigorSettings(root, sddDir);
+            const gates = effectiveGates(settings.level, settings.gates);
+            if (gates.length === 0) {
+                outcomes.push(unmeasured('gates', `el nivel ${settings.level} no activa ningún gate`));
             }
             else {
-                gatesMeasured = true;
-                gatesPassed = gateReport.passed && gateReport.unavailable.length === 0;
-                const credit = gateReport.findings.filter((finding) => finding.outcome === 'pass' || finding.outcome === 'advisory').length;
-                const failed = gateReport.findings.filter((finding) => finding.outcome === 'fail').length;
-                outcomes.push(measured('gates', credit / gateReport.findings.length, `${credit}/${gateReport.findings.length} gate(s) acreditan el control · ${failed} fallo(s)` +
-                    `${selfAuthorized.length > 0 ? ` · ${selfAuthorized.length} auto-autorizado(s) sin acreditar` : ''}`));
+                applyGateReport(await runChain(gates, {
+                    cwd: root,
+                    sddDir,
+                    feature: feature ?? '(sin-feature)',
+                    changedFiles,
+                    declaredScope: [],
+                }));
             }
         }
-    }
-    catch (err) {
-        outcomes.push(unmeasured('gates', `el rigor declarado no se pudo leer (${err.message})`));
+        catch (err) {
+            outcomes.push(unmeasured('gates', `el rigor declarado no se pudo leer (${err.message})`));
+        }
     }
     // ── 7. Alineación: el pivote constitucional ─────────────────────────────────────────────────
     if (!constitution) {
@@ -324,7 +358,7 @@ export const computeSddScore = async (cwd, opts = {}) => {
         evidence: outcome.evidence,
     }));
     const notMeasured = [
-        ...outcomes.filter((outcome) => !outcome.measured).map((outcome) => LABELS[outcome.id]),
+        ...outcomes.filter((outcome) => !outcome.measured).map((outcome) => outcome.name ?? LABELS[outcome.id]),
         ...extraNotMeasured,
     ];
     const measuredOutcomes = outcomes.filter((outcome) => outcome.measured);
@@ -363,7 +397,7 @@ export const computeSddScore = async (cwd, opts = {}) => {
         contractsScore: outcomes.find((outcome) => outcome.id === 'contracts')?.score ?? 0,
         gatesMeasured,
         gatesPassed,
-        gates: gateReport?.findings.map((finding) => finding.gateId) ?? [],
+        gates: gatesAssessed,
     });
     const detail = `Total ${total}/100 = Σ(peso·score de lo medido) / Σ(peso medido) = ${raw.toFixed(1)}/${measuredWeight} · ` +
         `peso medido ${measuredWeight}/100 · peso NO medido ${100 - measuredWeight}/100` +
@@ -451,8 +485,11 @@ export const explainNextAction = (report) => {
  */
 export const renderScoreFooter = (report) => {
     const parts = [`SDD ${report.total}%`, `Fase ${report.phase}`, PHASE_SHORT[report.phase]];
+    // Un componente no medido se omite del porcentaje. El nombre puede llevar un matiz entre
+    // paréntesis («gates (no medidos en esta ejecución)»), así que se compara por prefijo.
+    const isUnmeasured = (label) => report.notMeasured.some((name) => name === label || name.startsWith(`${label} (`));
     for (const component of report.components) {
-        if (report.notMeasured.includes(component.label))
+        if (isUnmeasured(component.label))
             continue;
         if (component.id === 'gates') {
             // Name the gates that were assessed: "gates OK" alone reads as "the whole chain passed",

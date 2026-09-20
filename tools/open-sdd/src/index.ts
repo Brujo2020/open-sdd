@@ -277,6 +277,19 @@ const runPlanExecution = async (
 };
 
 /**
+ * ¿El comando invocado ejecuta la cadena Zero-Trust por su cuenta?
+ *
+ * `gates run` resuelve sus propios ids, perfil, régimen y alcance (`--staged`/`--base`);
+ * `audit bundle`/`audit sarif` resuelven la suya. En esos casos el pie NO puede reproducir el
+ * veredicto, así que el componente de gates se declara NO MEDIDO en esa ejecución. El invariante que
+ * esto protege: el pie jamás puede decir «gates OK» mientras el comando de la misma invocación dice
+ * que la cadena NO pasa.
+ */
+const runsGateChain = (cmd: string, subArgv: string[]): boolean =>
+  (cmd === 'gates' && subArgv[0] === 'run') ||
+  (cmd === 'audit' && (subArgv[0] === 'bundle' || subArgv[0] === 'sarif'));
+
+/**
  * La puerta: `open-sdd` sin argumentos.
  *
  * NO imprime una lista de comandos como primer movimiento. Inspecciona el repositorio, dice el
@@ -408,8 +421,15 @@ export const runCli = async (
     const code = await dispatchSubcommand(cmd, subArgv, io, targetCwd);
     if (code !== undefined) {
       // El pie de puntuación se emite aquí, en el despachador, y en ningún otro sitio: ningún
-      // comando tiene que acordarse. `--json`, `--quiet` y `--no-footer` lo suprimen.
-      await emitScoreFooter(argv, io, targetCwd);
+      // comando tiene que acordarse. `--json`, `--quiet` y `--no-footer` lo suprimen. Cuando el
+      // comando acaba de ejecutar la cadena, el pie declara los gates NO MEDIDOS en vez de arriesgar
+      // un «gates OK» que el propio comando desmiente.
+      await emitScoreFooter(
+        argv,
+        io,
+        targetCwd,
+        runsGateChain(cmd, subArgv) ? { gateContext: 'external' } : {},
+      );
       return code;
     }
   }

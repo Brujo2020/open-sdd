@@ -53,6 +53,14 @@
  * Un TTY no es requisito: en no-TTY el pie SÍ aparece (salvo las tres excepciones de arriba), porque
  * un log de CI sin el número es exactamente donde más falta hace. Un fallo al medir no puede tumbar
  * el comando: el pie se omite y el veredicto del comando queda intacto.
+ *
+ * ── Invariante gates: el pie y el comando no pueden contradecirse ───────────────────────────────
+ * El pie mide la cadena del nivel declarado, pero `gates run` y `audit bundle`/`sarif` ejecutan SU
+ * propia cadena (ids, perfil, régimen y `--staged`/`--base` son del comando). Reproducirla desde el
+ * pie sería adivinar. Por eso el despachador marca esas invocaciones con `gateContext: 'external'` y
+ * el componente de gates viaja como «no medidos en esta ejecución»: el pie NUNCA puede decir «gates
+ * OK» mientras el comando de la misma invocación dice que la cadena NO pasa. Quien sí conozca la
+ * ejecución puede inyectarla con `gateRun` y el componente la puntúa con el mismo código.
  */
 import { computeSddScore, renderScoreFooter } from '../core/sddScore.js';
 const toFinding = (value) => {
@@ -123,12 +131,21 @@ export const shouldEmitScoreFooter = (argv) => !argv.includes(SCORE_FOOTER_FLAG)
  * Medir el repositorio y escribir el pie de UNA línea. Devuelve el informe (para quien quiera
  * adjuntarlo al sobre) o `null` cuando no toca o cuando medir falló. Nunca lanza: un pie que
  * revienta no puede tumbar el comando que lo lleva.
+ *
+ * `opts.gateRun` deja que el llamante puntúe la MISMA ejecución de la cadena que produjo el comando;
+ * `opts.gateContext: 'external'` declara que el comando acaba de correr la cadena y el pie no puede
+ * reproducirla. Sin ninguno de los dos, el pie mide la cadena del nivel declarado. El invariante:
+ * el pie nunca puede decir «gates OK» mientras el comando de esta invocación dice que la cadena NO
+ * pasa.
  */
-export const emitScoreFooter = async (argv, io, cwd) => {
+export const emitScoreFooter = async (argv, io, cwd, opts = {}) => {
     if (!shouldEmitScoreFooter(argv))
         return null;
     try {
-        const report = await computeSddScore(cwd);
+        const report = await computeSddScore(cwd, {
+            ...(opts.gateRun ? { gateRun: opts.gateRun } : {}),
+            ...(opts.gateContext ? { gateContext: opts.gateContext } : {}),
+        });
         io.log(renderScoreFooter(report));
         return report;
     }

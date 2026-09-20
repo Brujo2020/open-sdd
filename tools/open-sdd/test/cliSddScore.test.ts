@@ -229,4 +229,31 @@ describe('cli/jsonOut — el sobre gana el score y el pie se decide en un solo s
     expect(await emitScoreFooter(['status', SCORE_FOOTER_FLAG], ctx.io, cwd)).toBeNull();
     expect(ctx.logs).toHaveLength(1);
   });
+
+  it('tras un `gates run` que FALLA, el pie no dice «gates OK» (invariante de la misma ejecución)', async () => {
+    // Repositorio del demo: una tarea completada sin `_Evidence:` hace fallar C3 en la cadena que
+    // `gates run` resuelve por su cuenta. El pie no puede reproducir esa cadena, así que declara los
+    // gates NO MEDIDOS en esta ejecución en vez de arriesgar un «gates OK» que el comando desmiente.
+    const cwd = await makeTmp();
+    await write(
+      cwd,
+      '.sdd/specs/payments/requirements.md',
+      ['# Requirements — payments', '', '### REQ-PAY-001 — Refund', 'WHEN a charge is refunded, the payments system SHALL record the refund.', ''].join('\n'),
+    );
+    await write(cwd, '.sdd/specs/payments/plan.md', '# Plan — payments\n\nRefunds are compensating ledger entries.\n');
+    await write(
+      cwd,
+      '.sdd/specs/payments/tasks.md',
+      '# Tasks — payments\n\n- [x] T1 Implement refund endpoint _Requirements: REQ-PAY-001_\n',
+    );
+    const ctx = makeIO();
+
+    const code = await runCli(['gates', 'run'], runtime, ctx.io, {}, { cwd });
+    const out = ctx.logs.join('\n');
+
+    expect(code).toBe(1);
+    expect(out).toContain('La cadena NO pasa');
+    expect(out).toContain('gates (no medidos en esta ejecución)');
+    expect(out).not.toContain('gates OK');
+  });
 });

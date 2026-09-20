@@ -17,6 +17,7 @@ import {
   explainNextAction,
   renderScoreFooter,
 } from '../src/core/sddScore.js';
+import type { GateRunReport } from '../src/core/gateRunner.js';
 
 const dirs: string[] = [];
 
@@ -272,5 +273,66 @@ describe('core/sddScore — el pie de UNA línea', () => {
     expect(footer).toContain('Fase 1');
     expect(footer.split('\n')).toHaveLength(1);
     expect(footer.match(/open-sdd [a-z-]/g)).toHaveLength(1);
+  });
+});
+
+/**
+ * El defecto que estas pruebas cierran: el pie corría SU PROPIA cadena (la del nivel declarado) y
+ * decía «gates OK» justo después de que `gates run` dijera «La cadena NO pasa». El pie y el comando
+ * no pueden contradecirse. Se cubren los dos caminos: una ejecución inyectada se puntúa con ESA
+ * ejecución, y cuando el pie no puede conocerla la declara NO MEDIDA en vez de arriesgar un OK.
+ */
+const injectedReport = (outcomes: ('pass' | 'fail' | 'advisory' | 'self-authorized')[]): GateRunReport => {
+  const findings = outcomes.map((outcome, index) => ({
+    gateId: `C${index + 1}`,
+    outcome,
+    detail: `${outcome} inyectado`,
+    authority: `C${index + 1}`,
+  }));
+  return {
+    feature: 'session',
+    regime: 'flexible',
+    findings,
+    passed: !outcomes.includes('fail'),
+    unavailable: findings.filter((finding) => finding.outcome === 'self-authorized').map((finding) => finding.gateId),
+  };
+};
+
+describe('core/sddScore — el pie y el comando no pueden contradecirse en los gates', () => {
+  it('con una cadena FALLIDA inyectada el pie no dice «gates OK» y apunta a gates run', async () => {
+    const root = await seedComplete(TASKS_DONE);
+
+    const report = await computeSddScore(root, { feature: 'session', gateRun: injectedReport(['pass', 'fail']) });
+    const footer = renderScoreFooter(report);
+
+    expect(report.components.find((component) => component.id === 'gates')?.score).toBe(0.5);
+    expect(footer).not.toContain('gates OK');
+    expect(footer).toContain('gates 50%');
+    expect(report.nextAction).toBe('open-sdd gates run C1 C2');
+  });
+
+  it('con una cadena APROBADA inyectada el pie sí puede decir «gates OK»', async () => {
+    const root = await seedComplete(TASKS_DONE);
+
+    const report = await computeSddScore(root, { feature: 'session', gateRun: injectedReport(['pass', 'advisory']) });
+
+    expect(report.phase).toBe(3);
+    expect(renderScoreFooter(report)).toContain('gates OK');
+  });
+
+  it('cuando el comando ejecutó la cadena, el pie la declara NO MEDIDA en esa ejecución', async () => {
+    const root = await seedComplete(TASKS_DONE);
+
+    const report = await computeSddScore(root, { feature: 'session', gateContext: 'external' });
+    const footer = renderScoreFooter(report);
+    const gates = report.components.find((component) => component.id === 'gates');
+
+    expect(report.notMeasured).toContain('gates (no medidos en esta ejecución)');
+    expect(gates?.evidence).toContain('NO MEDIDO');
+    expect(footer).toContain('sin medir: gates (no medidos en esta ejecución)');
+    expect(footer).not.toContain('gates OK');
+    expect(footer).not.toContain('gates 0%');
+    // El peso de gates (15) queda fuera del denominador: no se puntúa 0 ni 1.
+    expect(report.detail).toContain('peso NO medido 15/100');
   });
 });
