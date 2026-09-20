@@ -54,6 +54,15 @@ import {
   type HostIntegration,
 } from '../../core/integrations.js';
 import {
+  COMMAND_TEMPLATE_IDS,
+  commandHostById,
+  hostForAgent,
+  installCommandTemplates,
+  planCommandTemplates,
+  summarizeCommandTemplates,
+  type CommandTemplateArtifact,
+} from '../../core/commandTemplates.js';
+import {
   IMPORT_SOURCES,
   applyImport,
   planImport,
@@ -70,7 +79,7 @@ export interface InitArtifact {
   action: 'create' | 'keep' | 'update';
   reason: string;
   /** Qué artefacto es: permite consumir el plan por máquina sin interpretar la prosa del motivo. */
-  kind: 'rigor' | 'constitution' | 'hook' | 'agent-skills';
+  kind: 'rigor' | 'constitution' | 'hook' | 'agent-skills' | 'command-templates' | 'mcp-config';
 }
 
 export interface InitAgentChoice {
@@ -105,6 +114,23 @@ export interface InitPlan {
   language: InitLanguageChoice;
   skills: boolean;
   write: boolean;
+  /** Plantillas de comando del anfitrión: el camino POR DEFECTO (sin MCP, sin red). */
+  commandTemplates: {
+    host: string | null;
+    dir: string | null;
+    action: 'create' | 'update' | 'keep';
+    verified: boolean;
+    reason: string;
+    artifacts: CommandTemplateArtifact[];
+  };
+  /** Registro MCP: opt-in explícito con `--mcp` (algunos anfitriones y políticas lo bloquean). */
+  mcp: {
+    requested: boolean;
+    path: string | null;
+    action: 'create' | 'update' | 'keep' | null;
+    verified: boolean;
+    reason: string | null;
+  };
   artifacts: InitArtifact[];
   steps: string[];
   nextCommands: string[];
@@ -313,6 +339,8 @@ export interface PlanInitInput {
   lang?: string;
   skills?: boolean;
   write?: boolean;
+  /** Registro MCP explícito: el valor por defecto es NO tocar ninguna configuración MCP. */
+  mcp?: boolean;
   /** Raíz SDD declarada (`--sdd-dir`); por defecto `.sdd`, o `.kiro` si es el layout existente. */
   sddDir?: string;
 }
@@ -478,6 +506,75 @@ export const planInit = async (input: PlanInitInput): Promise<InitPlan> => {
     });
   }
 
+  // ── Plantillas de comando: el camino POR DEFECTO ───────────────────────────────────────────
+  // Sin MCP, sin red y sin nada que una política de seguridad pueda bloquear: son archivos de
+  // prompt en el directorio que el anfitrión ya lee. El anfitrión se mapea desde el agente detectado
+  // y, si su convención no está verificada, se reporta `keep` con el motivo en vez de escribir a
+  // ciegas (la misma regla que la matriz MCP).
+  const commandHostId = hostForAgent(agent.id) ?? null;
+  const commandHost = commandHostId ? commandHostById(commandHostId) : undefined;
+  let commandTemplateArtifacts: CommandTemplateArtifact[] = [];
+  let commandSummary: InitPlan['commandTemplates'] = {
+    host: commandHostId,
+    dir: commandHost?.dir ?? null,
+    action: 'keep',
+    verified: false,
+    reason: `el anfitrión ${agent.id} no está en la matriz de plantillas de comando: no se escribe nada.`,
+    artifacts: [],
+  };
+
+  if (commandHostId && commandHost) {
+    try {
+      commandTemplateArtifacts = await planCommandTemplates({ cwd: target, hosts: [commandHostId] });
+      const summary = summarizeCommandTemplates(commandTemplateArtifacts, commandHostId);
+      commandSummary = { host: commandHostId, dir: commandHost.dir, ...summary, artifacts: commandTemplateArtifacts };
+      artifacts.push({
+        kind: 'command-templates',
+        path: summary.path,
+        action: summary.action,
+        reason:
+          `${summary.reason} Fuente: plantillas de comando propias (${COMMAND_TEMPLATE_IDS.length}), instaladas sin MCP ni red. ` +
+          `Cada workflow queda como \`${commandHost.invocation('constitution')}\` en el chat del anfitrión.`,
+      });
+    } catch (error) {
+      commandSummary.reason = `no se pudieron planificar las plantillas de comando (${(error as Error).message}); no se escribe nada.`;
+      artifacts.push({ kind: 'command-templates', path: commandHost.dir ?? '(sin directorio)', action: 'keep', reason: commandSummary.reason });
+    }
+  } else {
+    artifacts.push({ kind: 'command-templates', path: '(anfitrión sin plantillas)', action: 'keep', reason: commandSummary.reason });
+  }
+
+  // ── MCP: opt-in explícito (`--mcp`) ────────────────────────────────────────────────────────
+  let mcpSummary: InitPlan['mcp'] = { requested: input.mcp === true, path: null, action: null, verified: false, reason: null };
+  if (input.mcp) {
+    const integration = commandHostId ? integrationById(commandHostId) : undefined;
+    if (!integration) {
+      mcpSummary = {
+        requested: true,
+        path: null,
+        action: 'keep',
+        verified: false,
+        reason: `no hay una entrada MCP para el anfitrión ${agent.id}: no se toca ninguna configuración.`,
+      };
+      artifacts.push({ kind: 'mcp-config', path: '(sin ruta documentada)', action: 'keep', reason: mcpSummary.reason! });
+    } else {
+      const merge = await mergeMcpConfig(integration, cliPath ?? '<ruta-al-cli-open-sdd>', target);
+      mcpSummary = {
+        requested: true,
+        path: merge.path,
+        action: merge.action,
+        verified: merge.verified,
+        reason: merge.reason,
+      };
+      artifacts.push({
+        kind: 'mcp-config',
+        path: merge.path ?? '(sin ruta documentada)',
+        action: merge.action,
+        reason: merge.reason,
+      });
+    }
+  }
+
   const targetArg = path.relative(cwd, target) || '.';
   const nextCommands: string[] = [
     draftAvailable
@@ -490,10 +587,16 @@ export const planInit = async (input: PlanInitInput): Promise<InitPlan> => {
   const steps: string[] = [
     '1. Declara el rigor, el andamiaje de steering y el gate de commit: `open-sdd init ' +
       `${targetArg} --agent ${agent.id} --level ${level} --lang ${language.lang}${input.skills ? ' --skills' : ''} --write\``,
-    `2. Constitución (obligatoria en LOS TRES niveles: es el suelo, no un extra): \`${nextCommands[0]}\``,
-    `3. Estado del repositorio en una pantalla: \`${nextCommands[1]}\``,
-    `4. Gate constitucional de la spec: \`${nextCommands[2]}\``,
-    '5. Diagnóstico de la instalación (hook, CLI, entorno): `open-sdd doctor`',
+    commandHostId
+      ? `2. Plantillas de comando (CAMINO POR DEFECTO, sin MCP ni red): ${COMMAND_TEMPLATE_IDS.length} comandos en ${commandSummary.dir} — invócalos como \`${commandHost?.invocation('constitution') ?? '/sdd-constitution'}\`.`
+      : '2. Plantillas de comando: el anfitrión no está en la matriz, así que no hay directorio verificado donde escribirlas.',
+    input.mcp
+      ? `3. MCP (opt-in, ya solicitado): ${mcpSummary.path ?? '(sin ruta documentada)'} — ${mcpSummary.verified ? 'forma verificada' : 'forma NO verificada, no se escribe'}. El anfitrión podrá llamar al motor directamente.`
+      : '3. MCP (opt-in, NO solicitado): añade `--mcp` si tu anfitrión lo admite y tu política de seguridad no lo bloquea; el camino por defecto no lo necesita.',
+    `4. Constitución (obligatoria en LOS TRES niveles: es el suelo, no un extra): \`${nextCommands[0]}\``,
+    `5. Estado del repositorio en una pantalla: \`${nextCommands[1]}\``,
+    `6. Gate constitucional de la spec: \`${nextCommands[2]}\``,
+    '7. Diagnóstico de la instalación (hook, CLI, entorno): `open-sdd doctor`',
   ];
   if (!hasCode) {
     steps.splice(
@@ -514,6 +617,9 @@ export const planInit = async (input: PlanInitInput): Promise<InitPlan> => {
   const detail = [
     `Plan de init en ${target}: agente ${agent.id} (${agent.source}), nivel ${level} (${levelSpec.name}), idioma ${language.lang} (${language.source}).`,
     `${toCreate} artefacto(s) por crear, ${toUpdate} por actualizar, ${toKeep} conservado(s).`,
+    input.mcp
+      ? 'Dos caminos: plantillas de comando (por defecto) + MCP solicitado (opt-in).'
+      : 'Camino por defecto: solo plantillas de comando (sin MCP, sin red). MCP es opt-in con --mcp.',
     input.write ? 'Se escribirá lo indicado.' : 'Sin --write no se escribe nada: este es el plan.',
   ].join(' ');
 
@@ -538,6 +644,8 @@ export const planInit = async (input: PlanInitInput): Promise<InitPlan> => {
     language,
     skills: input.skills === true,
     write: input.write === true,
+    commandTemplates: commandSummary,
+    mcp: mcpSummary,
     artifacts,
     steps,
     nextCommands,
@@ -696,6 +804,46 @@ const applyInit = async (plan: InitPlan): Promise<InitOutcome> => {
     if (skills.detail) outcome.details.push(skills.detail);
   }
 
+  // Plantillas de comando: el camino por defecto. Se delega en el instalador de `commandTemplates`,
+  // que nunca sobrescribe un archivo editado a mano (la firma sha256 lo detecta) y nunca escribe en
+  // un anfitrión cuya convención no esté verificada.
+  const templatesArtifact = plan.artifacts.find((item) => item.kind === 'command-templates');
+  const templatesHost = plan.commandTemplates.host;
+  if (templatesArtifact && templatesHost && plan.commandTemplates.verified) {
+    const result = await installCommandTemplates({ cwd: plan.root, hosts: [templatesHost], write: true });
+    outcome.written.push(...result.written);
+    outcome.kept.push(...result.kept);
+    outcome.failures.push(...result.failures);
+    outcome.details.push(...result.details);
+  } else if (templatesArtifact) {
+    outcome.kept.push(templatesArtifact.path);
+    if (!plan.commandTemplates.verified) outcome.details.push(templatesArtifact.reason);
+  }
+
+  // MCP: solo si se solicitó con `--mcp`. Se reutiliza el merge idempotente de `integrate`.
+  if (plan.mcp.requested) {
+    const mcpArtifact = plan.artifacts.find((item) => item.kind === 'mcp-config');
+    const host = plan.commandTemplates.host ? integrationById(plan.commandTemplates.host) : undefined;
+    if (mcpArtifact && host) {
+      const merge = await mergeMcpConfig(host, (await resolveCliExecutable(plan.root)) ?? '<ruta-al-cli-open-sdd>', plan.root);
+      if (merge.resolvedPath === null || merge.action === 'keep') {
+        outcome.kept.push(mcpArtifact.path);
+        outcome.details.push(merge.reason);
+      } else {
+        try {
+          await mkdir(path.dirname(merge.resolvedPath), { recursive: true });
+          await writeFile(merge.resolvedPath, merge.content, 'utf8');
+          outcome.written.push(mcpArtifact.path);
+          outcome.details.push(merge.reason);
+        } catch (error) {
+          outcome.failures.push(`no se pudo escribir ${merge.resolvedPath} (${(error as Error).message})`);
+        }
+      }
+    } else if (mcpArtifact) {
+      outcome.kept.push(mcpArtifact.path);
+    }
+  }
+
   return outcome;
 };
 
@@ -703,7 +851,7 @@ const applyInit = async (plan: InitPlan): Promise<InitOutcome> => {
 // Superficie CLI
 // ---------------------------------------------------------------------------------------------
 
-const PROJECT_FLAGS = new Set(['--agent', '--level', '--skills', '--write', '--json', '--yes', '--sdd-dir']);
+const PROJECT_FLAGS = new Set(['--agent', '--level', '--skills', '--write', '--json', '--yes', '--sdd-dir', '--mcp']);
 
 /**
  * Despacho explícito entre el inicializador de proyecto y el init de spec heredado.
@@ -728,6 +876,7 @@ const handleProjectInit = async (args: string[], io: CliIO, cwd: string): Promis
   const json = args.includes('--json');
   const write = args.includes('--write');
   const skills = args.includes('--skills');
+  const mcp = args.includes('--mcp');
   const positional = args.find((arg) => !arg.startsWith('-'));
   const flag = (name: string): string | undefined => flagValue(args, name);
 
@@ -742,6 +891,7 @@ const handleProjectInit = async (args: string[], io: CliIO, cwd: string): Promis
       ...(flag('sdd-dir') !== undefined ? { sddDir: flag('sdd-dir') as string } : {}),
       skills,
       write,
+      mcp,
     });
   } catch (error) {
     io.error(colors.red(`Error: ${(error as Error).message}`));

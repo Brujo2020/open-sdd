@@ -16,7 +16,7 @@ import { colors } from '../ui/colors.js';
 import type { CliIO } from '../io.js';
 import { scanProject } from '../../core/reverseEngineering.js';
 import { buildDescriptiveConstitution, collectRepoFacts } from '../../core/reverseConstitution.js';
-import { buildConstitutionDraft, constitutionArtifactPaths } from '../../core/constitutionDraft.js';
+import { buildConstitutionDraft, constitutionArtifactPaths, RATIFY_INSTRUCTION } from '../../core/constitutionDraft.js';
 import { parseConstitution, renderConstitution, validateConstitution, principlesInForce, resolveAuthority } from '../../core/constitution.js';
 import {
   deltaCounts,
@@ -38,6 +38,7 @@ import { REUSE_FIRST_RULE, findReuseCandidates } from '../../core/reuseFirst.js'
 import { planBootstrap, writeCodeIntelligence } from '../../core/bootstrap.js';
 import { adaptTemplates } from '../../core/templateAdaptation.js';
 import { checkConsistency } from '../../core/consistency.js';
+import { analyseConvergence, appendConvergence, convergeExitCode, type ConvergenceReport } from '../../core/converge.js';
 import {
   analyseEars,
   deltaStatementText,
@@ -49,6 +50,23 @@ import {
   type EarsSuggestion,
 } from '../../core/earsAssistant.js';
 import { assist, renderAssist } from '../../core/assistants.js';
+import {
+  applyAnswers,
+  clarifyQuestionsFile,
+  planClarify,
+  readClarifyAnswers,
+  type ClarifyApplyReport,
+  type ClarifyQuestion,
+} from '../../core/clarify.js';
+import {
+  SPECIFY_QUESTIONS_FILE_KIND,
+  applyConstitutionAnswers,
+  existingRequirementStatements,
+  normalizeRequirementStatement,
+  planConstitutionInterview,
+  requirementArea,
+  specifyFromDescription,
+} from '../../core/interview.js';
 import { jsonEnvelope, type FindingInput } from '../jsonOut.js';
 
 const heading = (t: string): string => colors.bold(colors.cyan(t));
@@ -66,6 +84,59 @@ const findRepoRoot = async (cwd: string): Promise<string> => {
 };
 
 const readIfExists = async (p: string): Promise<string | null> => readFile(p, 'utf8').catch(() => null);
+
+/** El valor de un flag, aceptando `--flag valor` y `--flag=valor`. */
+const flagValue = (args: string[], flag: string): string | undefined => {
+  const inline = args.find((arg) => arg.startsWith(`${flag}=`));
+  if (inline) return inline.slice(flag.length + 1);
+  const index = args.findIndex((arg) => arg === flag);
+  return index >= 0 ? args[index + 1] : undefined;
+};
+
+/** Los argumentos posicionales de `args` desde `from`, saltando los valores de los flags de valor. */
+const positionalsOf = (args: string[], from: number, valueFlags: string[]): string[] => {
+  const words = args.slice(from);
+  const flags = new Set(valueFlags);
+  return words.filter((arg, index) => {
+    if (arg.startsWith('-')) return false;
+    const previous = words[index - 1];
+    return !(previous && flags.has(previous));
+  });
+};
+
+/**
+ * Un fichero de respuestas de la entrevista: `{ "<id>": "<respuesta>" }`. Se aceptan además la forma
+ * `{ "answers": {…} }` y una lista de `{ id, answer }`, para que un host no tenga que adivinar.
+ */
+const normalizeInterviewAnswers = (parsed: unknown): Record<string, string> => {
+  const out: Record<string, string> = {};
+  const take = (source: unknown): void => {
+    if (!source || typeof source !== 'object') return;
+    if (Array.isArray(source)) {
+      for (const item of source) {
+        if (!item || typeof item !== 'object') continue;
+        const entry = item as Record<string, unknown>;
+        const id = typeof entry.id === 'string' ? entry.id : undefined;
+        const answer = entry.answer ?? entry.value;
+        if (id && (typeof answer === 'string' || typeof answer === 'number' || typeof answer === 'boolean')) {
+          out[id] = String(answer);
+        }
+      }
+      return;
+    }
+    for (const [id, value] of Object.entries(source as Record<string, unknown>)) {
+      if (id === 'answers' && value && typeof value === 'object') {
+        take(value);
+        continue;
+      }
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        out[id] = String(value);
+      }
+    }
+  };
+  take(parsed);
+  return out;
+};
 
 /**
  * The change under analysis, from either boundary.
@@ -646,6 +717,160 @@ export const handleBrownfieldCommand = async (args: string[], io: CliIO, cwd: st
   }
 
   if (sub === 'survey' || sub === 'constitution') {
+    // LA ENTREVISTA de constitución (en lenguaje natural y sin TTY): se añade `--interview` al
+    // subcomando `constitution` que ya existía. Sin `--answers` imprime las preguntas y lo que la
+    // evidencia YA decidió (por eso no se pregunta); con `--answers <path>` aplica las respuestas y
+    // produce un BORRADOR validado. `--write` lo guarda en `constitution.draft.md` y NUNCA toca
+    // `constitution.md`: la autoridad solo la da `govern constitution --ratify`.
+    if (sub === 'constitution' && args.includes('--interview')) {
+      const json = args.includes('--json');
+      const interviewPositionals = positionalsOf(args, 1, ['--answers']);
+      const interviewTarget = interviewPositionals[0]
+        ? path.resolve(cwd, interviewPositionals[0])
+        : await findRepoRoot(cwd);
+      const answersPath = flagValue(args, '--answers');
+      const interview = await planConstitutionInterview(interviewTarget, { sddDir: '.sdd' });
+
+      if (answersPath) {
+        const absolute = path.resolve(cwd, answersPath);
+        const rawAnswers = await readIfExists(absolute);
+        if (rawAnswers === null) {
+          io.error(colors.red(`No se puede leer el fichero de respuestas: ${absolute}`));
+          return 1;
+        }
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(rawAnswers);
+        } catch {
+          io.error(colors.red(`El fichero de respuestas no es JSON válido: ${absolute}`));
+          return 1;
+        }
+        const answers = normalizeInterviewAnswers(parsed);
+        if (Object.keys(answers).length === 0) {
+          io.error(colors.red('El fichero de respuestas no contiene ninguna respuesta reconocible (objeto { "<id>": "<texto>" }).'));
+          return 1;
+        }
+
+        const application = await applyConstitutionAnswers({ answers, interview, cwd: interviewTarget });
+        // La severidad la aporta el validador compartido sobre el texto producido: `issues` del core
+        // es el contrato sin severidad, y el veredicto de esta puerta no puede depender de la forma.
+        const blocking = validateConstitution(parseConstitution(application.text)).filter(
+          (issue) => issue.severity === 'error',
+        );
+        const paths = constitutionArtifactPaths(interviewTarget);
+        const write = args.includes('--write');
+        let draftPath: string | null = null;
+        if (write) {
+          await mkdir(path.dirname(paths.draft), { recursive: true });
+          await writeFile(paths.draft, application.text, 'utf8');
+          draftPath = path.relative(interviewTarget, paths.draft).split(path.sep).join('/');
+        }
+
+        if (json) {
+          io.log(
+            JSON.stringify(
+              jsonEnvelope({
+                command: 'brownfield constitution --interview',
+                data: {
+                  interview,
+                  answers,
+                  applied: application.applied,
+                  unanswered: application.unanswered,
+                  issues: application.issues,
+                  blocking: blocking.map((issue) => ({ id: issue.code ?? issue.id, message: issue.message })),
+                  written: draftPath !== null,
+                  draft: draftPath,
+                  inForceTouched: false,
+                  text: application.text,
+                },
+                errors: blocking.map((issue) => ({ id: issue.code ?? issue.id, message: issue.message })),
+                ok: blocking.length === 0,
+                detail:
+                  draftPath !== null
+                    ? `Borrador escrito en ${draftPath} (NO en vigor; constitution.md no se ha tocado).`
+                    : 'Borrador producido en memoria: añade --write para guardarlo en constitution.draft.md (nunca toca constitution.md).',
+              }),
+              null,
+              2,
+            ),
+          );
+          return blocking.length > 0 ? 1 : 0;
+        }
+
+        io.log('');
+        io.log(heading(`Entrevista de constitución — ${interview.project}`));
+        io.log('');
+        io.log(`  ${colors.bold('Respuestas aplicadas')} (${application.applied.length}):`);
+        if (application.applied.length === 0) io.log(dim('    (ninguna)'));
+        for (const entry of application.applied) io.log(`    ${colors.green('✓')} ${entry.id} → ${entry.principle}`);
+        if (application.unanswered.length > 0) {
+          io.log(`  ${colors.bold('Sin responder o no reconocidas')} (${application.unanswered.length}) ${dim('— no cuentan como decisiones')}:`);
+          for (const id of application.unanswered) io.log(`    ${colors.yellow('?')} ${id}`);
+        }
+        io.log('');
+        for (const issue of application.issues) io.log(`  ${dim(issue.code)}: ${dim(issue.message)}`);
+        if (blocking.length > 0) {
+          io.log('');
+          io.log(`  ${colors.red(`${blocking.length} error(es) BLOQUEAN la ratificación`)}: el borrador se produce igual y el defecto no se oculta.`);
+        }
+        io.log('');
+        if (write && draftPath !== null) {
+          io.log(`  ${colors.green('✓')} borrador escrito en ${draftPath} (NO en vigor)`);
+          const inForce = await readIfExists(paths.inForce);
+          if (inForce !== null) {
+            io.log(
+              `  ${colors.yellow('!')} ${path.relative(interviewTarget, paths.inForce)} existe y no se ha tocado: solo --ratify lo sustituye.`,
+            );
+          }
+          io.log('');
+          io.log(dim(`  Autoridad: ${RATIFY_INSTRUCTION}`));
+        } else {
+          io.log(dim('  El borrador no se escribe: añade --write para guardarlo en .sdd/steering/constitution.draft.md (nunca toca constitution.md). A continuación se imprime el texto producido.'));
+          io.log('');
+          io.log(application.text);
+        }
+        io.log('');
+        return blocking.length > 0 ? 1 : 0;
+      }
+
+      if (json) {
+        io.log(
+          JSON.stringify(
+            jsonEnvelope({
+              command: 'brownfield constitution --interview',
+              data: interview,
+              detail: interview.detail,
+            }),
+            null,
+            2,
+          ),
+        );
+        return 0;
+      }
+
+      io.log('');
+      io.log(heading(`Entrevista de constitución — ${interview.project}`));
+      io.log('');
+      io.log(`  ${colors.bold('Decidido por evidencia (NO se pregunta)')} (${interview.decidedByEvidence.length}):`);
+      for (const item of interview.decidedByEvidence) io.log(`    · ${item}`);
+      io.log('');
+      io.log(`  ${colors.bold('Preguntas que la evidencia no puede responder')} (${interview.questions.length}):`);
+      for (const question of interview.questions) {
+        io.log(`    ${colors.bold(question.id)} ${question.question}`);
+        io.log(`        ${dim(`por qué: ${question.why}`)}`);
+        if (question.default !== undefined) io.log(`        ${dim(`por defecto: ${question.default}`)}`);
+        if (question.options) io.log(`        ${dim(`opciones: ${question.options.join(' | ')}`)}`);
+        if (question.fromEvidence) io.log(`        ${dim(`de la evidencia: ${question.fromEvidence}`)}`);
+      }
+      io.log('');
+      io.log(`  ${dim(interview.detail)}`);
+      io.log('');
+      io.log(dim('  Responde en un fichero JSON { "<id>": "<respuesta>" } y ejecuta:'));
+      io.log(dim('  open-sdd brownfield constitution . --interview --answers <path> --write'));
+      io.log('');
+      return 0;
+    }
+
     // `--draft` is handled BEFORE the descriptive constitution is built: the draft is a proposal, not
     // an authoritative artifact, and it must not inherit the "in force" reading of the flow below.
     if (sub === 'constitution' && args.includes('--draft')) {
@@ -776,6 +1001,162 @@ export const handleBrownfieldCommand = async (args: string[], io: CliIO, cwd: st
     }
     io.log('');
     return issues.some((i) => i.severity === 'error') ? 1 : 0;
+  }
+
+  if (sub === 'specify') {
+    // DE LENGUAJE NATURAL A EARS. Headless-first: sin TTY imprime los requisitos y las preguntas (o
+    // las escribe en un fichero con --questions-file). `requirements.md` se escribe SOLO con --write
+    // y solo se AÑADE: los enunciados existentes se conservan y se informan como `keep`. Decidir
+    // ADDED frente a MODIFIED es competencia de la delta, no de este comando.
+    const feature = (positionalsOf(args, 1, ['--area', '--questions-file'])[0] ?? '').trim();
+    const description = positionalsOf(args, 1, ['--area', '--questions-file']).slice(1).join(' ').trim();
+    if (feature.length === 0 || description.length === 0) {
+      io.error(
+        colors.red(
+          'Faltan argumentos: open-sdd brownfield specify <feature> "<descripción en lenguaje natural>" [--area A] [--json] [--write] [--questions-file <path>]',
+        ),
+      );
+      return 1;
+    }
+
+    const areaFlag = flagValue(args, '--area');
+    const root = await findRepoRoot(cwd);
+    const sddDir = await resolveSddDir(root);
+    const specDir = path.join(root, sddDir, 'specs', feature);
+    const requirementsPath = path.join(specDir, 'requirements.md');
+    const existing = await readIfExists(requirementsPath);
+    const result = specifyFromDescription({
+      feature,
+      description,
+      ...(areaFlag ? { area: areaFlag } : {}),
+      ...(existing !== null ? { existing } : {}),
+    });
+    const area = requirementArea(feature, areaFlag);
+    const existingStatements = new Set(
+      existingRequirementStatements(existing ?? '').map(normalizeRequirementStatement),
+    );
+    const keep = result.requirements.filter((requirement) =>
+      existingStatements.has(normalizeRequirementStatement(requirement.statement)),
+    );
+    const added = result.requirements.filter(
+      (requirement) => !existingStatements.has(normalizeRequirementStatement(requirement.statement)),
+    );
+
+    const questionsFileFlag = flagValue(args, '--questions-file');
+    let questionsFile: string | null = null;
+    if (questionsFileFlag) {
+      const absolute = path.resolve(cwd, questionsFileFlag);
+      const payload = {
+        kind: SPECIFY_QUESTIONS_FILE_KIND,
+        feature,
+        area,
+        description,
+        questions: result.questions,
+        accepted: result.requirements,
+        howToAnswer:
+          'Responde cada pregunta ampliando la descripción (nombra el actor, el disparador y el valor medible) y vuelve a ejecutar specify: los enunciados ya presentes se conservan y no se reescriben.',
+      };
+      await mkdir(path.dirname(absolute), { recursive: true });
+      await writeFile(absolute, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+      questionsFile = path.relative(root, absolute).split(path.sep).join('/');
+    }
+
+    const write = args.includes('--write');
+    let written = false;
+    if (write) {
+      // Guardia de no-sobrescritura: el texto producido SIEMPRE empieza por el fichero existente tal
+      // cual. Si no fuera así, se rechaza en vez de reescribir requisitos que nadie revisó.
+      if (existing !== null && !result.text.startsWith(existing.replace(/\s+$/, ''))) {
+        io.error(colors.red('Rechazado: el texto resultante no conserva requirements.md tal cual. Nada se ha escrito.'));
+        return 1;
+      }
+      const unchanged = existing !== null && result.text === existing;
+      if (!unchanged) {
+        await mkdir(specDir, { recursive: true });
+        await writeFile(requirementsPath, result.text, 'utf8');
+        written = true;
+      }
+    }
+
+    if (args.includes('--json')) {
+      io.log(
+        JSON.stringify(
+          jsonEnvelope({
+            command: 'brownfield specify',
+            data: {
+              feature,
+              area,
+              description,
+              requirements: result.requirements,
+              added,
+              keep: keep.map((requirement) => requirement.id),
+              questions: result.questions,
+              text: result.text,
+              written,
+              questionsFile,
+              detail: result.detail,
+            },
+            // Una pregunta es un dato que falta: el comando no declara verde una especificación
+            // incompleta. No cambia ningún veredicto de otro gate; solo dice «falta esto».
+            errors: result.questions.map((question) => ({
+              id: question.id,
+              message: question.question,
+              artifact: question.missing,
+            })),
+            warnings: keep.map((requirement) => ({
+              id: requirement.id,
+              message: `ya existe: se conserva (${requirement.statement})`,
+            })),
+            ok: result.questions.length === 0 && result.requirements.length > 0,
+            detail: result.detail,
+          }),
+          null,
+          2,
+        ),
+      );
+      return result.questions.length > 0 ? 1 : 0;
+    }
+
+    io.log('');
+    io.log(heading(`Especificación en lenguaje natural — ${feature}`));
+    io.log('');
+    io.log(`  descripción: ${description}`);
+    io.log(`  área: ${area}`);
+    io.log('');
+    io.log(`  ${colors.bold(`Requisitos EARS (${result.requirements.length})`)}:`);
+    if (result.requirements.length === 0) io.log(dim('    (ninguno: no se ha inventado ningún requisito)'));
+    for (const requirement of result.requirements) {
+      const already = keep.some((candidate) => candidate.id === requirement.id);
+      io.log(
+        `    ${already ? colors.dim('keep') : colors.green('add')} ${requirement.id} ${dim(requirement.pattern)} ${requirement.statement}`,
+      );
+    }
+    if (result.questions.length > 0) {
+      io.log('');
+      io.log(
+        `  ${colors.bold(`Preguntas — datos que la descripción no trae (${result.questions.length})`)} ${dim('(NO son requisitos: no se ha inventado ninguno)')}:`,
+      );
+      for (const question of result.questions) {
+        io.log(`    ${colors.yellow('?')} ${question.id} ${dim(`[${question.missing}]`)} ${question.question}`);
+      }
+      io.log('');
+      io.log(dim('  Responde ampliando la descripción y vuelve a ejecutar: los enunciados ya presentes se conservan.'));
+    }
+    io.log('');
+    if (questionsFile) io.log(`  ${colors.green('✓')} preguntas escritas en ${questionsFile}`);
+    if (written) {
+      io.log(
+        `  ${colors.green('✓')} ${path.relative(root, requirementsPath)} escrito (${added.length} añadido(s), ${keep.length} conservado(s))`,
+      );
+    } else if (write && result.requirements.length > 0 && keep.length === result.requirements.length) {
+      io.log(dim('  = todos los requisitos derivados ya existían: requirements.md no se ha tocado'));
+    } else {
+      io.log(dim('  Solo previsualización: añade --write para escribir requirements.md (nunca sobrescribe un requisito existente).'));
+    }
+    io.log('');
+    io.log(`  ${dim(result.detail)}`);
+    io.log('');
+    return result.questions.length > 0 ? 1 : 0;
   }
 
   if (sub === 'requirements') {
@@ -1411,6 +1792,480 @@ export const handleBrownfieldCommand = async (args: string[], io: CliIO, cwd: st
     return report.refusals.length > 0 || report.status === 'drift' ? 1 : 0;
   }
 
-  io.log(`Subcomando desconocido: ${sub}. Usa: survey | constitution [target] [--write|--draft] | bootstrap [target] [--focus "<texto>"] [--write] [--json] | templates [target] [--write] [--json] | requirements <feature> [--suggest] [--json] [--apply <índice|código>] [--write] | analyze <feature> [--base <ref>] [--json] | impact <feature> [--base <ref>] | contracts <feature> [--write] [--verify] [--base <ref>] | reuse <feature> [--symbols A,B] [--base <ref>] | forecast "<descripción>" [--symbols A,B] [--json] | repair <feature> --target <artefacto> [--command "<cmd>"] [--requirement REQ-X] [--evidence "<texto>"] [--write] [--json]`);
+  if (sub === 'clarify') {
+    // La interrogación acotada. DERIVA cada pregunta del código determinista que la levanta (EARS o
+    // marcador `{{…}}`), NO pregunta lo que el repositorio ya puede responder (va a `fromEvidence`) y
+    // acota el lote declarándolo. Sin `--write` no toca la especificación jamás; con `--write` aplica
+    // y VERIFICA re-ejecutando el análisis (antes/después por pregunta).
+    const root = await findRepoRoot(cwd);
+    const words = args.slice(1);
+    const valueFlags = new Set(['--max', '--questions-file', '--answers']);
+    const feature =
+      words
+        .filter((arg, index) => {
+          if (arg.startsWith('-')) return false;
+          const previous = words[index - 1];
+          return !(previous && valueFlags.has(previous));
+        })
+        .map((arg) => arg.trim())
+        .filter((arg) => arg.length > 0)[0] ?? (await firstSpec(root));
+    if (!feature) {
+      io.error(colors.red('No hay especificación que clarificar. Pasa un nombre de feature o crea una spec primero.'));
+      return 1;
+    }
+
+    const valueOf = (name: string): string | undefined => {
+      const inline = args.find((arg) => arg.startsWith(`${name}=`));
+      if (inline) return inline.slice(name.length + 1);
+      const index = args.indexOf(name);
+      return index >= 0 ? args[index + 1] : undefined;
+    };
+    const relOf = (file: string): string => path.relative(root, file).split(path.sep).join('/');
+
+    let max: number | undefined;
+    const maxRaw = valueOf('--max');
+    if (maxRaw !== undefined) {
+      max = Number.parseInt(maxRaw, 10);
+      if (!Number.isFinite(max) || max < 0) {
+        io.error(colors.red(`--max debe ser un entero ≥ 0 (recibido: ${maxRaw}).`));
+        return 1;
+      }
+    }
+
+    const json = args.includes('--json');
+    const write = args.includes('--write');
+    const questionsFile = valueOf('--questions-file');
+    const answersFile = valueOf('--answers');
+
+    const session = await planClarify({ cwd: root, feature, ...(max !== undefined ? { max } : {}) });
+
+    const renderQuestions = (): void => {
+      io.log('');
+      io.log(heading(`Clarify — ${feature}${session.truncated ? ` ${dim(`(lote recortado: ${session.remaining} sin mostrar)`)}` : ''}`));
+      io.log('');
+      if (session.questions.length === 0) {
+        io.log(`  ${colors.green(session.detail)}`);
+      } else {
+        session.questions.forEach((question, index) => {
+          io.log(`  [${index + 1}] ${question.severity} ${question.code} · ${question.id}`);
+          io.log(`      artefacto: ${question.artifact}`);
+          io.log(`      pregunta: ${question.question}`);
+          io.log(`      por qué: ${question.why}`);
+          if (question.template) io.log(dim(`      plantilla: ${question.template}`));
+          if (question.options) for (const option of question.options) io.log(dim(`      opción: ${option}`));
+        });
+      }
+      for (const entry of session.fromEvidence) {
+        io.log(`  ${colors.green('= evidencia')} ${entry.id} ${entry.code} · ${entry.artifact}`);
+        io.log(dim(`      respuesta ya computada: ${entry.answer}`));
+        io.log(dim(`      ${entry.evidence}`));
+      }
+      for (const entry of session.unresolvable) {
+        io.log(`  ${colors.yellow('!')} ${entry.code} · ${entry.artifact}`);
+        io.log(dim(`      no se pregunta: ${entry.reason}`));
+      }
+      io.log('');
+      io.log(`  ${session.detail}`);
+      io.log(
+        dim('  No se ha escrito nada. Ciclo no interactivo: --questions-file <ruta> → rellena answers → --answers <ruta> --write.'),
+      );
+    };
+
+    if (questionsFile !== undefined && answersFile === undefined) {
+      const target = path.resolve(root, questionsFile);
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, `${JSON.stringify(clarifyQuestionsFile(session), null, 2)}\n`, 'utf8');
+      if (json) {
+        io.log(
+          JSON.stringify(
+            jsonEnvelope({
+              command: 'brownfield clarify',
+              data: { feature, session, questionsFile: relOf(target) },
+              warnings: session.questions.map((question) => ({ id: question.id, message: question.question, artifact: question.artifact })),
+              detail: session.detail,
+            }),
+            null,
+            2,
+          ),
+        );
+        return 0;
+      }
+      renderQuestions();
+      io.log(`  ${colors.green('✓')} preguntas escritas en ${relOf(target)} (${session.questions.length})`);
+      io.log('');
+      return 0;
+    }
+
+    const applyWith = async (
+      answers: Record<string, string>,
+      doWrite: boolean,
+    ): Promise<{ reports: { file: string; report: ClarifyApplyReport }[]; unreadable: string[]; written: number }> => {
+      const groups = new Map<string, ClarifyQuestion[]>();
+      for (const question of session.questions) {
+        const list = groups.get(question.file) ?? [];
+        list.push(question);
+        groups.set(question.file, list);
+      }
+      const reports: { file: string; report: ClarifyApplyReport }[] = [];
+      const unreadable: string[] = [];
+      let written = 0;
+      for (const [file, questions] of groups) {
+        const text = await readIfExists(file);
+        if (text === null) {
+          unreadable.push(relOf(file));
+          continue;
+        }
+        const report = applyAnswers({ text, session: { ...session, questions }, answers });
+        if (doWrite && report.applied.length > 0 && report.text !== text) {
+          await writeFile(file, report.text, 'utf8');
+          written += 1;
+        }
+        reports.push({ file: relOf(file), report });
+      }
+      return { reports, unreadable, written };
+    };
+
+    const renderApply = (
+      result: { reports: { file: string; report: ClarifyApplyReport }[]; unreadable: string[]; written: number },
+      doWrite: boolean,
+    ): void => {
+      io.log('');
+      io.log(heading(`Clarify — ${feature}`));
+      io.log('');
+      for (const { file, report } of result.reports) {
+        for (const entry of report.applied) {
+          io.log(`  ${colors.green('✓')} ${entry.id} ${doWrite ? 'aplicada' : 'lista (sin --write, no escrita)'} en ${file}`);
+          io.log(`      ${colors.red(`- ${entry.before.trim()}`)}`);
+          for (const line of entry.after.split('\n')) io.log(`      ${colors.green(`+ ${line.trim()}`)}`);
+        }
+        for (const refusal of report.refused) io.log(`  ${colors.red('rechazada')} ${refusal.id}: ${refusal.why}`);
+        const verification = report.verification;
+        io.log(
+          `  ${file}: códigos antes ${verification.codeBefore} · después ${verification.codeAfter} · ` +
+            `resueltos ${verification.resolved.length > 0 ? verification.resolved.join(', ') : '(ninguno)'} · ` +
+            `siguen abiertos ${verification.stillOpen.length > 0 ? verification.stillOpen.join(', ') : '(ninguno)'}`,
+        );
+      }
+      for (const file of result.unreadable) io.log(`  ${colors.red('✗')} no se pudo leer ${file}`);
+      io.log('');
+      io.log(
+        `  ${result.written} fichero(s) reescrito(s). ${doWrite ? 'Todo lo demás se ha conservado byte a byte.' : 'Sin --write la especificación NO se ha tocado.'}`,
+      );
+      io.log(`  ${session.detail}`);
+    };
+
+    let interactiveAnswers: Record<string, string> | null = null;
+    if (answersFile === undefined && !json && questionsFile === undefined && process.stdin.isTTY === true && session.questions.length > 0) {
+      const readline = await import('node:readline/promises');
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+      interactiveAnswers = {};
+      try {
+        io.log('');
+        io.log(heading(`Clarify — ${feature}`));
+        for (const question of session.questions) {
+          io.log('');
+          io.log(`  [${question.severity}] ${question.id} · ${question.code}`);
+          io.log(`      ${question.artifact}`);
+          io.log(`      ${question.question}`);
+          if (question.template) io.log(dim(`      plantilla: ${question.template}`));
+          if (question.options) for (const option of question.options) io.log(dim(`      opción: ${option}`));
+          const answer = await rl.question('  respuesta (vacío = no aplicar): ');
+          if (answer.trim().length > 0) interactiveAnswers[question.id] = answer.trim();
+        }
+      } finally {
+        rl.close();
+      }
+    }
+
+    let answers: Record<string, string> | null = interactiveAnswers;
+    if (answersFile !== undefined) {
+      const target = path.resolve(root, answersFile);
+      const raw = await readIfExists(target);
+      if (raw === null) {
+        io.error(colors.red(`No se pudo leer --answers ${relOf(target)}.`));
+        return 1;
+      }
+      const parsed = readClarifyAnswers(raw);
+      if (parsed.error) {
+        io.error(colors.red(`--answers ${relOf(target)}: ${parsed.error}`));
+        return 1;
+      }
+      answers = parsed.answers;
+    }
+
+    if (answers === null) {
+      if (write) {
+        io.error(
+          colors.red(
+            '--write exige respuestas: usa --answers <ruta> (o ejecuta en un TTY para responder una a una). Nada se ha escrito.',
+          ),
+        );
+        return 1;
+      }
+      if (json) {
+        io.log(
+          JSON.stringify(
+            jsonEnvelope({
+              command: 'brownfield clarify',
+              data: { feature, session },
+              warnings: session.questions.map((question) => ({ id: question.id, message: question.question, artifact: question.artifact })),
+              detail: session.detail,
+            }),
+            null,
+            2,
+          ),
+        );
+        return 0;
+      }
+      renderQuestions();
+      return 0;
+    }
+
+    const result = await applyWith(answers, write);
+    const answered = result.reports.reduce(
+      (count, { report }) => count + report.applied.length + report.refused.length,
+      0,
+    );
+    if (answered === 0) {
+      io.error(
+        colors.red(
+          `Ninguna respuesta del fichero coincide con las ${session.questions.length} pregunta(s) de esta sesión: nada que aplicar.`,
+        ),
+      );
+      return 1;
+    }
+
+    const refusals = result.reports.flatMap((entry) =>
+      entry.report.refused.map((refusal) => ({ id: refusal.id, message: refusal.why, artifact: entry.file })),
+    );
+    const hasErrors = refusals.length > 0 || result.unreadable.length > 0;
+
+    if (json) {
+      io.log(
+        JSON.stringify(
+          jsonEnvelope({
+            command: 'brownfield clarify',
+            data: {
+              feature,
+              session,
+              written: write,
+              files: result.reports.map(({ file, report }) => ({ file, ...report })),
+              unreadable: result.unreadable,
+            },
+            errors: [...refusals, ...result.unreadable.map((file) => ({ id: 'READ', message: `no se pudo leer ${file}`, artifact: file }))],
+            warnings: session.questions.map((question) => ({ id: question.id, message: question.question, artifact: question.artifact })),
+            ok: !hasErrors,
+            detail: session.detail,
+          }),
+          null,
+          2,
+        ),
+      );
+      return hasErrors ? 1 : 0;
+    }
+
+    renderApply(result, write);
+    io.log('');
+    return hasErrors ? 1 : 0;
+  }
+
+  if (sub === 'converge') {
+    // Convergencia brownfield MEDIDA: cada hallazgo lleva evidencia de máquina, el anexado es
+    // APPEND-ONLY (una sola sección `## Phase N: Convergence`) e idempotente (marca
+    // `_Convergence: F-<huella>_`). Sin `--write` no se toca `tasks.md`; con `--write` se anexa.
+    const root = await findRepoRoot(cwd);
+    const words = args.slice(1);
+    const valueFlags = new Set(['--max']);
+    const feature =
+      words
+        .filter((arg, index) => {
+          if (arg.startsWith('-')) return false;
+          const previous = words[index - 1];
+          return !(previous && valueFlags.has(previous));
+        })
+        .map((arg) => arg.trim())
+        .filter((arg) => arg.length > 0)[0] ?? (await firstSpec(root));
+    if (!feature) {
+      io.error(colors.red('No hay especificación que converger. Pasa un nombre de feature o crea una spec primero.'));
+      return 1;
+    }
+
+    const valueOf = (name: string): string | undefined => {
+      const inline = args.find((arg) => arg.startsWith(`${name}=`));
+      if (inline) return inline.slice(name.length + 1);
+      const index = args.indexOf(name);
+      return index >= 0 ? args[index + 1] : undefined;
+    };
+    let max: number | undefined;
+    const maxRaw = valueOf('--max');
+    if (maxRaw !== undefined) {
+      max = Number.parseInt(maxRaw, 10);
+      if (!Number.isFinite(max) || max <= 0) {
+        io.error(colors.red(`--max debe ser un entero > 0 (recibido: ${maxRaw}).`));
+        return 1;
+      }
+    }
+
+    const json = args.includes('--json');
+    const write = args.includes('--write');
+    const report = await analyseConvergence({
+      cwd: root,
+      feature,
+      ...(max !== undefined ? { max } : {}),
+    });
+
+    const asFindings = (findings: ConvergenceReport['findings']): FindingInput[] =>
+      findings.map((finding) => ({ id: finding.id, message: finding.remainingWork, artifact: finding.source }));
+
+    // Prerrequisito ausente: mensaje accionable que nombra el comando a ejecutar primero y CERO
+    // salida parcial. `appended === null` con cero hallazgos significa que no se pudo analizar.
+    if (report.appended === null && report.findings.length === 0) {
+      if (json) {
+        io.log(
+          JSON.stringify(
+            jsonEnvelope({
+              command: 'brownfield converge',
+              data: report,
+              errors: [{ id: 'PREREQUISITE', message: report.detail }],
+              ok: false,
+              detail: report.detail,
+            }),
+            null,
+            2,
+          ),
+        );
+        return 1;
+      }
+      io.error(colors.red(report.detail));
+      return 1;
+    }
+
+    const high = report.findings.filter((finding) => finding.severity === 'high');
+    const rest = report.findings.filter((finding) => finding.severity !== 'high');
+    const exitCode = convergeExitCode(report);
+
+    const renderConvergence = (
+      written?: { written: boolean; tasksAfter: number; writeDetail: string },
+    ): void => {
+      io.log('');
+      io.log(heading(`Convergencia brownfield — ${feature}`));
+      io.log('');
+      if (report.findings.length === 0) {
+        io.log(
+          `  ${
+            report.converged
+              ? colors.green('Sin huecos nuevos: tasks.md queda byte a byte intacto.')
+              : colors.yellow('Sin huecos nuevos, pero hay inspecciones sin hacer: NO se declara convergencia.')
+          }`,
+        );
+      } else {
+        io.log(`  ${colors.bold('Hallazgos')} (${report.findings.length}):`);
+        for (const finding of report.findings) {
+          const mark =
+            finding.severity === 'high'
+              ? colors.red(finding.severity)
+              : finding.severity === 'medium'
+                ? colors.yellow(finding.severity)
+                : colors.dim(finding.severity);
+          io.log(`    ${colors.bold(finding.id)}  ${finding.gapType}  ${mark}  ${colors.bold(finding.source)}`);
+          io.log(`        trabajo: ${finding.remainingWork}`);
+          for (const item of finding.evidence) io.log(dim(`        evidencia: ${item}`));
+        }
+      }
+      const metrics = report.metrics;
+      io.log('');
+      io.log(
+        `  métricas: requisitos ${metrics.requirementsChecked} · tareas ${metrics.tasksChecked} · principios ${metrics.principlesChecked} · contratos ${metrics.contractsChecked}`,
+      );
+      io.log(
+        `  por tipo: ${Object.entries(metrics.byGapType).map(([gap, count]) => `${gap} ${count}`).join(' · ')}`,
+      );
+      io.log(
+        `  por severidad: alto ${metrics.bySeverity.high} · medio ${metrics.bySeverity.medium} · bajo ${metrics.bySeverity.low}`,
+      );
+      const tasksAfter = written ? written.tasksAfter : report.tasksAfter;
+      io.log(
+        `  tareas: ${report.tasksBefore} → ${tasksAfter}${written ? '' : ' (proyección: sin --write no se escribe)'}`,
+      );
+      io.log(
+        `  score que debería moverse: ${
+          report.scoreImpact.length === 0
+            ? dim('ningún componente (no hay huecos nuevos)')
+            : report.scoreImpact.map((entry) => `${entry.component} ↑`).join(', ')
+        }`,
+      );
+      io.log('');
+      io.log(`  ${colors.bold('Comprobado')} (${report.checked.length}):`);
+      for (const item of report.checked) io.log(`    ${colors.green('✓')} ${item}`);
+      if (report.notChecked.length > 0) {
+        io.log(`  ${colors.bold('NO comprobado')} (${report.notChecked.length}) — no cuenta como aprobado:`);
+        for (const item of report.notChecked) io.log(`    ${colors.yellow('!')} ${item}`);
+      }
+      if (written) {
+        io.log('');
+        io.log(`  ${written.written ? colors.green(`✓ ${written.writeDetail}`) : colors.yellow(written.writeDetail)}`);
+      } else {
+        io.log('');
+        io.log(dim('  Sin --write no se ha tocado tasks.md.'));
+      }
+      io.log('');
+      io.log(
+        `  ${
+          report.converged
+            ? colors.green(report.detail)
+            : high.length > 0
+              ? colors.red(report.detail)
+              : colors.yellow(report.detail)
+        }`,
+      );
+      io.log('');
+    };
+
+    if (write) {
+      const result = await appendConvergence({ cwd: root, feature, report, write: true });
+      if (json) {
+        io.log(
+          JSON.stringify(
+            jsonEnvelope({
+              command: 'brownfield converge',
+              data: { ...report, write: result },
+              errors: asFindings(high),
+              warnings: asFindings(rest),
+              ok: high.length === 0,
+              detail: `${report.detail} ${result.detail}`,
+            }),
+            null,
+            2,
+          ),
+        );
+        return exitCode;
+      }
+      renderConvergence({ written: result.written, tasksAfter: result.tasksAfter, writeDetail: result.detail });
+      return exitCode;
+    }
+
+    if (json) {
+      io.log(
+        JSON.stringify(
+          jsonEnvelope({
+            command: 'brownfield converge',
+            data: report,
+            errors: asFindings(high),
+            warnings: asFindings(rest),
+            ok: high.length === 0,
+            detail: report.detail,
+          }),
+          null,
+          2,
+        ),
+      );
+      return exitCode;
+    }
+
+    renderConvergence();
+    return exitCode;
+  }
+
+  io.log(`Subcomando desconocido: ${sub}. Usa: survey | constitution [target] [--write|--draft] [--interview [--answers <ruta>] [--write] [--json]] | specify <feature> "<descripción>" [--area A] [--json] [--write] [--questions-file <ruta>] | bootstrap [target] [--focus "<texto>"] [--write] [--json] | templates [target] [--write] [--json] | requirements <feature> [--suggest] [--json] [--apply <índice|código>] [--write] | clarify <feature> [--max N] [--json] [--questions-file <ruta>] [--answers <ruta>] [--write] | converge <feature> [--write] [--json] [--max N] | analyze <feature> [--base <ref>] [--json] | impact <feature> [--base <ref>] | contracts <feature> [--write] [--verify] [--base <ref>] | reuse <feature> [--symbols A,B] [--base <ref>] | forecast "<descripción>" [--symbols A,B] [--json] | repair <feature> --target <artefacto> [--command "<cmd>"] [--requirement REQ-X] [--evidence "<texto>"] [--write] [--json]`);
   return 1;
 };

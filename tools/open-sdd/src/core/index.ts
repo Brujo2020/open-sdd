@@ -45,10 +45,17 @@ export * from './bootstrap.js';
 export * from './doctor.js';
 export * from './templateAdaptation.js';
 export * from './consistency.js';
+export * from './converge.js';
 // EARS assistant: explicit names because `EarsPattern`/`EarsReport` already exist in `ears.js` with another vocabulary.
 export { analyseEars, describeFromPlainLanguage, earsEvidencePack, renderEarsReport, mergeEarsReports, EARS_PATTERNS, EARS_NEEDS_INFORMATION, EARS_ASSISTANT_TEMPLATES, EARS_REPO_EXAMPLES, EARS_SUGGESTION_CATALOGUE, isEarsProposalApplicable, type EarsSuggestion, type EarsAssistantTemplate, type EarsSuggestionRule } from './earsAssistant.js';
 // Assistants: the single decision point that makes the EARS/constitution helpers appear on demand.
 export * from './assistants.js';
+// Interview: the two natural-language front doors (constitution interview + specify), explicit names.
+export { planConstitutionInterview, applyConstitutionAnswers, specifyFromDescription, existingRequirementStatements, normalizeRequirementStatement, requirementArea, DEFAULT_INTERVIEW_MAX, INTERVIEW_ANSWERS_FILE_KIND, SPECIFY_QUESTIONS_FILE_KIND, type InterviewQuestion, type ConstitutionInterview, type SpecifyResult, type SpecifyRequirement, type SpecifyQuestion } from './interview.js';
+// Clarify: bounded, derived interrogation over the deterministic ambiguity codes, with verified write-back.
+export * from './clarify.js';
 // Adoption surface: the machine-checked integration matrix and the importers for the incumbents.
 export * from './integrations.js';
 export * from './importers.js';
+// The DEFAULT adoption surface: the host prompt templates, installed without MCP or network.
+export * from './commandTemplates.js';
