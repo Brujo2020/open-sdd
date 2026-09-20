@@ -73,7 +73,7 @@ pushing the tag is what asks CI to publish — so **the tag is part of the relea
 formality.
 
 ```bash
-git tag -a v3.0.2 -m "open-sdd v3.0.2"
+git tag -a v3.0.2 -m "the version you just published"
 git push origin v3.0.2
 ```
 
@@ -132,10 +132,10 @@ npm view @brujo2020/open-sdd dist.attestations
 
 # Run the published CLI in a throwaway directory and read its version
 WORK="$(mktemp -d)"; cd "$WORK"
-npx --yes @brujo2020/open-sdd@3.0.2 --version
+npx --yes @brujo2020/open-sdd@latest --version
 ```
 
-Expected: `open-sdd v3.0.2`. If the version printed is not the version you published, you are
+Expected: `the version you just published`. If the version printed is not the version you published, you are
 resolving a different package or a cached one — check `npm view @brujo2020/open-sdd version` again
 rather than assuming the release failed.
 
@@ -150,7 +150,7 @@ Finally, confirm the *unscoped* trap is still documented and still true: `npx op
 npm does not allow re-publishing the same version. If a published version is wrong:
 
 ```bash
-npm deprecate @brujo2020/open-sdd@3.0.2 "superseded by 3.0.3: <reason>"
+npm deprecate @brujo2020/open-sdd@latest "superseded by 3.0.3: <reason>"
 ```
 
 then fix, bump, and publish a new patch version. Never try to overwrite history; deprecate and move

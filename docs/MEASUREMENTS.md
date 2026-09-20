@@ -12,9 +12,9 @@ Everything below is reproducible offline from a clone. Nothing here is field dat
 
 | Field | Value |
 |---|---|
-| Tool | `open-sdd v3.0.2` (`tools/open-sdd/dist/cli.js`, pinned) |
+| Tool | `open-sdd v3.1.0` (`tools/open-sdd/dist/cli.js`, pinned) |
 | Node | `v26.7.0` |
-| Date | 2026-09-20 |
+| Date | 2026-09-20 (tool version refreshed to v3.1.0; the measurement numbers below are unchanged) |
 | Seed | `1` |
 | Repositories | `10` (synthetic) |
 | Baseline sanity | pristine repo → **0 error findings** |
@@ -52,7 +52,7 @@ It writes only inside `mktemp -d` and needs no network.
 
 ```text
 open-sdd — synthetic incoherence bench
-  tool     open-sdd v3.0.2 (tools/open-sdd/dist/cli.js)
+  tool     open-sdd v3.1.0 (tools/open-sdd/dist/cli.js)
   node     v26.7.0   seed 1   repos 10
   baseline clean (0 error findings)
 

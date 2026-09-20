@@ -673,19 +673,20 @@ never overwrites an existing file and reports every path it refused to touch, an
 leave two SDD roots (`.kiro` and `.sdd`) raises a warning. The honest label: an on-ramp that loses
 nothing silently, not a lossless migration.
 
-### G-26 — The portable commit gate has never executed on Windows, and the Windows job is red
+### G-26 — The portable commit gate has never executed on Windows
 
 Paper: §6.3, Table 19 (levels A–D), §16.1 (host portability of the floor). `.github/workflows/gates.yml`
 declares a `windows` job (windows-latest, Node 20) that builds the CLI and runs the **full** suite with
 no skips, and the file predicts three pre-existing POSIX-mode assertions
 (`enforcementFloor.test.ts:170`, `cliInit.test.ts:389`, `coreDoctor.test.ts:601`) that read execute
 bits from `stat().mode`. Two facts, both from the workflow and from the Actions API rather than from
-prose: (1) the job **does execute** and **fails at the test suite** on the recent pushes (runs 10–13 of
-`gates.yml`, e.g. run `35519014257`), so the suite is not green on the host it is meant to prove; and
-(2) the job **never installs or runs the pre-commit hook** — only the Linux `gates` job runs
-`npm run hooks:install` — so the portable Node hook (`templates/hooks/pre-commit.mjs`) has never
-executed on Windows at all. The design is portable and untested where it matters; `doctor` reports the
-hook's POSIX dependence as a check precisely because this gap is real.
+prose: (1) the job **does execute** and **now succeeds** — the latest completed `gates.yml` run on
+`main` (`35536452295`, 2026-09-20T20:43Z) reports both jobs, `gates` and `windows`, as `success`, so
+the suite is green on the host it is meant to prove; and (2) the job **never installs or runs the
+pre-commit hook** — only the Linux `gates` job runs `npm run hooks:install` — so the portable Node hook
+(`templates/hooks/pre-commit.mjs`) has never executed on Windows at all. The Windows suite is green;
+what remains untested there is the commit gate itself, and `doctor` reports the hook's POSIX
+dependence as a check precisely because that part of the gap is real.
 
 ### G-27 — The container image is built for one architecture, and CI never builds it
 
@@ -697,16 +698,31 @@ produces whatever the builder's architecture is (arm64 on the machine this was w
 image and a `docker run` on a different architecture is unverified. The README's container snippet
 works on the architecture it was built on; it does not claim more, and this gap records that.
 
-### G-28 — Nothing of this repository is published to npm yet
+### G-28 — The package is published, but the CI trusted-publishing path is not the route that shipped it
 
-Paper: §16 (reproducible distribution). `package.json` declares `@brujo2020/open-sdd` v3.0.2 with
-`publishConfig.access: public`, but the registry carries only **v2.0.0** of that name
-(`dist-tags: { latest: 2.0.0 }`, a single version, an older toolkit with different behaviour), and the
-unscoped name `open-sdd` does not exist (HTTP 404). So `npx @brujo2020/open-sdd@latest` runs the wrong
-artifact and `npx open-sdd@latest` fails. The README states this and withholds the npm badges until
-v3.0.2 ships; the report records it as a gap because every "install in one command" promise in the
-documentation currently resolves to one of two clone-based paths (`install.sh`, `npm run
-install:global`), never to the registry.
+Paper: §16 (reproducible distribution). The package **is** published: `@brujo2020/open-sdd` carries
+**v3.1.0** (published 2026-09-20) with **v2.0.0** (2026-09-17) as the previous version, and
+`dist-tags.latest` is **3.1.0**, matching the root `package.json` v3.1.0 — so
+`npx @brujo2020/open-sdd@latest` runs this artifact. The unscoped name `open-sdd` still does not
+exist (HTTP 404), so `npx open-sdd@latest` is **not** this project and remains the wrong invocation.
+What is still a gap is the *path*, not the artifact:
+
+- **The workflow's trusted-publishing (OIDC) path has never succeeded.** Every `.github/workflows/
+  publish.yml` run is red, and each fails at the `npm publish --access public --provenance` step with
+  `E404 — PUT https://registry.npmjs.org/@brujo2020%2fopen-sdd - Not found`. The last red run
+  (`35536455377`, 2026-09-20T20:43Z) still shows it, and v3.1.0 was already on the registry by then,
+  so the 404 is an authorisation failure and not a missing package. The repository's own account of it
+  (`dad42b0`) is that the OIDC exchange needs npm ≥ 11.5.1 and Node 20 bundles npm 10.x, so with an
+  npm that cannot do trusted publishing the workflow has no token to fall back on and npm masks the
+  authorisation failure as a 404. The workflow now pins Node 24 (`node-version: '24'`, npm 11), which
+  is the fix for that specific cause, but no run has yet gone green on it.
+- **Until that path is proven, a manual publish is the fallback.** The owner publishes by hand with an
+  interactive one-time password (`npm publish --access public --provenance --otp <code>`), which is
+  what put 3.1.0 on the registry without a successful workflow run. That is a human-in-the-loop
+  release step and not a reproducible one-command pipeline, which is why the gap survives the publish.
+
+The report therefore no longer claims the registry carries only v2.0.0, and the "install in one
+command" promise in the documentation now resolves to the registry.
 
 ### G-29 — `docs/MEASUREMENTS.md` is synthetic honesty data, not field data, and the paper's figures are still not ours
 
