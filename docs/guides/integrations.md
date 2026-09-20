@@ -17,6 +17,10 @@ open-sdd integrate cursor --json          # the plan and the outcome as machine-
 
 In this repository, replace `open-sdd` with `node tools/open-sdd/dist/cli.js`.
 
+Detection names its evidence. With no host argument and no marker in the repository, the plan
+proposes `claude-code` as a **default** — exactly like `init` — and labels it `[defecto]` rather than
+pretending it was detected. An explicit host always wins.
+
 ## The matrix
 
 | Host | id | Skills layout | Invocation in chat | MCP config | Snippet verified |

@@ -874,13 +874,22 @@ export const planIntegrate = async (input) => {
     }
     else {
         const detected = await detectIntegration(cwd);
-        if (!detected) {
-            throw new Error(`No se observó ningún anfitrión en ${cwd}. Pasa uno explícito (${HOST_INTEGRATIONS.map((item) => item.id).join(', ')}) o consulta la matriz con \`open-sdd integrate --list\`.`);
+        if (detected) {
+            host = integrationById(detected.id);
+            source = 'detectado';
+            evidence = detected.evidence;
+            alternatives = detected.alternatives;
         }
-        host = integrationById(detected.id);
-        source = 'detectado';
-        evidence = detected.evidence;
-        alternatives = detected.alternatives;
+        else {
+            // Same fallback as `init`: the default is proposed AND declared as a default, never as a
+            // detection. `--write` still requires the user to have asked for it.
+            host = integrationById('claude-code');
+            source = 'defecto';
+            evidence = [
+                `no se observó ningún marcador de anfitrión (${HOST_INTEGRATIONS.flatMap((item) => item.detect).join(', ')})`,
+            ];
+            alternatives = [];
+        }
     }
     const language = input.lang === 'es' || input.lang === 'en'
         ? input.lang
@@ -928,16 +937,24 @@ export const planIntegrate = async (input) => {
         `2. Comprueba la instalación: \`open-sdd doctor\``,
         `3. Registro MCP: ${merge.path ?? '(sin ruta documentada)'} — ${merge.verified ? 'forma verificada' : 'forma NO VERIFICADA'}`,
     ];
+    if (source === 'defecto') {
+        steps.push(`ATENCIÓN: no se observó ningún anfitrión; se propone ${host.id} por defecto (igual que \`init\`). Si usas otro, pásalo explícito: \`open-sdd integrate <host>\`.`);
+    }
     const created = artifacts.filter((artifact) => artifact.action === 'create').length;
     const updated = artifacts.filter((artifact) => artifact.action === 'update').length;
     const kept = artifacts.filter((artifact) => artifact.action === 'keep').length;
     const detail = [
         `Plan de integración para ${host.label} (${host.id}, ${source}) en ${cwd}: ${created} artefacto(s) por crear, ${updated} por actualizar, ${kept} conservado(s).`,
+        source === 'defecto'
+            ? 'No se observó ningún anfitrión: el anfitrión es un valor por defecto, no una detección.'
+            : '',
         merge.verified
             ? 'El snippet MCP está verificado para este anfitrión.'
             : 'El snippet MCP NO está verificado: se imprime como NO VERIFICADO y --write no lo escribe.',
         input.write === true ? 'Se escribirá lo indicado.' : 'Sin --write no se escribe nada: este es el plan.',
-    ].join(' ');
+    ]
+        .filter((part) => part.length > 0)
+        .join(' ');
     return {
         cwd,
         host: { id: host.id, label: host.label, source, evidence, alternatives },
@@ -961,7 +978,7 @@ export const planIntegrate = async (input) => {
             host.invocation,
         ],
         detail,
-        complete: merge.verified,
+        complete: merge.verified && source !== 'defecto',
     };
 };
 export const applyIntegrate = async (plan, cwd) => {

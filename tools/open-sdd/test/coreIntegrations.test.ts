@@ -113,6 +113,23 @@ describe('integrations — detection names its evidence', () => {
     expect(ctx.text()).toContain('.cursor/ existe');
   });
 
+  it('without any marker it proposes the default host, like `init`, and says so', async () => {
+    const dir = await makeRoot();
+    const ctx = makeIO();
+
+    expect(await handleIntegrateCommand(['--json'], ctx.io, dir)).toBe(0);
+    const plan = JSON.parse(ctx.text()) as {
+      host: { id: string; source: string; evidence: string[] };
+      complete: boolean;
+      steps: string[];
+    };
+    expect(plan.host.source).toBe('defecto');
+    expect(plan.host.id).toBe('claude-code');
+    expect(plan.host.evidence.join(' ')).toContain('no se observó ningún marcador');
+    expect(plan.complete).toBe(false);
+    expect(plan.steps.some((step) => step.includes('por defecto'))).toBe(true);
+  });
+
   it('an unknown host is an error that lists the admitted ids', async () => {
     const dir = await makeRoot();
     const ctx = makeIO();

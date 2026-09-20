@@ -1229,17 +1229,27 @@ export const planIntegrate = async (input: PlanIntegrateInput): Promise<Integrat
     `2. Comprueba la instalación: \`open-sdd doctor\``,
     `3. Registro MCP: ${merge.path ?? '(sin ruta documentada)'} — ${merge.verified ? 'forma verificada' : 'forma NO VERIFICADA'}`,
   ];
+  if (source === 'defecto') {
+    steps.push(
+      `ATENCIÓN: no se observó ningún anfitrión; se propone ${host.id} por defecto (igual que \`init\`). Si usas otro, pásalo explícito: \`open-sdd integrate <host>\`.`,
+    );
+  }
 
   const created = artifacts.filter((artifact) => artifact.action === 'create').length;
   const updated = artifacts.filter((artifact) => artifact.action === 'update').length;
   const kept = artifacts.filter((artifact) => artifact.action === 'keep').length;
   const detail = [
     `Plan de integración para ${host.label} (${host.id}, ${source}) en ${cwd}: ${created} artefacto(s) por crear, ${updated} por actualizar, ${kept} conservado(s).`,
+    source === 'defecto'
+      ? 'No se observó ningún anfitrión: el anfitrión es un valor por defecto, no una detección.'
+      : '',
     merge.verified
       ? 'El snippet MCP está verificado para este anfitrión.'
       : 'El snippet MCP NO está verificado: se imprime como NO VERIFICADO y --write no lo escribe.',
     input.write === true ? 'Se escribirá lo indicado.' : 'Sin --write no se escribe nada: este es el plan.',
-  ].join(' ');
+  ]
+    .filter((part) => part.length > 0)
+    .join(' ');
 
   return {
     cwd,
@@ -1264,7 +1274,7 @@ export const planIntegrate = async (input: PlanIntegrateInput): Promise<Integrat
       host.invocation,
     ],
     detail,
-    complete: merge.verified,
+    complete: merge.verified && source !== 'defecto',
   };
 };
 

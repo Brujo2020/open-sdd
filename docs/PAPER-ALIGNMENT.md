@@ -5,9 +5,11 @@ Referencia Zero-Trust para Gobernar la Ingeniería de Software Agéntica a Escal
 Ramos (NTT DATA), rev. 3, September 2026, 87 pp. (henceforth "the paper").
 
 **Scope of this report:** how the paper's architecture maps onto the code that now lives in
-`tools/open-sdd/src/core/`, what is implemented, what is a declared gap, and what the paper measured
-that this repository does **not** measure. Every row names the file and the symbol that implements
-it, so a reader can check the row instead of trusting it.
+`tools/open-sdd/src/core/`, `tools/open-sdd/src/mcp/`, `tools/open-sdd/src/cli/commands/`,
+`tools/open-sdd/templates/`, `bench/` and `scripts/` — plus the repository-level artifacts
+`action.yml`, `Dockerfile` and `.github/workflows/gates.yml`. What is implemented, what is a declared
+gap, and what the paper measured that this repository does **not** measure. Every row names the file
+and the symbol that implements it, so a reader can check the row instead of trusting it.
 
 **What this report is not:** it is not evidence that the implementation works. It is an
 *internal-consistency* instrument of exactly the kind the paper describes in §9.6 — prose and
@@ -66,15 +68,18 @@ $ node tools/open-sdd/dist/cli.js assure claims --verify
 | `broken` (text claims a pass the code does not deliver) | 0 | — |
 | `outdated-text` (code improved past the prose) | 0 | — |
 
-In the short vocabulary: **verified = 54, declared-gap = 0, absent/not-measured = 3, broken = 0,
-outdated-text = 0** (out of 57). CLM-045 … CLM-057 decide the brownfield and rigor capabilities by
+In the short vocabulary: **verified = 59, declared-gap = 0, absent/not-measured = 3, broken = 0,
+outdated-text = 0** (out of 62). CLM-045 … CLM-057 decide the brownfield and rigor capabilities by
 exit code: delta validation and two-way traceability, the mandatory `previous` on `MODIFIED`, the
 evidence-or-amendment rule for descriptive principles, the constitution being blocking at every
 level as the floor of the ladder, absent practices travelling as proposed amendments,
 workspace-aware reconnaissance, contract extraction, the rule that exit code 0 never launders a
 missing declared contract, the console report that publishes the oracle, the default level's
 constitution-plus-requirements floor, the ladder monotonicity (2 → 4 → 6 gates), the rejection of an
-unknown gate id, and the quiet `--no-drift` commit path.
+unknown gate id, and the quiet `--no-drift` commit path. CLM-058 … CLM-062 cover the surfaces added
+since: the single brownfield entry point, the `sdd-brownfield` skill, the one status dashboard, its
+`--quiet` commit-time line, and the phantom-authority check that makes `status --check` exit 1 on a
+principle that is not in force.
 
 Observed exit codes, from the run above: **CLM-028, CLM-029 and CLM-031 exited `1`; every other claim
 exited `0`.** Both runners print the per-claim code, so the line above can be re-derived rather than
@@ -332,8 +337,9 @@ runs the registry directly: `assure claims --verify` → `claimsRegistry.ts` · 
 `1` only on `broken`. There is exactly one runner: a second, documentation-side copy was removed
 rather than left to drift against the product command. Two declared differences from the paper's run:
 
-- The registry holds **53 claims**, not the paper's 33, because it registers this port's components
-  (including the brownfield capabilities, CLM-045 … CLM-053).
+- The registry holds **62 claims**, not the paper's 33, because it registers this port's components
+  (including the brownfield capabilities, CLM-045 … CLM-053, and the synthesis and adoption surfaces,
+  CLM-054 … CLM-062).
 - The **three `not-measured` entries are the honest residue of the unpublished prototype** (no
   `docs/lab`, no `bin/sh-gate`, no `.steelharness/`): the paper's own instrument cannot decide them
   from here, and this report does not pretend otherwise.
