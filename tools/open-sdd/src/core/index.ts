@@ -40,9 +40,12 @@ export * from './regeneration.js';
 export * from './contextPack.js';
 export * from './ratchet.js';
 export * from './status.js';
+export * from './sddScore.js';
 export * from './bootstrap.js';
 export * from './doctor.js';
 export * from './templateAdaptation.js';
 export * from './consistency.js';
 // EARS assistant: explicit names because `EarsPattern`/`EarsReport` already exist in `ears.js` with another vocabulary.
 export { analyseEars, describeFromPlainLanguage, earsEvidencePack, renderEarsReport, mergeEarsReports, EARS_PATTERNS, EARS_NEEDS_INFORMATION, EARS_ASSISTANT_TEMPLATES, EARS_REPO_EXAMPLES, EARS_SUGGESTION_CATALOGUE, isEarsProposalApplicable, type EarsSuggestion, type EarsAssistantTemplate, type EarsSuggestionRule } from './earsAssistant.js';
+// Assistants: the single decision point that makes the EARS/constitution helpers appear on demand.
+export * from './assistants.js';

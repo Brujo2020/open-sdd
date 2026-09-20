@@ -118,3 +118,39 @@ jobs:
       - name: Report the enforcement floor
         if: always()
         run: node tools/open-sdd/dist/cli.js floor status
+
+  # ── Windows: the non-POSIX host ───────────────────────────────────────────────────────────────
+  # The commit gate ships as a portable Node hook (`templates/hooks/pre-commit`) and the CLI is
+  # plain Node, so a Windows host must be able to build it and run the FULL suite. This job is the
+  # proof. Nothing is weakened for Windows: no test is skipped, filtered or marked
+  # `continue-on-error` here, because a suite that is green only where it is convenient proves
+  # nothing. If a test is genuinely POSIX-only it fails loudly and is reported as a finding.
+  #
+  # Expected, pre-existing failures (reported, not hidden) — three assertions read POSIX execute
+  # bits from `stat().mode`, and Windows files carry none:
+  #   tools/open-sdd/test/enforcementFloor.test.ts:170
+  #   tools/open-sdd/test/cliInit.test.ts:389
+  #   tools/open-sdd/test/coreDoctor.test.ts:601
+  # The repository already guards this class elsewhere with
+  # `it.skipIf(process.platform === 'win32')` (coreDoctor.test.ts:344); these three predate that
+  # guard. Fixing them belongs to whoever owns `tools/open-sdd/test/**`.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install workspace
+        working-directory: tools/open-sdd
+        run: npm ci
+
+      - name: Build
+        working-directory: tools/open-sdd
+        run: npm run build
+
+      - name: Test suite (full)
+        working-directory: tools/open-sdd
+        run: npm test

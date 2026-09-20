@@ -48,6 +48,7 @@ import {
   type EarsReport,
   type EarsSuggestion,
 } from '../../core/earsAssistant.js';
+import { assist, renderAssist } from '../../core/assistants.js';
 import { jsonEnvelope, type FindingInput } from '../jsonOut.js';
 
 const heading = (t: string): string => colors.bold(colors.cyan(t));
@@ -246,6 +247,23 @@ export const handleDeltaCommand = async (args: string[], io: CliIO, cwd: string)
           `  ${colors.yellow('!')} Tareas que citan ids inexistentes: ${trace.phantomTasks.map((p) => `${p.taskId}→${p.cited}`).join(', ')}`,
         );
       }
+    }
+    // El asistente APARECE donde ya está la ambigüedad: junto a los hallazgos que este comando
+    // acaba de imprimir. No cambia el veredicto (abajo) y solo propone; nunca reescribe la delta.
+    if (issues.length > 0 || (trace?.unfilledPlaceholders.length ?? 0) > 0) {
+      const assistant = await assist({
+        cwd: root,
+        feature,
+        sddDir: await resolveSddDir(root),
+        findings: [
+          ...issues.map((issue) => ({ code: issue.code, artifact: issue.id })),
+          ...(trace?.unfilledPlaceholders ?? []).map((placeholder) => ({
+            code: placeholder.code,
+            artifact: placeholder.cited,
+          })),
+        ],
+      });
+      for (const line of renderAssist(assistant.suggestions)) io.log(dim(`  ${line}`));
     }
     io.log('');
     return errors.length > 0 ? 1 : 0;
@@ -1037,6 +1055,19 @@ export const handleBrownfieldCommand = async (args: string[], io: CliIO, cwd: st
     if (!suggest && report.suggestions.length > 0) {
       io.log('');
       io.log(dim('  Añade --suggest para ver cada propuesta con su porqué y un ejemplo real de este repositorio.'));
+      // El asistente APARECE junto al hallazgo que el informe acaba de imprimir, con la propuesta
+      // concreta y una única acción. No cambia el veredicto (abajo) y nunca reescribe la spec.
+      io.log('');
+      const assistant = await assist({
+        cwd: root,
+        feature,
+        sddDir: await resolveSddDir(root),
+        findings: report.suggestions.map((suggestion) => ({
+          code: suggestion.code,
+          artifact: suggestion.target,
+        })),
+      });
+      for (const line of renderAssist(assistant.suggestions)) io.log(dim(`  ${line}`));
     }
     for (const note of notes) io.log(dim(`  ${note}`));
     io.log('');

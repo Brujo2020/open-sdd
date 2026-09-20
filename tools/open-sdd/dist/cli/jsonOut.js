@@ -39,7 +39,22 @@
  *
  * Cuando un comando adopte el sobre, basta con devolver `jsonEnvelope(...)` como su salida `--json`;
  * no hay registro central que actualizar.
+ *
+ * ── El pie de puntuación (una línea, en TODOS los comandos) ─────────────────────────────────────
+ * `emitScoreFooter` es el ÚNICO sitio que decide si un comando lleva el pie `SDD n% · Fase …`. Lo
+ * llama el despachador (`src/index.ts`), no cada comando, para que ninguno tenga que acordarse. El
+ * sobre JSON gana un campo opcional `score` con el informe completo; el pie humano y el JSON son la
+ * misma medición (`core/sddScore.ts`), no dos. Reglas de supresión, en este orden:
+ *
+ *   `--no-footer`  lo apaga explícitamente (scripts que comparan la salida del comando tal cual).
+ *   `--json`       la salida debe seguir siendo JSON parseable: un pie la rompería.
+ *   `--quiet`      el modo guion promete UNA línea y esa línea es del comando.
+ *
+ * Un TTY no es requisito: en no-TTY el pie SÍ aparece (salvo las tres excepciones de arriba), porque
+ * un log de CI sin el número es exactamente donde más falta hace. Un fallo al medir no puede tumbar
+ * el comando: el pie se omite y el veredicto del comando queda intacto.
  */
+import { computeSddScore, renderScoreFooter } from '../core/sddScore.js';
 const toFinding = (value) => {
     if (typeof value === 'string')
         return { message: value };
@@ -62,7 +77,7 @@ export const jsonEnvelope = (input) => {
         (ok
             ? `Comando «${input.command}» completado sin errores${warnings.length > 0 ? ` (${warnings.length} aviso(s))` : ''}.`
             : `Comando «${input.command}» con ${errors.length} error(es)${warnings.length > 0 ? ` y ${warnings.length} aviso(s)` : ''}.`);
-    return { ok, command: input.command, data: input.data, findings: { errors, warnings }, detail };
+    return { ok, command: input.command, data: input.data, findings: { errors, warnings }, detail, ...(input.score ? { score: input.score } : {}) };
 };
 /**
  * Aplanar los issues de core (`{ severity, id?, message }`) a las dos listas del sobre. Los issues de
@@ -96,4 +111,28 @@ export const renderJsonEnvelope = (envelope) => {
     const verdict = envelope.ok ? 'ok' : 'error';
     const counts = `${errors.length} error(es)${warnings.length > 0 ? `, ${warnings.length} aviso(s)` : ''}`;
     return `open-sdd ${envelope.command} · ${verdict} · ${counts} · ${envelope.detail}`;
+};
+/** Flag que apaga el pie para scripts que comparan la salida del comando tal cual. */
+export const SCORE_FOOTER_FLAG = '--no-footer';
+/**
+ * ¿Toca pie en esta invocación? El JSON y el modo guion quedan intactos; `--no-footer` lo apaga. La
+ * decisión vive aquí y solo aquí: el despachador pregunta, ningún comando recuerda nada.
+ */
+export const shouldEmitScoreFooter = (argv) => !argv.includes(SCORE_FOOTER_FLAG) && !argv.includes('--json') && !argv.includes('--quiet');
+/**
+ * Medir el repositorio y escribir el pie de UNA línea. Devuelve el informe (para quien quiera
+ * adjuntarlo al sobre) o `null` cuando no toca o cuando medir falló. Nunca lanza: un pie que
+ * revienta no puede tumbar el comando que lo lleva.
+ */
+export const emitScoreFooter = async (argv, io, cwd) => {
+    if (!shouldEmitScoreFooter(argv))
+        return null;
+    try {
+        const report = await computeSddScore(cwd);
+        io.log(renderScoreFooter(report));
+        return report;
+    }
+    catch {
+        return null;
+    }
 };

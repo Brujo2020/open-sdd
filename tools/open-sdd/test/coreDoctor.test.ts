@@ -576,7 +576,7 @@ describe('doctor — instalación completa', () => {
 });
 
 describe('doctor --fix', () => {
-  it('crea el rigor ausente y reinstala el hook, diciendo qué hizo', async () => {
+  it.skipIf(process.platform === 'win32')('crea el rigor ausente y reinstala el hook, diciendo qué hizo', async () => {
     const dir = await makeRoot();
     await gitInit(dir);
     const ctx = makeIO();

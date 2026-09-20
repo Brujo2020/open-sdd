@@ -24,7 +24,76 @@ Zero-Trust gate chain, reports declared-vs-executed honestly, and never invents 
 
 ---
 
+## Empieza en 60 segundos
+
+Un repositorio desechable, cuatro incoherencias reales y el CLI diciéndote cuáles son. Sin red, sin
+`npm install`, sin escribir fuera de un directorio temporal:
+
+```bash
+git clone https://github.com/Brujo2020/open-sdd
+cd open-sdd
+npm --prefix tools/open-sdd ci
+npm --prefix tools/open-sdd run build
+sh scripts/demo-60s.sh
+```
+
+El script crea un repo temporal con una spec real (`.sdd/specs/payments/`), inyecta un requisito de
+la delta sin ninguna tarea que lo implemente, una tarea marcada como completa sin la línea
+`_Evidence:`, un marcador de plantilla sin rellenar y un contrato declarado que no existe; después
+ejecuta el CLI **fijado** —`tools/open-sdd/dist/cli.js` de este checkout, nunca el `open-sdd`
+global— y muestra tres transcripciones: `status` (fase, trazabilidad, evidencia), `delta validate`
+(requisito sin tarea, marcador sin rellenar) y `gates run` (la cadena Zero-Trust y su veredicto).
+
+Sale con código distinto de cero si el motor no detecta alguna de ellas: una demo que no puede
+fallar es marketing, no una demo. Guía completa en
+**[docs/guides/quickstart-60s.md](docs/guides/quickstart-60s.md)**.
+
+En tu propio repositorio, los mismos tres comandos (sustituye solo la ruta del clon):
+
+```bash
+cd /ruta/a/tu/repositorio
+node /ruta/a/open-sdd/tools/open-sdd/dist/cli.js status
+node /ruta/a/open-sdd/tools/open-sdd/dist/cli.js delta validate <feature>
+node /ruta/a/open-sdd/tools/open-sdd/dist/cli.js gates run
+```
+
+O en un contenedor, sin instalar Node:
+
+```bash
+docker build -t open-sdd .
+docker run --rm -v "$PWD:/work" open-sdd status
+```
+
+Los números medidos —por clase, con el comando exacto y la versión de la herramienta— están en
+**[docs/MEASUREMENTS.md](docs/MEASUREMENTS.md)**: son cifras de honestidad sobre repositorios
+**sintéticos**, no datos de campo de equipos reales.
+
+---
+
 ## Install
+
+### Instalación sin placeholders
+
+Estos comandos se copian y se pegan tal cual desde el clon: no hay que sustituir ninguna ruta ni
+ningún marcador. Instalan dependencias, compilan el CLI y lo dejan disponible en el `PATH`:
+
+```bash
+npm --prefix tools/open-sdd ci
+npm --prefix tools/open-sdd run build
+npm run install:global
+open-sdd --version
+```
+
+Para instalar las skills en un repositorio de destino, el helper acepta el destino como primer
+argumento. Guarda una vez la ruta del clon y ejecútalo desde el repositorio de destino:
+
+```bash
+# 1) estando en el clon de open-sdd: guarda su ruta absoluta
+OPEN_SDD="$PWD"
+
+# 2) desde el repositorio de destino: instala las skills de Claude Code
+bash "$OPEN_SDD/install.sh" . --claude-skills -y
+```
 
 ### From a clone (the build and CLI commands below were verified this way)
 

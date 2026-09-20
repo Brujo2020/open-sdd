@@ -325,7 +325,7 @@ export const handleGatesCommand = async (args, io, cwd) => {
         for (const f of report.findings) {
             const gate = getExecutableGate(f.gateId);
             io.log(`  ${f.gateId.padEnd(4)} ${(gate?.name ?? '').padEnd(42)} ${outcomeColor(f.outcome)}`);
-            io.log(`       ${dim(f.detail.slice(0, 180))}${f.detail.length > 180 ? '…' : ''}`);
+            io.log(`       ${dim((f.outcome === 'fail' ? f.detail : f.detail.slice(0, 180)))}${f.detail.length > 180 ? '…' : ''}`);
         }
         io.log('');
         io.log(`  ${report.passed ? colors.green('La cadena pasa') : colors.red('La cadena NO pasa')}`);

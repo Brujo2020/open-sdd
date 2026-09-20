@@ -39,7 +39,24 @@
  *
  * Cuando un comando adopte el sobre, basta con devolver `jsonEnvelope(...)` como su salida `--json`;
  * no hay registro central que actualizar.
+ *
+ * ── El pie de puntuación (una línea, en TODOS los comandos) ─────────────────────────────────────
+ * `emitScoreFooter` es el ÚNICO sitio que decide si un comando lleva el pie `SDD n% · Fase …`. Lo
+ * llama el despachador (`src/index.ts`), no cada comando, para que ninguno tenga que acordarse. El
+ * sobre JSON gana un campo opcional `score` con el informe completo; el pie humano y el JSON son la
+ * misma medición (`core/sddScore.ts`), no dos. Reglas de supresión, en este orden:
+ *
+ *   `--no-footer`  lo apaga explícitamente (scripts que comparan la salida del comando tal cual).
+ *   `--json`       la salida debe seguir siendo JSON parseable: un pie la rompería.
+ *   `--quiet`      el modo guion promete UNA línea y esa línea es del comando.
+ *
+ * Un TTY no es requisito: en no-TTY el pie SÍ aparece (salvo las tres excepciones de arriba), porque
+ * un log de CI sin el número es exactamente donde más falta hace. Un fallo al medir no puede tumbar
+ * el comando: el pie se omite y el veredicto del comando queda intacto.
  */
+
+import type { CliIO } from './io.js';
+import { computeSddScore, renderScoreFooter, type SddScoreReport } from '../core/sddScore.js';
 
 export type FindingSeverity = 'error' | 'warning';
 
@@ -63,6 +80,8 @@ export interface JsonEnvelope<T = unknown> {
   data: T;
   findings: EnvelopeFindings;
   detail: string;
+  /** El número compuesto y la fase (`core/sddScore.ts`), cuando el comando lo aporta. */
+  score?: SddScoreReport;
 }
 
 /** Un hallazgo puede llegar como objeto o como cadena suelta; ambos se normalizan. */
@@ -80,6 +99,8 @@ export interface JsonEnvelopeInput<T = unknown> {
   detail?: string;
   /** Fuerza el veredicto cuando «hay errores» no describe el resultado. */
   ok?: boolean;
+  /** El informe de puntuación; se incluye en el sobre solo cuando el comando lo mide. */
+  score?: SddScoreReport;
 }
 
 const toFinding = (value: FindingInput): EnvelopeFinding => {
@@ -105,7 +126,7 @@ export const jsonEnvelope = <T>(input: JsonEnvelopeInput<T>): JsonEnvelope<T> =>
     (ok
       ? `Comando «${input.command}» completado sin errores${warnings.length > 0 ? ` (${warnings.length} aviso(s))` : ''}.`
       : `Comando «${input.command}» con ${errors.length} error(es)${warnings.length > 0 ? ` y ${warnings.length} aviso(s)` : ''}.`);
-  return { ok, command: input.command, data: input.data, findings: { errors, warnings }, detail };
+  return { ok, command: input.command, data: input.data, findings: { errors, warnings }, detail, ...(input.score ? { score: input.score } : {}) };
 };
 
 /**
@@ -142,4 +163,34 @@ export const renderJsonEnvelope = (envelope: JsonEnvelope<unknown>): string => {
   const verdict = envelope.ok ? 'ok' : 'error';
   const counts = `${errors.length} error(es)${warnings.length > 0 ? `, ${warnings.length} aviso(s)` : ''}`;
   return `open-sdd ${envelope.command} · ${verdict} · ${counts} · ${envelope.detail}`;
+};
+
+/** Flag que apaga el pie para scripts que comparan la salida del comando tal cual. */
+export const SCORE_FOOTER_FLAG = '--no-footer';
+
+/**
+ * ¿Toca pie en esta invocación? El JSON y el modo guion quedan intactos; `--no-footer` lo apaga. La
+ * decisión vive aquí y solo aquí: el despachador pregunta, ningún comando recuerda nada.
+ */
+export const shouldEmitScoreFooter = (argv: readonly string[]): boolean =>
+  !argv.includes(SCORE_FOOTER_FLAG) && !argv.includes('--json') && !argv.includes('--quiet');
+
+/**
+ * Medir el repositorio y escribir el pie de UNA línea. Devuelve el informe (para quien quiera
+ * adjuntarlo al sobre) o `null` cuando no toca o cuando medir falló. Nunca lanza: un pie que
+ * revienta no puede tumbar el comando que lo lleva.
+ */
+export const emitScoreFooter = async (
+  argv: readonly string[],
+  io: CliIO,
+  cwd: string,
+): Promise<SddScoreReport | null> => {
+  if (!shouldEmitScoreFooter(argv)) return null;
+  try {
+    const report = await computeSddScore(cwd);
+    io.log(renderScoreFooter(report));
+    return report;
+  } catch {
+    return null;
+  }
 };

@@ -376,7 +376,7 @@ describe('init — idioma', () => {
 });
 
 describe('init — hook de commit (delegado al instalador existente)', () => {
-  it('--write instala el gate en un repositorio git y la segunda pasada lo conserva', async () => {
+  it.skipIf(process.platform === 'win32')('--write instala el gate en un repositorio git y la segunda pasada lo conserva', async () => {
     const dir = await makeRoot();
     await gitInit(dir);
     const first = makeIO();

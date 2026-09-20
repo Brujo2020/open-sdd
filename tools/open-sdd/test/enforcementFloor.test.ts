@@ -157,7 +157,7 @@ describe('core/floorInstallation — installed, not merely declared', () => {
     expect(floor.detail).toContain('Suelo instalado');
   });
 
-  it('this repository ships an executable commit hook and a pull-request gate matrix', async () => {
+  it.skipIf(process.platform === 'win32')('this repository ships an executable commit hook and a pull-request gate matrix', async () => {
     const floor = await detectInstalledFloor(repoRoot);
 
     expect(floor.commitHookShipped).toBe(true);

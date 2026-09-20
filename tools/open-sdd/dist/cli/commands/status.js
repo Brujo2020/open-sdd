@@ -48,9 +48,11 @@ import { colors } from '../ui/colors.js';
 import { getSpecStatus, listSpecs, resolveSddDir } from '../../core/specManager.js';
 import { alignFeature, buildStatus, constitutionCandidates, loadConstitution, renderStatus, worstTone, } from '../../core/status.js';
 import { principlesInForce } from '../../core/constitution.js';
+import { assist, renderAssist } from '../../core/assistants.js';
 import { hashConstitution, runAdhesionRatchet } from '../../core/ratchet.js';
 import { adhesionHistoryEntry, adhesionScore, adhesionTrend, readAdhesionHistory, recordAdhesionHistory, } from '../../core/specConstitution.js';
 import { jsonEnvelope } from '../jsonOut.js';
+import { computeSddScore } from '../../core/sddScore.js';
 const TONE_PAINT = {
     ok: colors.green,
     warn: colors.yellow,
@@ -287,6 +289,12 @@ export const handleStatusCommand = async (args, io, cwd = process.cwd()) => {
             return hasErrorLine || pivot.exitCode !== 0 ? 1 : 0;
         }
         // Modo estricto: sobre estable (`cli/jsonOut.ts`), con `ok` forzado al veredicto estricto.
+        // El sobre gana el número compuesto y la fase (`core/sddScore.ts`): es la misma medición que el
+        // pie humano, para que máquina y persona no lean dos verdades distintas.
+        const score = await computeSddScore(cwd, {
+            ...(feature ? { feature } : {}),
+            ...(sddDir ? { sddDir } : {}),
+        });
         const envelope = jsonEnvelope({
             command: 'status',
             data: {
@@ -304,6 +312,7 @@ export const handleStatusCommand = async (args, io, cwd = process.cwd()) => {
                 .filter((finding) => finding.severity === 'warning')
                 .map((finding) => ({ id: finding.code, message: finding.message })),
             ok: pivot.strictExitCode === 0,
+            score,
             detail: `Validación constitucional estricta de "${pivot.alignment?.feature ?? feature ?? '(sin-feature)'}": ${pivot.errorCount} error(es) y ${pivot.warningCount} aviso(s); en modo estricto ambos fallan.`,
         });
         io.log(JSON.stringify(envelope, null, 2));
@@ -355,6 +364,18 @@ export const handleStatusCommand = async (args, io, cwd = process.cwd()) => {
                 io.log(`  ${colors.dim(`Modo estricto (--strict) añadiría ${pivot.warningCount} aviso(s) al veredicto${warningCodes.length > 0 ? ` (${warningCodes.join(', ')})` : ''}.`)}`);
             }
         }
+        // El asistente aparece junto a los hallazgos ya impresos y solo cuando tiene algo que decir:
+        // con la constitución en vigor y hallazgos constitucionales devuelve cero sugerencias y no se
+        // imprime nada (el silencio es una respuesta válida). Cubre los dos caminos —constitución
+        // ausente (pivote no ejecutable) y pivote con hallazgos— y no toca el veredicto de arriba.
+        const assistant = await assist({
+            cwd: report.root,
+            ...(feature ? { feature } : {}),
+            sddDir: sddRel,
+            findings: pivot.findings.map((finding) => ({ code: finding.code })),
+        });
+        for (const line of renderAssist(assistant.suggestions))
+            io.log(colors.dim(`  ${line}`));
     }
     io.log('');
     return exitCode;

@@ -178,6 +178,16 @@
       "owner": "mantenimiento (tests)",
       "actor": "spec:tool-maturity",
       "expires": "2027-03-31"
+    },
+    {
+      "path": "bench/harness.mjs",
+      "ids": [
+        "aws-access-key"
+      ],
+      "reason": "FIXTURE del banco de pruebas: inyecta a proposito una credencial con forma valida para medir si el motor detecta la clase \"waiver caducado deja de suprimir\". Sin ese valor esa clase no se puede medir.",
+      "owner": "mantenimiento (mediciones)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
     }
   ]
 }

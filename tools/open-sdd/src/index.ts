@@ -37,6 +37,8 @@ import {
 } from './cli/commands/paper.js';
 import { handleDeltaCommand, handleBrownfieldCommand } from './cli/commands/brownfield.js';
 import { handleTourCommand, handleContextCommand } from './cli/commands/tour.js';
+import { SCORE_FOOTER_FLAG, emitScoreFooter } from './cli/jsonOut.js';
+import { computeSddScore, explainNextAction, renderScoreFooter } from './core/sddScore.js';
 
 export * from './core/index.js';
 
@@ -125,6 +127,11 @@ Brownfield (existing code that is the de facto source of truth):
 Experience layer (bilingual: --lang es|en, or OPEN_SDD_LANG):
   tour [target] [--write] [--lang es|en] [--json]  Guided first run: recon, constitution draft, check, status, delta
   context [feature] [--lang es|en] [--json]        The context pack the MCP server serves, in the terminal
+
+Score (one number, one door):
+  open-sdd                                    Inspect the repository: composite SDD score, phase and the ONE next action
+  --no-footer                                 Suppress the score footer on any command (scripts)
+  --json | --quiet                            Also suppress the footer: machine and one-line output stay intact
 
 Note: In non-TTY environments, prompt mode falls back to skip.`;
 
@@ -269,6 +276,108 @@ const runPlanExecution = async (
   }
 };
 
+/**
+ * La puerta: `open-sdd` sin argumentos.
+ *
+ * NO imprime una lista de comandos como primer movimiento. Inspecciona el repositorio, dice el
+ * número compuesto y la fase, da la ÚNICA acción siguiente y explica en una línea por qué ESA acción.
+ * Es de SOLO LECTURA y no pregunta nunca: en un no-TTY no hay prompt que ofrecer. El catálogo
+ * completo sigue a un flag de distancia (`--help`), que es donde debe estar.
+ */
+const runScoreDoor = async (io: CliIO, cwd: string): Promise<number> => {
+  try {
+    const report = await computeSddScore(cwd);
+    io.log(renderScoreFooter(report));
+    io.log(`Por qué: ${explainNextAction(report)}`);
+    io.log('todos los comandos: open-sdd --help');
+    return 0;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    io.error(formatError(`Error: ${msg}`));
+    return 1;
+  }
+};
+
+/**
+ * Despacho de subcomandos, extraído para que el pie de puntuación se emita en UN solo sitio (el
+ * llamante) en vez de en cada comando. Devuelve `undefined` cuando el primer argumento no es un
+ * comando conocido: entonces `runCli` conserva el camino heredado (instalación vía `parseArgs`), que
+ * es exactamente lo que hacía antes cuando ningún `if` encajaba.
+ */
+const dispatchSubcommand = async (
+  cmd: string,
+  subArgv: string[],
+  io: CliIO,
+  targetCwd: string,
+): Promise<number | undefined> => {
+  if (cmd === 'status' || cmd === 'spec-status') {
+    return handleStatusCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'init' || cmd === 'spec-init') {
+    return handleInitCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'audit') {
+    if (subArgv[0] === 'bundle' || subArgv[0] === 'sarif') return handleAuditBundleCommand(subArgv, io, targetCwd);
+    return handleAuditCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'gap' || cmd === 'validate-gap') {
+    return handleGapCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'getspecs') {
+    return handleGetspecsCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'verify' || cmd === 'validate-impl') {
+    return handleVerifyCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'impl') {
+    return handleImplCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'help') {
+    return handleHelpCommand(subArgv, io);
+  }
+  // Reference architecture: the Zero-Trust chain and its supporting models.
+  if (cmd === 'gates') {
+    return handleGatesCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'govern') {
+    return handleGovernCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'assure') {
+    return handleAssureCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'doctor') {
+    // Self-diagnosis: Node range, CLI reachability, the commit gate and its version and portability,
+    // declared rigor, constitution, specs and the offline posture — each with the fix to apply.
+    return handleDoctorCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'mcp') {
+    // Model Context Protocol over stdio: the agnostic integration surface. Any modern AI host can
+    // call the engine's checks and read the constitution as a resource without per-host code.
+    return runMcpServer({ cwd: targetCwd });
+  }
+  if (cmd === 'waves') {
+    return handleWavesCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'floor') {
+    return handleFloorCommand(subArgv, io, targetCwd);
+  }
+  // Brownfield: the unit of specification is the delta, not the system.
+  if (cmd === 'delta') {
+    return handleDeltaCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'brownfield') {
+    return handleBrownfieldCommand(subArgv, io, targetCwd);
+  }
+  // Experience layer: the guided first run and the terminal face of the MCP context pack.
+  if (cmd === 'tour') {
+    return handleTourCommand(subArgv, io, targetCwd);
+  }
+  if (cmd === 'context') {
+    return handleContextCommand(subArgv, io, targetCwd);
+  }
+  return undefined;
+};
+
 export const runCli = async (
   argv: string[],
   runtime: EnvRuntime = { platform: process.platform, env: process.env },
@@ -285,85 +394,31 @@ export const runCli = async (
     return 0;
   }
 
+  // La puerta. `--no-footer` a solas sigue siendo la puerta (el pie ES la salida de la puerta).
+  if (argv.length === 0 || (argv.length === 1 && argv[0] === SCORE_FOOTER_FLAG)) {
+    return runScoreDoor(io, execOpts?.cwd ?? process.cwd());
+  }
+
   // Dispatch CLI subcommands
   const firstArg = argv[0];
   if (firstArg && !firstArg.startsWith('-')) {
     const cmd = firstArg.toLowerCase();
     const subArgv = argv.slice(1);
     const targetCwd = execOpts?.cwd ?? process.cwd();
-
-    if (cmd === 'status' || cmd === 'spec-status') {
-      return handleStatusCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'init' || cmd === 'spec-init') {
-      return handleInitCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'audit') {
-      if (subArgv[0] === 'bundle' || subArgv[0] === 'sarif') return handleAuditBundleCommand(subArgv, io, targetCwd);
-      return handleAuditCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'gap' || cmd === 'validate-gap') {
-      return handleGapCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'getspecs') {
-      return handleGetspecsCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'verify' || cmd === 'validate-impl') {
-      return handleVerifyCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'impl') {
-      return handleImplCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'help') {
-      return handleHelpCommand(subArgv, io);
-    }
-    // Reference architecture: the Zero-Trust chain and its supporting models.
-    if (cmd === 'gates') {
-      return handleGatesCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'govern') {
-      return handleGovernCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'assure') {
-      return handleAssureCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'doctor') {
-      // Self-diagnosis: Node range, CLI reachability, the commit gate and its version and portability,
-      // declared rigor, constitution, specs and the offline posture — each with the fix to apply.
-      return handleDoctorCommand(subArgv, io, targetCwd);
-    }
-
-    if (cmd === 'mcp') {
-      // Model Context Protocol over stdio: the agnostic integration surface. Any modern AI host can
-      // call the engine's checks and read the constitution as a resource without per-host code.
-      return runMcpServer({ cwd: targetCwd });
-    }
-
-    if (cmd === 'waves') {
-      return handleWavesCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'floor') {
-      return handleFloorCommand(subArgv, io, targetCwd);
-    }
-    // Brownfield: the unit of specification is the delta, not the system.
-    if (cmd === 'delta') {
-      return handleDeltaCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'brownfield') {
-      return handleBrownfieldCommand(subArgv, io, targetCwd);
-    }
-    // Experience layer: the guided first run and the terminal face of the MCP context pack.
-    if (cmd === 'tour') {
-      return handleTourCommand(subArgv, io, targetCwd);
-    }
-    if (cmd === 'context') {
-      return handleContextCommand(subArgv, io, targetCwd);
+    const code = await dispatchSubcommand(cmd, subArgv, io, targetCwd);
+    if (code !== undefined) {
+      // El pie de puntuación se emite aquí, en el despachador, y en ningún otro sitio: ningún
+      // comando tiene que acordarse. `--json`, `--quiet` y `--no-footer` lo suprimen.
+      await emitScoreFooter(argv, io, targetCwd);
+      return code;
     }
   }
 
   let parsedArgs;
   try {
-    parsedArgs = parseArgs(argv);
+    // `--no-footer` es global y `parseArgs` (camino de instalación) no lo conoce: se filtra aquí
+    // para que no se lea como un flag desconocido. En los subcomandos lo lee `emitScoreFooter`.
+    parsedArgs = parseArgs(argv.filter((arg) => arg !== SCORE_FOOTER_FLAG));
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     io.error(formatError(`Error: ${msg}`));
