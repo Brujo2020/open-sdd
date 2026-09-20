@@ -113,9 +113,14 @@ describe('release integrity — the documentation advertises what actually resol
     expect(read('docs/INSTALLATION.md')).toContain('@brujo2020/open-sdd');
   });
 
-  it('the root README states that the scoped package is not published yet', () => {
-    // Promising `npx` before the first publish is the false claim the earlier docs made.
-    expect(read('README.md')).toMatch(/not published yet/i);
+  it('the root README advertises the scoped package that actually resolves on npm', () => {
+    // This assertion used to demand "not published yet": while the registry carried only v2.0.0, a
+    // fenced `npx @brujo2020/open-sdd` command would have run the wrong artifact. The scoped package
+    // now publishes v3.1.0 as `latest` (verified with `npm view @brujo2020/open-sdd dist-tags` and by
+    // running the published `init`), so that denial is itself the false claim and had to go.
+    const readme = read('README.md');
+    expect(readme).toContain('@brujo2020/open-sdd');
+    expect(readme).not.toMatch(/not published yet/i);
   });
 });
 

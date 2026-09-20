@@ -1,700 +1,122 @@
 # open-sdd
 
-**The layer that makes an AI's "done" verifiable.**
+`open-sdd` is the layer that makes an AI coding agent's "done" verifiable: executable gates, delta
+specs for code that already exists, and a constitution that validates every spec.
 
-`open-sdd` installs a spec-driven workflow into the coding agent you already use, then holds that
-agent to three things a chat prompt cannot: **executable gates** that decide pass or fail, **delta
-specs** for code that already exists, and a **constitution** that every spec is validated against.
-It is model-agnostic, lives in Git next to your code, and reports what it actually inspected —
-including what it did not.
-
-- **One CLI, many hosts.** 18 agent definitions across 8 skills-based variants (168 `SKILL.md`
-  templates ship in this repository).
-- **Specs in the repository.** `.sdd/specs/<feature>/` holds the Documentary Triad
-  (`requirements.md` in EARS, `plan.md`, `tasks.md`), versioned and reviewed like code.
-- **Brownfield first.** The existing code is the de-facto source of truth; the unit of specification
-  is the **delta**, and `/sdd-getspecs` reverse-engineers steering and editable spec seeds from a
-  codebase that has none.
-- **Governance you can inspect.** `gates`, `govern` and `assure` expose the chain, the invariants,
-  the HITL thresholds, the threat model and the declared gaps as deterministic console output.
-- **Honest by construction.** A control that is declared but not implemented is reported as such,
-  not silently executed as an empty success.
-
-<!-- Only badges that resolve today are shown.
-     The npm version and install-size badges are withheld until v3.0.2 is published: the scoped
-     name @brujo2020/open-sdd exists on the registry, but `latest` is the older v2.0.0 binary (a
-     different tool — see "Published package" below). A badge reading 2.0.0 on this README would
-     advertise the wrong artifact. Uncomment both lines below on the day v3.0.2 ships. -->
 [![License: MIT](https://img.shields.io/github/license/Brujo2020/open-sdd)](https://github.com/Brujo2020/open-sdd/blob/main/LICENSE)
 [![CI — Linux + Windows](https://img.shields.io/github/actions/workflow/status/Brujo2020/open-sdd/gates.yml?branch=main)](https://github.com/Brujo2020/open-sdd/actions/workflows/gates.yml)
 
-<!-- pendiente de publicar: descomenta cuando v3.0.2 esté en el registro.
-[![npm version](https://img.shields.io/npm/v/@brujo2020/open-sdd)](https://www.npmjs.com/package/@brujo2020/open-sdd)
-[![install size](https://packagephobia.com/badge?p=@brujo2020/open-sdd)](https://packagephobia.com/result?p=@brujo2020/open-sdd)
--->
-
-> The CI badge is live, and it is currently red on `main`: see the run for the failing job. The
-> `windows` job's three pre-existing POSIX-mode assertions are documented at the top of
-> [`.github/workflows/gates.yml`](.github/workflows/gates.yml).
-
 **English** · [Español](README.es.md)
 
-**Docs:** [60-second demo](docs/guides/quickstart-60s.md) · [Install](docs/INSTALL.md) ·
-[Existing projects](docs/guides/existing-projects.md) · [Upgrade](docs/guides/upgrade.md) ·
-[Integrations](docs/guides/integrations.md) · [Migrate from](docs/guides/migrate-from.md) ·
-[Measurements](docs/MEASUREMENTS.md) · [Paper alignment](docs/PAPER-ALIGNMENT.md)
+## The problem
 
-> Full traceability of the paper's architecture onto this code — including what is *not*
-> implemented — is in **[docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md)**.
+AI agents write code fast, and their "it is finished" is a claim nobody checks.
+Prompt-only spec-driven tools produce documents, and a document does not fail a build.
+This tool turns the claim into something executable: a gate decides pass or fail, and a control that
+is declared but not implemented is reported as declared instead of counted as green.
 
----
-
-## Start here
-
-Run the CLI with **no arguments** inside a repository. That is the one door: it inspects the
-repository and prints the composite **SDD score** (0–100 over seven checks that already exist), the
-current **phase** (1 Specify · 2 Implement · 3 Verify) and the **single next action**, with one line
-of why:
+## Install and the first 60 seconds
 
 ```bash
-open-sdd
-# SDD 93% · Fase 2 · Implementar · constitución 100% · EARS 100% · trazabilidad 100% ·
-# evidencia 53% · contratos 100% · gates OK (C1, C2, las del nivel declarado) · alineación 100% ·
-# siguiente: open-sdd impl brownfield-support
-# Por qué: la especificación está sana y quedan tareas sin evidencia capturada.
+npx @brujo2020/open-sdd init . --write
 ```
 
-It is read-only and never prompts. A component the CLI could not inspect is listed under
-`sin medir:` and its weight is **excluded from the score** rather than counted as zero, so the number
-never claims more than was measured. `status` is the same state as a full panel; `status --check`
-adds the constitutional verdict and exits `1` on an error-severity finding; `status --quiet`
-collapses the panel to one line for a commit hook.
+Run it inside your repository. It detects the host agent, records the rigor level in
+`.sdd/settings/rigor.json` and installs the commit gate (`.git/hooks/pre-commit`). It is plan-first:
+without `--write` it only prints the plan, and it never overwrites an existing file. To install the
+host's skills too, add `--skills`; `open-sdd integrate <host> --write` installs the skills **and**
+registers the MCP server (`--list` shows the ten hosts; six carry a verified registration).
 
-The **on-demand assistants** appear where a command already found something: an ambiguous EARS
-requirement, an unfilled `{{…}}` marker or a missing constitution produces a paste-ready proposal or
-an explicit question — never a template with holes — and never changes the command's verdict.
-
----
-
-## 60-second demo
-
-A throwaway repository, four real incoherences and the CLI naming them. No network, no `npm install`,
-nothing written outside a temp directory:
+Then the one door. No arguments, read-only: it prints a 0–100 SDD score, the current phase and ONE
+next action, with one line of why.
 
 ```bash
-git clone https://github.com/Brujo2020/open-sdd
-cd open-sdd
-npm --prefix tools/open-sdd ci
-npm --prefix tools/open-sdd run build
-sh scripts/demo-60s.sh
+open-sdd                 # SDD score, phase and the single next action
+open-sdd status          # the same state as a full panel
+open-sdd --help          # every command
 ```
 
-The script creates a temp repo with a real spec (`.sdd/specs/payments/`), injects a delta requirement
-with no task implementing it, a task marked complete without its `_Evidence:` line, an unfilled
-`{{REQ-AREA-002}}` template marker and a declared contract that does not exist, then runs the
-**pinned** CLI — always `tools/open-sdd/dist/cli.js` from this checkout, never the global `open-sdd`
-— and prints three transcripts: `status` (phase, traceability, evidence), `delta validate` (unmapped
-requirement, unfilled marker) and `gates run` (the Zero-Trust chain and its verdict).
+The console messages are currently Spanish; `--lang en` fully translates `open-sdd tour` and
+`open-sdd context` only. The commands above work from the published package. In this checkout,
+replace `open-sdd` with `node tools/open-sdd/dist/cli.js`.
 
-Real output shape (trimmed; the strings are Spanish in the tool, because the CLI's console language
-is Spanish):
-
-```text
-Specification: payments — Phase: initialized · tríada completa · trazabilidad 0/1 · evidencia 0/1 tarea(s) completada(s)
-Contratos de payments — declarados por la delta que no existen: test/ledger.test.ts
-…
-Trazabilidad: 1/2 requisito(s) de la delta con tarea (50%); sin tarea: REQ-PAY-011; marcador(es) de plantilla sin rellenar (UNFILLED_REQUIREMENT_PLACEHOLDER, no es un id inexistente): T2→{{REQ-AREA-002}}.
-…
-  C3   Evidence Validation                        fail
-  C6   Claims Integrity (Doc vs Code)             fail
-  La cadena NO pasa
-
-Veredicto de la demo (el script falla si el motor no ve alguno):
-  DETECTADO requisito sin tarea (REQ-PAY-011)
-  DETECTADO placeholder {{...}} sin rellenar (T2)
-  DETECTADO tarea completada sin evidencia (T1)
-  DETECTADO contrato declarado que no existe
-  DETECTADO la cadena NO pasa (score del gate)
-  DETECTADO la cadena sale con código 1 (no-cero)
-```
-
-It exits non-zero if the engine fails to detect any of them: a demo that cannot fail is marketing, not
-a demo. Full guide: **[docs/guides/quickstart-60s.md](docs/guides/quickstart-60s.md)**.
-
-In your own repository, the same three commands (replace only the path to the clone):
+Optional: the 60-second demo, offline, in a throwaway temp directory.
 
 ```bash
-cd /path/to/your/repository
-node /path/to/open-sdd/tools/open-sdd/dist/cli.js status
-node /path/to/open-sdd/tools/open-sdd/dist/cli.js delta validate <feature>
-node /path/to/open-sdd/tools/open-sdd/dist/cli.js gates run
+git clone https://github.com/Brujo2020/open-sdd && cd open-sdd
+bash scripts/demo-60s.sh
 ```
 
-Or in a container, with no Node on the host:
-
-```bash
-docker build -t open-sdd .
-docker run --rm -v "$PWD:/work" open-sdd status
-```
-
-The measured numbers — per class, with the exact command and the tool version — are in
-**[docs/MEASUREMENTS.md](docs/MEASUREMENTS.md)**: honesty figures over **synthetic** repositories,
-not field data from real teams.
-
----
-
-## Why not spec-kit or Kiro?
-
-Both are good at what they do, and worth using. From their public documentation:
-
-- **spec-kit** has a documentation site, a much broader install and integration surface, and a
-  gentler learning curve; its workflow is delivered as prompts and skills your agent reads.
-- **Kiro** builds spec-driven development into its own IDE. That integration is smoother than
-  anything this repository ships, and if you live in that IDE it is the better authoring experience.
-
-What is different here, and verifiable in this repository:
-
-- **The verdict is executable.** `open-sdd gates run` decides pass or fail and exits non-zero, and a
-  control that is declared but not implemented is reported as declared rather than counted as green
-  (see the gaps in [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md)).
-- **Existing code is the entry point, not an afterthought.** The delta is the unit of specification
-  and the constitution is the pivot every spec is validated against — the concepts spec-kit's issue
-  #1436 names, reimplemented on this engine (gap G-21 states exactly where the coverage is narrower).
-- **No vendor and no model lock-in.** One MIT-licensed CLI writes skills for 18 agent definitions
-  (8 skills-based), and no model backend ships.
-
-What this does **not** claim: parity of ecosystem, polish or adoption. Those are spec-kit's and
-Kiro's strengths today. This is a qualitative comparison, not a benchmark. If you are coming from
-Kiro, spec-kit or cc-sdd, [Migrating from Kiro, spec-kit and cc-sdd](docs/guides/migrate-from.md)
-maps their artifacts and layouts onto this one, and
-[Integrations](docs/guides/integrations.md) is the per-agent install matrix.
-
----
-
-## Adopt open-sdd, and migrate from another SDD tool
-
-`integrate` is the machine-checked adoption surface, and `import` absorbs an incumbent's artifacts.
-Both are **plans first**: nothing is written without `--write`, and neither ever overwrites a file.
-
-```bash
-open-sdd integrate --list            # the matrix: 10 hosts, skills layout, invocation, MCP config
-open-sdd integrate cursor            # detect or name a host; print its exact in-chat invocation
-open-sdd integrate cursor --write    # install the skills and register the MCP server (idempotent)
-open-sdd import spec-kit             # plan the mapping of .specify/** into .sdd/**
-open-sdd import kiro --write         # copy steering + the triad; never overwrites an existing file
-```
-
-`integrate` reads `tools/open-sdd/src/core/integrations.ts`: one row per host with the exact
-invocation syntax (`/sdd-brownfield`, `$sdd-brownfield`, `@sdd-brownfield`, …), the MCP config path
-per OS and the snippet that registers the stdio server. `verified` is an **evidence** field — an
-unconfirmed row is printed as **NO VERIFICADA** and `--write` refuses to touch it, so you paste and
-check the snippet yourself. `import` is a **mapping, not a migration**: every
-recognized-but-unmappable artifact is reported as a `skip` with its reason, imported requirements are
-not EARS-validated, and a file that already exists is never overwritten. Per-host guide:
-[docs/guides/integrations.md](docs/guides/integrations.md); artifact-by-artifact mapping:
-[docs/guides/migrate-from.md](docs/guides/migrate-from.md).
-
----
-
-## Install
-
-The short version is below. Every path, the prerequisites, what the installer writes and how to
-verify it are in **[docs/INSTALL.md](docs/INSTALL.md)**.
-
-### Install without placeholders
-
-These commands copy-paste as-is from the clone: no path or marker to replace. They install
-dependencies, build the CLI and put it on the `PATH`:
-
-```bash
-npm --prefix tools/open-sdd ci
-npm --prefix tools/open-sdd run build
-npm run install:global
-open-sdd --version
-```
-
-### From a clone (the build and CLI commands below were verified this way)
-
-```bash
-git clone https://github.com/Brujo2020/open-sdd
-cd open-sdd
-npm --prefix tools/open-sdd install    # installs the CLI's dev dependencies
-npm --prefix tools/open-sdd run build  # compiles to tools/open-sdd/dist/
-node tools/open-sdd/dist/cli.js --help
-```
-
-`tools/open-sdd/dist/` is present and tracked, so a checkout can also run the CLI without building
-first.
-
-### Install the skills into a project
-
-Run the CLI **inside the target repository**, or use the `install.sh` helper that takes the target as
-its first argument:
-
-```bash
-# In the target repo (Claude Code skills, no prompts):
-node /path/to/open-sdd/tools/open-sdd/dist/cli.js --claude-skills -y
-
-# Or from the open-sdd checkout:
-bash install.sh /path/to/your/repo --cursor-skills -y
-```
-
-The helper builds the CLI on first use and installs artifacts under `<repo>/.sdd/` plus the selected
-agent's skill directory.
-
-### Global CLI
-
-```bash
-npm run install:global          # builds, then installs this checkout globally
-open-sdd gates chain            # one of: open-sdd, sdd-open, sdd
-```
-
-### Published package
-
-The npm package is **`@brujo2020/open-sdd`**. The registry currently carries **v2.0.0**, an older
-toolkit with different behaviour from the **v3.0.2** documented here, which is not published yet.
-Two facts the documentation has to state plainly:
-
-- The unscoped name `open-sdd` is **not** this project (it does not exist on the registry), so
-  `npx open-sdd@latest` fails. The scoped name is the only correct one.
-- `npx @brujo2020/open-sdd@latest` **runs today**, but it gives you the published v2.0.0 binary, not
-  this checkout. Until v3.0.2 is published, use one of the two paths that install this version:
-
-```bash
-bash install.sh /path/to/your/repo            # from a clone: installs into a target repository
-npm run install:global                        # from a clone: puts open-sdd on your PATH
-```
-
-Once v3.0.2 is published, the same entry point is available without a clone:
-
-```bash
-npx @brujo2020/open-sdd@latest --cursor-skills -y   # pending publication
-```
-
-### CLI flags
-
-| Flag | Meaning |
-|---|---|
-| `--agent <id>` | Select an agent (see the table below) |
-| `--<alias>` | Agent alias flags, e.g. `--claude-skills`, `--cursor-skills`, `--antigravity` |
-| `--lang <code>` | `ja en zh-TW zh es pt de fr ru it ko ar el` |
-| `--os <auto\|mac\|windows\|linux>` | Target OS (default `auto`) |
-| `--sdd-dir <path>` | SDD root (default `.sdd` or `.kiro`); `--kiro-dir` is an alias |
-| `--overwrite <prompt\|skip\|force>` | Overwrite policy (default `prompt`) |
-| `--backup[=<dir>]` | Back up files before overwriting |
-| `--profile <full\|minimal>` | Template profile (default `full`) |
-| `--manifest <path>` | Plan from an explicit manifest |
-| `--dry-run` | Print the plan, write nothing |
-| `--yes`, `-y` | Skip prompts (`prompt` → `force`) |
-
-In non-TTY environments, `prompt` falls back to `skip`.
-
----
-
-## The workflow, in the agent
-
-After installing, use the skills from your agent's chat:
-
-| Command | What it does |
-|---|---|
-| `/sdd-help` | Interactive guide, cheatsheet and examples |
-| `/sdd-getspecs [focus]` | Brownfield: reverse-engineer steering + editable spec seeds |
-| `/sdd-brownfield` | Brownfield governance: recon, constitution, delta, impact and rigor (the 5 steps) |
-| `/sdd-discovery "idea"` | Route new work; writes `brief.md` + `roadmap.md` |
-| `/sdd-spec-quick <feature> [--auto]` | Requirements → design → tasks in one pass |
-| `/sdd-impl <feature> [tasks] [--review required\|inline\|off]` | Autonomous or targeted implementation |
-| `/sdd-validate-impl <feature>` | Standalone feature-level verification |
-| `/sdd-audit <feature> [--regulatory]` | Drift report; EU AI Act / NIST RMF when requested |
-| `/sdd-spec-status <feature>` | Progress and next actions |
-
-The step-by-step path is `/sdd-steering` → `/sdd-spec-init` → `/sdd-spec-requirements` →
-`/sdd-validate-gap` → `/sdd-spec-design` → `/sdd-validate-design` → `/sdd-spec-tasks` → `/sdd-impl`.
-
----
-
-## Brownfield: governing an existing codebase
-
-When the code already exists, the existing code is the de facto source of truth and the unit of
-specification is not the system but the **delta**: the artifact that describes only what changes.
-Three mechanisms implement that, all in the `open-sdd` console. The full on-ramp, with what it reads,
-what it never touches and the honest list of what it does not do, is
-**[docs/guides/existing-projects.md](docs/guides/existing-projects.md)**.
-
-### Brownfield in 5 steps
-
-The rule that governs: **the existing code is the de-facto source of truth: do not reinvent the
-architecture, govern it.** The short path, in order, with the mnemonics of the *Manual Maestro SDD
-v3.0* (**ADSR** for the delta, **EARS** for the checkable form of a requirement, **EGTAV** for the
-five layers: Specification, Generation, Tasks, Artifacts, Validation):
-
-| Step | Command | What it produces |
-|---|---|---|
-| 1. Recon | `open-sdd brownfield bootstrap .` | stack, modules, evidence and the ordered plan of steps |
-| 2. Anchor | `open-sdd brownfield constitution . --write` | the descriptive `.sdd/steering/constitution.md`, with evidence |
-| 3. Describe the change | `open-sdd delta init <feature> "..."` → `open-sdd delta validate <feature>` | the ADSR delta: the contract of change, not the spec of the whole system |
-| 4. Check | `open-sdd status --check`, `brownfield impact\|contracts\|reuse`, `govern rigor` | constitutional pivot, impact, regression oracle, reuse |
-| 5. Deliver | `open-sdd status` | the evidence in the tasks, the gates of the declared level, and a single dashboard |
-
-The detail is in the **`/sdd-brownfield`** skill
-(`tools/open-sdd/templates/agents/*/skills/sdd-brownfield/SKILL.md`) and in the 10-minute guide
-[docs/guides/brownfield-quickstart.md](docs/guides/brownfield-quickstart.md). The constitution is the
-**pivot**: every spec is validated against it with `open-sdd status --check`.
-
-### 1. The delta is the contract of change
-
-A delta has four sections — `ADDED`, `MODIFIED`, `REMOVED`, `RENAMED` (ADSR) — and every entry
-carries a delta-scoped identifier `REQ-<AREA>-<NNN>` rather than an id for the whole system, which is
-what keeps the obligation finite.
-
-| Section | Extra obligation |
-|---|---|
-| `ADDED` | — |
-| `MODIFIED` | `previous` (the behaviour replaced); contracts recommended |
-| `REMOVED` | `previous` + `rationale` + `contracts` (all required) |
-| `RENAMED` | `previous` required |
-
-Each entry also declares a strangulation state (`legacy → both → new`), so moving a piece of the old
-system into the new one is visible progress instead of an implied rewrite.
-
-```bash
-open-sdd delta init <feature> "what changes"    # scaffold .sdd/specs/<feature>/delta.md
-open-sdd delta validate <feature>               # ids, EARS, targets, ADSR obligations, traceability
-open-sdd delta status <feature>                 # counts, strangulation progress, traceability
-```
-
-Three reports back the change before it is written. `brownfield contracts <feature> [--verify]` turns
-the delta's declared tests into the regression oracle: it lists which tests protect the changed
-files, names the changed files **no** contract covers, and with `--verify` runs the test command —
-exit code 0 with a declared contract missing is not a pass. `brownfield impact <feature>` reports the
-reachable set, the touched API surface and the breaking changes; `brownfield reuse <feature>` reports
-the symbols a reuse-first search would have found first.
-
-### 2. The reverse constitution
-
-`brownfield constitution` reads the repository and emits a **descriptive** constitution: the
-principles the code already obeys, each with the evidence that it does, plus the stack declared an
-established fact. A practice that is desired but absent is emitted as a **proposed amendment**, never
-as a fact, and a descriptive principle without evidence is a validation error.
-
-```bash
-open-sdd brownfield survey .                    # what the project is: stack, tooling, modules, evidence
-open-sdd brownfield constitution . --write      # write .sdd/steering/constitution.md
-```
-
-### 3. Rigor levels (the ladder)
-
-The three SDD rigor levels are a **cumulative ladder**: every level only *adds* demands and gates,
-and a valid constitution is required at **every** level, because a blocking verdict must be able to
-cite an authority. The default is **Spec-First**, and it is deliberately fluid: it runs the two gates
-you can never self-authorize, not the whole audit.
-
-| Level | What it adds | Active gates |
-|---|---|---|
-| **Spec-First** (default, fluid) | A requirements spec in checkable EARS form and a valid constitution. Nothing else: no evidence binding, no drift detection, no contracts, no regeneration. | C1, C2 |
-| **Spec-Anchored** | + a living spec, the brownfield delta, requirement→task traceability, evidence binding and drift detection on every change. | C1, C2, C3, C6 |
-| **Spec-as-Source** | + declared execution contracts and regeneration from the spec as the repair mechanism. | C1, C2, C3, C4, C5, C6 |
-
-C2 (secrets and destructive commands) is active at every level **on purpose**: it is the hard subset
-that never self-authorizes, so lowering rigor must not make a committed credential acceptable.
-
-**How to raise the level:** declare it in `.sdd/settings/rigor.json` with the level and a non-empty
-rationale (a rigor choice without a declared motive is not auditable, and a malformed file is
-rejected rather than silently degraded). The optional `gates` field overrides which checks run: it
-may **narrow** the list, but an unknown gate id is **rejected** rather than ignored, so a typo cannot
-silently reduce the checks a project believes it is running.
-
-```bash
-open-sdd govern rigor            # compact: level + active gates + what it demands
-open-sdd govern rigor --verbose  # the full level table, the rationale and every finding
-open-sdd govern rigor --gates    # the ladder table: what each level adds and its gates
-open-sdd govern rigor --select   # recommend a level from the decision table
-```
-
-The reconnaissance is workspace-aware: on this repository `brownfield survey .` reports TypeScript /
-npm / tsc / Vitest and 9 modules, not the "JavaScript, no tests detected" it used to report when the
-code lived in a nested workspace.
-
----
-
-## Supported host agents
-
-The authoritative list is `tools/open-sdd/src/agents/registry.ts` (`agentDefinitions`). Eight variants
-are skills-based and carry the full 21-skill suite.
-
-| Agent | `--agent` id | Alias flags | Installs into |
-|---|---|---|---|
-| Claude Code Skills | `claude-code-skills` | `--claude-code-skills`, `--claude-skills` | `.claude/skills` |
-| Claude Code | `claude-code` | `--claude-code`, `--claude` | `.claude/commands/sdd` |
-| Claude Code Agents | `claude-code-agent` | `--claude-code-agent`, `--claude-agent` | `.claude/commands/sdd` + `.claude/agents/sdd` |
-| Codex Skills | `codex-skills` | `--codex-skills` | `.agents/skills` |
-| Cursor Skills | `cursor-skills` | `--cursor-skills` | `.cursor/skills` |
-| Cursor IDE | `cursor` | `--cursor` | `.cursor/commands/sdd` |
-| GitHub Copilot Skills | `github-copilot-skills` | `--copilot-skills`, `--github-copilot-skills` | `.github/skills` |
-| GitHub Copilot | `github-copilot` | `--copilot`, `--github-copilot` | `.github/prompts` |
-| Gemini CLI Skills | `gemini-cli-skills` | `--gemini-cli-skills`, `--gemini-skills` | `.gemini/skills` |
-| Gemini CLI | `gemini-cli` | `--gemini-cli`, `--gemini` | `.gemini/commands/sdd` |
-| Windsurf Skills | `windsurf-skills` | `--windsurf-skills` | `.windsurf/skills` |
-| Windsurf IDE | `windsurf` | `--windsurf` | `.windsurf/workflows` |
-| OpenCode Skills | `opencode-skills` | `--opencode-skills` | `.opencode/skills` |
-| OpenCode | `opencode` | `--opencode` | `.opencode/commands` |
-| OpenCode Agents | `opencode-agent` | `--opencode-agent` | `.opencode/commands` |
-| Antigravity Skills | `antigravity-skills` | `--antigravity-skills`, `--antigravity` | `.agent/skills` |
-| Qwen Code | `qwen-code` | `--qwen-code`, `--qwen` | `.qwen/commands/sdd` |
-| Codex CLI (prompts) | `codex` | `--codex`, `--codex-cli` | **deprecated** — the CLI refuses and points to `--codex-skills` |
-
-The install path above is where the CLI writes **in your project**. The templates this repository
-ships live under `tools/open-sdd/templates/agents/<agent>/`.
-
----
-
-## Governance profiles
-
-There are **two different profile axes**, and they are not interchangeable.
-
-### 1. What blocks — `.sdd/settings/governance.json`
-
-Verified in `tools/open-sdd/src/core/governance.ts` (`governanceProfiles`). Default is `solo`.
-
-| `profile` | What blocks | Intended use |
-|---|---|---|
-| `solo` | Nothing. Checks run and report. | Building; you want the signal, not the friction. |
-| `team` | Code written without an approved spec. | Shared repository. |
-| `enterprise` | Everything (strict mode, all critical invariants). | Audited environments. |
-
-Three checks exist; the profile decides which stop a run:
-`spec_contract_present`, `boundary_integrity`, `verification_proofs_pass`. Explicit
-`critical_invariants` override the profile; unknown ids are dropped rather than trusted. A check the
-profile ignores still reports. See [docs/guides/governance-profiles.md](docs/guides/governance-profiles.md).
-
-### 2. Which Zero-Trust controls are declared — `gates chain --profile`
-
-Verified in `tools/open-sdd/src/core/gateCatalog.ts` (`ChainProfile`, `PROFILE_MANDATED`). The core
-C1–C7 is constant; the activable layer is a function of the profile and of repository signals.
-
-| `--profile` | Declared | Executed | Vacuous | Adds |
+It injects four real incoherences — an untraced requirement, a completed task with no evidence, an
+unfilled `{{…}}` marker, a declared contract that does not exist — and exits non-zero if the tool
+misses any of them.
+
+## What you get
+
+- **An MCP server.** A stdio JSON-RPC server with 11 tools and read-only resources, callable by any
+  modern MCP host. No network, no model backend, no API keys.
+- **Delta specs.** `ADDED` / `MODIFIED` / `REMOVED` / `RENAMED`, with delta-scoped `REQ-<AREA>-<NNN>`
+  ids, so the contract of change stays finite.
+- **A constitution as the pivot.** Every spec is validated against
+  `.sdd/steering/constitution.md`; `brownfield constitution --draft` proposes it and a human ratifies it.
+- **A rigor ladder.** `spec-first` → `spec-anchored` → `spec-as-source`, fluid by default and
+  cumulative: each step only adds gates, and a valid constitution is required at every level.
+- **A commit gate and PR checks.** A pre-commit hook over the staged index, and a pull-request
+  workflow that runs the full chain.
+- **An audit bundle.** One sha256 per artifact plus SARIF 2.1.0; exits non-zero on a blocking finding.
+- **On-demand assistants.** Where a command already found a gap — an ambiguous EARS requirement, an
+  unfilled marker, a missing constitution — it proposes a paste-ready fix or asks an explicit question.
+- **Brownfield adoption.** `brownfield bootstrap` produces a module map, a codebase-intelligence
+  document, a reverse constitution and reuse-first candidates.
+- **Importers.** `import kiro | spec-kit | cc-sdd` maps incumbent artifacts into `.sdd/` and names
+  every skip with its reason.
+
+## How it compares
+
+Qualitative, from the alternatives' public documentation. This is **not a benchmark**.
+
+| | this tool | spec-kit | Kiro | prompt-only skill packs |
 |---|---|---|---|---|
-| `solo` (default) | 7 | 6 | 1 (C7) | — |
-| `team` | 9 | 8 | 1 | O1, O5 |
-| `regulated` | 12 | 11 | 1 | O1, O2, O3, O4, O5 (and `gates run` uses strict posture) |
+| Nature | CLI + MCP engine | prompt/skill toolkit | SDD inside one IDE | prompts and skills |
+| Host integration | MCP server; 18 agent definitions, 10 host registrations (6 verified) | broad install and integration surface | its own IDE | the host's chat |
+| Specs for existing code | delta specs + reverse constitution | spec workflow; a brownfield-bootstrap extension is proposed (#1436) | spec workflow in the IDE | documents only |
+| Enforcement | executable gates, exit codes, commit hook + PR checks | prompts and review | IDE-guided workflow | none |
+| Evidence / audit | audit bundle, sha256 per artifact, SARIF | the documents themselves | IDE artifacts | none |
+| Offline | no network, no model backend | local templates and scripts | IDE product | host-dependent |
 
-> The names `enterprise` and `regulated` belong to different axes; `--profile enterprise` is not a
-> valid chain profile. This divergence is recorded as gap G-08 in
-> [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
+spec-kit does two things this repository does not: a much broader ecosystem and integration surface,
+and a gentler learning curve. Kiro's IDE integration is smoother than anything shipped here. If you
+live in either, they are good choices; no parity of ecosystem, polish or adoption is claimed.
+[Migrate from Kiro, spec-kit and cc-sdd](docs/guides/migrate-from.md) maps their artifacts onto this
+one.
 
----
+## What it does not do yet
 
-## The Zero-Trust console
-
-All commands are read-mostly, deterministic, and safe to run from the repository root. They exit `0`
-unless stated otherwise.
-
-| Command | What it prints |
-|---|---|
-| `gates chain [--profile solo\|team\|regulated]` | The resolved chain, declared/executed/vacuous counts, and the repository signals that activated opt-ins |
-| `gates crosswalk` | Implemented check → logical gate (G1–G21), plus the residue computed by subtraction |
-| `gates list` | The 21 logical gates with tier, check and state |
-| `gates enforcement` | Enforcement levels A–D, the per-tool write ceiling, and the sentinel fail-open warning |
-| `gates run [ids…]` | Runs the resolved chain (or named controls). Exits `1` if the chain does not pass |
-| `govern invariants` | Invariants I1–I6 and the inspection that decides each |
-| `govern conformance` | Conformity level C0–C3 with per-invariant evidence |
-| `govern hitl` | The quantified Human-in-the-Loop thresholds |
-| `govern discipline` | §9.7 decidable properties (diff budget, scope containment) over the working diff |
-| `floor status` / `floor install` | Whether the owned enforcement floor (commit hook + PR gate matrix) is installed, and installing it into a target project |
-| `govern rigor` | The declared rigor level and its active gates; `--select` recommends a level, `--gates` prints the ladder, `--verbose` adds every finding |
-| `govern appeal` | Relaxation receipts and override-rate recalibration |
-| `govern meta-eval` | Cohen's κ pilot, the Landis–Koch floor and the preregistered `n` |
-| `govern budget` | Governance overhead lines, the 30 % ceiling, metric definitions, T0–T3 routing |
-| `assure threats` | OWASP Agentic → MITRE ATLAS → primary gates; regulatory crosswalk; the Zero-Trust borrowing boundary |
-| `assure lab` | The five risk-lab banks and the preregistered refutation thresholds |
-| `assure claims` | The five claim states and the measured/built/proposed inventory; `assure claims --verify` runs `docs/claims/paper-claims.yaml` and decides every claim by exit code (exits `1` only on `broken`) |
-| `assure skills` | Skill classes, the MCP hard rule and the promotion ladder |
-| `assure memory` | Memory mesh, distillation pipeline, anti-poisoning probe |
-| `waves <feature>` | Transactional wave plan with the git commands that would materialise it (needs `.sdd/specs/<feature>/tasks.md`) |
-| `brownfield survey [target]` | What the existing project is: stack, tooling, module boundaries and the evidence for each |
-| `brownfield constitution [target] [--write]` | The descriptive constitution (principles the code obeys + proposed amendments); `--write` stores it in `.sdd/steering/constitution.md` |
-| `delta init\|validate\|status\|render\|merge [--write] <feature>` | The contract of change: scaffold ADSR, validate ids/EARS/contracts/traceability, report counts and strangulation, and merge the delta back into the base `requirements.md` (all-or-nothing) |
-| `brownfield impact\|contracts\|reuse <feature>` | Analysis over the pending change: reachable set and breaking changes, the regression oracle (`--verify` runs the test command), reuse-first candidates |
-| `brownfield bootstrap [target] [--focus "…"] [--write]` | One entry point for an existing repository: the module map, where new code goes and the ordered plan; `--write` writes the intelligence document, the constitution and the focus delta seed |
-| `brownfield templates [--write]` | Templates adapted to the observed stack, each substitution naming the file that proves it; the red-green TDD cycle appears only when a test runner is observed |
-| `brownfield analyze [--base <ref>]` | One-pass cross-artifact consistency (requirements↔tasks, delta↔diff, pivot, contracts, boundaries); `notChecked` names what it could not inspect |
-| `integrate [host] [--list\|--write\|--dry-run\|--json]` | The integration matrix: skills layout, exact in-chat invocation, MCP config path and snippet per host; unverified rows are printed and never written |
-| `import [kiro\|spec-kit\|cc-sdd] [--write\|--dry-run\|--json]` | Plan (and optionally apply) the mapping of an incumbent's artifacts into `.sdd/`; skips are named and existing files are never overwritten |
-| `audit bundle [--out <dir>] [--sarif <path>] [--profile <p>]` | The audit evidence bundle — constitution, specs, gates, claims, alignment and rigor — with one sha256 per artifact; exits `1` on a blocking finding, `2` when it could not run |
-| `audit sarif [--out <path>]` | The same verdict as SARIF 2.1.0, shape-validated before it is written |
-| `context [feature] [--json]` | The terminal face of the MCP context pack: constitution, applicable spec, module map and declared rigor in one object |
-| `tour [--write]` | The guided first run: runs the real commands and stops at the human decision (ratifying a constitution is never automated) |
-| `doctor` | Self-diagnosis — Node, CLI, commit hook and its portability, rigor, constitution, specs, offline posture — each with the fixing command |
-| `mcp` | The stdio MCP server (11 tools + read-only resources) any MCP host can call |
-
-Environment variables accepted by the console include `SDD_FEATURE`, `SDD_COMPLEXITY`,
-`SDD_RELAXATIONS`, `SDD_CYCLE_TOKENS`, `SDD_META_TOKENS`, `SDD_AUDIT_TOKENS`, `SDD_DISTILL_TOKENS`,
-`SDD_C2_OVERRIDES`/`SDD_C2_BLOCKS`, `SDD_C3_OVERRIDES`/`SDD_C3_BLOCKS`.
-
-### SDLC commands
-
-| Command | What it does |
-|---|---|
-| `status [feature] [--check] [--quiet] [--json]` | The one dashboard: constitution, specs, delta, contracts, alignment, rigor and the next command; `--check` adds the constitutional verdict |
-| `init <feature>` | Scaffold a spec directory |
-| `getspecs [focus]` | Brownfield scan → steering + spec seeds |
-| `gap <feature>` | Gap / blast-radius analysis |
-| `impl <feature>` | Implementation runner |
-| `verify <feature>` | Feature-level verification |
-| `audit <feature>` | Drift + traceability report; `audit bundle`/`audit sarif` produce the evidence bundle and the SARIF report |
-| `help [topic]` | In-chat help |
-
----
-
-## Reference architecture
-
-The console is a port of the paper's control plane, not a re-description of it. The maps below give
-the paper section and the implementing symbol; **[docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md)**
-is the complete traceability report, including every declared gap.
-
-| Paper (§ / Table) | This code | Symbol |
-|---|---|---|
-| Invariants I1–I6, conformity C0–C3 (§5.1, §5.2, Tables 17/18) | `src/core/invariants.ts` | `INVARIANTS`, `CONFORMITY_LEVELS`, `assessConformity` |
-| 21 logical gates, executable chain, crosswalk, residue (Appendix A, Tables 33–36) | `src/core/gateCatalog.ts` | `LOGICAL_GATES`, `EXECUTABLE_CHAIN`, `buildCrosswalk`, `computeResidue` |
-| Chain resolution from catalog + profile + signals (§9.5) | `src/core/gateCatalog.ts` | `resolveGateChain`, `detectSignals` |
-| default-FAIL posture and the hard subset (§9.2) | `src/core/enforcement.ts` | `applyDefaultFail`, `HARD_SUBSET` |
-| Enforcement levels A–D and per-tool ceilings (§6.3, Table 19) | `src/core/enforcement.ts` | `ENFORCEMENT_LEVELS`, `TOOL_ENFORCEMENT`, `resolveFloor`, `interpretSentinel` |
-| Documentary Triad + evidence lock (§4.5, I2) | `src/core/triad.ts` | `TRIAD`, `evaluateTriad`, `checkEvidenceLock` |
-| EARS grammar (§4.6, Table 12) | `src/core/ears.ts` | `EARS_TEMPLATES`, `validateEarsRequirement` |
-| Gate runner (§9.2, §9.5, §8.4) | `src/core/gateRunner.ts` | `runGate`, `runChain`, `scanSecurity`, `checkSymbols` |
-| HIL thresholds and rigor selection (§9.9, §4.8, §4.10, Table 25) | `src/core/hitl.ts` | `HITL_DEFAULTS`, `evaluateEscalations`, `selectRigorMode` |
-| Appeal channel + relaxation receipts (I6, §9.10) | `src/core/receipts.ts` | `makeReceipt`, `recalibrate`, `assessI6` |
-| META-EVAL protocol (§7.3, §7.4) | `src/core/metaEval.ts` | `cohensKappa`, `checkJudgeIndependence`, `checkApprovalDrift` |
-| Transactional waves (§7.2) | `src/core/waves.ts`, `src/core/scheduler.ts` | `resolveWave`, `checkScope`, `waveGitCommands`, `buildTaskDependencyWaves` |
-| Memory mesh, distillation and anti-poisoning (§11) | `src/core/memory.ts` | `MEMORY_MESH`, `decidePromotion`, `scanForInjection`, `applyDecay` |
-| Skills as the unit of privilege; Auto-Skill Factory (§6.4, §11.1, Table 28) | `src/core/skills.ts` | `SKILL_CLASSES`, `checkMcpPermissions`, `evaluateCandidate` |
-| Claims registry and implementation-status inventory (§9.6, §2.3) | `src/core/claims.ts`, `src/core/claimsRegistry.ts`, `docs/claims/paper-claims.yaml` | `CLAIM_STATUSES`, `evaluateClaim`, `IMPLEMENTATION_STATUSES`, `runClaimsRegistry` |
-| Threat model, regulatory crosswalk, risk lab (§9.8, Appendix D, §14.3, Tables 24/31/39) | `src/core/assurance.ts` | `OWASP_AGENTIC_MAP`, `REGULATORY_MAP`, `RISK_LAB_BANKS`, `REFUTATION_THRESHOLDS` |
-| Overhead budget and telemetry (Appendix B.4–B.6, §10.3) | `src/core/telemetry.ts` | `COST_LINES`, `evaluateGovernanceBudget`, `COMPLEXITY_TIERS`, `HARNESS_SELF_FAILURE` |
-| Brownfield inversion (§12, Figure 9) | `src/core/reverseEngineering.ts` | `scanProject`, `bootstrapSteering`, `bootstrapSpecSeeds` |
-| Tool-agnostic surface — the MCP server (§6.4, Table 4; §9.5 G16/O2) | `src/mcp/server.ts`, `src/mcp/tools.ts`, `src/core/contextPack.ts` | `runMcpServer`, `listToolDescriptors`, `callTool`, `listResources`, `readResource`, `buildContextPack` |
-| Adoption surface as machine-checked data (spec-kit issue #1436) | `src/core/integrations.ts`, `src/core/importers.ts` | `HOST_INTEGRATIONS`, `detectIntegration`, `mcpRegistration`, `planImport`, `applyImport` |
-| One number, one phase, one action (*Manual Maestro* EGTAV; §9.6) | `src/core/sddScore.ts`, `src/core/assistants.ts` | `computeSddScore`, `renderScoreFooter`, `assist`, `renderAssist` |
-| The EARS assistant and stack-adapted templates (§4.6; spec-kit issue #1436) | `src/core/earsAssistant.ts`, `src/core/templateAdaptation.ts`, `src/core/consistency.ts` | `analyseEars`, `earsEvidencePack`, `adaptTemplates`, `checkConsistency` |
-| The constitutional ratchet and expiring waivers (CSDD §3.4; invariants I1/I6) | `src/core/ratchet.ts`, `src/core/securityAllowlist.ts` | `runAdhesionRatchet`, `expiredWaivers`, `applySecurityAllowlist` |
-| Audit evidence bundle + SARIF (§9.6; CSDD §3.3) | `src/cli/commands/audit.ts`, `action.yml` | `collectEvidence`, `writeBundle`, `buildSarifLog`, `validateSarifShape`, `AUDIT_EXIT_CODES` |
-| The demo, the synthetic bench and the measurements (§14.3 discipline) | `scripts/demo-60s.sh`, `bench/harness.mjs`, `docs/MEASUREMENTS.md` | reproducible command; per-class injected/caught/missed |
-
-### What this port does **not** do
-
-Stated here so the reference section is not read as a claim of completeness:
-
-- **The paper's prototype (SteelHarness) is not published.** Its measured figures — κ = 0.86 (n=15),
-  C4 FPR 20.0 % (3/15), the 2.1–2.2 s sweep, the 7/9/12 chain counts, the −53 % token pilot — are
-  properties of that prototype. They are **not** measurements of this repository, and the console
-  labels the ones it reproduces as the paper's pilot.
-- **No model backend ships.** C5 (intent alignment) reports `mode=degraded` and is not evidence;
-  META-EVAL is a computational model, not a running judge.
-- **C7/Karpathy is vacuous** (`inspects: false`) and is reported as activation without measurement.
-- **The §9.7 decidable properties are implemented but not gate-wired.**
-- **No gate calibration, no labelled corpus, no ON/OFF delta table.** The paper publishes no ON/OFF
-  table either, so none is invented here.
-- **The commit/merge floor is installed, but level A is not verified.** The pre-commit hook
-  (level B) and the pull-request gate matrix (level C) both exist and are exercised; `resolveFloor`
-  remains an ownership argument, and no behavioural sentinel has verified write-time blocking in any
-  host, so level A is a ceiling and not a guarantee. `git commit --no-verify` bypasses level B and
-  that bypass is not recorded.
-- **Four of the ten MCP registrations are unverified.** Copilot, OpenCode, Zed and Antigravity ship
-  as `verified: false`: `integrate` prints the snippet as **NO VERIFICADA** and `--write` refuses to
-  touch that host's config (G-24).
-- **`import` is a mapping, not a migration.** Kiro/cc-sdd `spec.json`, cc-sdd skills, spec-kit
-  templates/scripts and unparseable settings are skipped with a reason, and imported requirements are
-  copied verbatim — not EARS-validated (G-25).
-- **The Windows job is red, and the commit hook never runs there.** The `windows` CI job executes the
-  full suite and fails at it — the workflow names three pre-existing POSIX-mode assertions it expects
-  to be the cause — and only the Linux job installs the pre-commit hook, so the portable Node gate has
-  never executed on Windows (G-26).
+- **Module discovery is Node-only.** Workspace roots come from `package.json`; Maven/Gradle, Go, Rust
+  and Python monorepos return a single root module from `brownfield bootstrap`.
+- **Impact analysis has known false-positive classes.** `brownfield impact` reads the import graph
+  and the delta, and a check with that noise level can train its readers to ignore it.
+- **Four of ten MCP registrations are unverified.** Copilot, OpenCode, Zed and Antigravity ship as
+  unverified: the snippet is printed and `--write` refuses to touch their config.
 - **The container is built for one architecture.** `docker build` produces the builder's
-  architecture; no CI job builds or pushes a multi-arch image (G-27).
-- **Nothing is published to npm yet.** The registry carries only v2.0.0 of `@brujo2020/open-sdd`, so
-  every install path here is clone-based until v3.0.2 ships (G-28).
-- **The measurements are synthetic.** `docs/MEASUREMENTS.md` records 10/10 classes caught on
-  repositories this project wrote — self-consistency, not field recall or precision (G-29).
+  architecture, and no CI job builds or pushes a multi-arch image.
+- **The measurements are synthetic.** `docs/MEASUREMENTS.md` records 10/10 injected classes caught on
+  repositories this project wrote — self-consistency, not field recall or precision. The paper's
+  κ/FPR/latency figures belong to an unpublished prototype and are not measurements of this repository.
+- **The commit floor is installed, but level A is not verified.** The hook and the PR matrix exist
+  and run; no behavioural sentinel has verified write-time blocking in any host, and
+  `git commit --no-verify` is not recorded.
 
-Each of these is a numbered gap (G-01 … G-29) with its paper citation and code location in
+The complete list of gaps (G-01 … G-29), each with its code location, is in
 [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
-
----
-
-## Enforcement floor (levels B and C)
-
-The guarantee this tool can make on day one is the **commit/merge floor**, because those boundaries
-belong to the organization rather than to a vendor. Both are installed here, and installed into any
-target project:
-
-```bash
-npm run hooks:install              # level B in this checkout (also runs automatically on npm install)
-open-sdd floor install . --ci      # level B + C in a target project
-open-sdd floor status              # is the floor installed? exits 1 when it is not
-```
-
-The hook judges the **staged index**, not the working tree, and runs three controls: C1 (triad,
-advisory), C2 (secrets and destructive commands, blocking) and C3 (evidence lock, blocking when a
-task is marked complete without its captured proof). If the CLI itself is missing, the hook **fails
-closed** and prints how to fix it. Legitimate false positives are declared per (path, pattern) with a
-reason in `.sdd/settings/security-allowlist.json`, and every run reports how many findings it
-suppressed — a suppression is never silent. `git commit --no-verify` also bypasses the hook, and that
-bypass is **not** recorded; the allow-list is the channel an audit can read.
-
-Level C is `.github/workflows/gates.yml` (`templates/hooks/open-sdd-gates.yml` for target projects):
-the chain runs against the pull-request diff via `--base`, because a gate run that inspects nothing is
-activation without measurement.
-
----
-
-## Repository layout
-
-```
-open-sdd/
-├── tools/open-sdd/            CLI source, templates, manifests
-│   ├── src/core/            governance models (see the map above)
-│   ├── src/mcp/             the stdio MCP server (11 tools + resources)
-│   ├── src/agents/          agent registry (18 definitions)
-│   ├── src/cli/commands/    status, init, getspecs, gap, impl, verify, audit, paper, brownfield, tour
-│   ├── templates/agents/    168 SKILL.md templates across 8 skills variants
-│   ├── templates/hooks/     the portable commit gate and the CI gate matrix
-│   └── dist/                compiled CLI (committed)
-├── docs/
-│   ├── PAPER-ALIGNMENT.md   traceability report (paper → code → gaps)
-│   ├── INSTALL.md           every install path, verified
-│   ├── QUICK-START.md       5-minute path
-│   ├── INSTALLATION.md      legacy installation reference
-│   ├── MEASUREMENTS.md      the synthetic bench numbers, with their commands
-│   ├── claims/              paper-claims.yaml (§9.6 registry)
-│   └── guides/              workflow, governance, brownfield, integrations, upgrade, git, skills
-├── bench/                   the synthetic incoherence bench
-├── scripts/                 demo-60s.sh, hook installer, postinstall
-├── action.yml               the merge boundary as a native GitHub Action
-├── Dockerfile               the container image (one architecture)
-├── .sdd/                    settings + templates (project memory lives here)
-├── install.sh               install the CLI artifacts into a target repo
-└── package.json             bin: open-sdd, sdd-open, sdd
-```
-
----
 
 ## Documentation
 
-- **[docs/guides/quickstart-60s.md](docs/guides/quickstart-60s.md)** — the demo, step by step.
-- **[docs/INSTALL.md](docs/INSTALL.md)** — every install path, verification and uninstall.
-- **[docs/guides/upgrade.md](docs/guides/upgrade.md)** — upgrading between versions and refreshing the gate.
-- **[docs/guides/existing-projects.md](docs/guides/existing-projects.md)** — the brownfield on-ramp.
-- **[docs/guides/integrations.md](docs/guides/integrations.md)** — the per-agent install matrix and how to verify or remove each install.
-- **[docs/guides/migrate-from.md](docs/guides/migrate-from.md)** — migrating from Kiro, spec-kit and cc-sdd.
-- **[docs/QUICK-START.md](docs/QUICK-START.md)** — install and run in five minutes.
-- **[docs/INSTALLATION.md](docs/INSTALLATION.md)** — the legacy installation reference.
-- **[docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md)** — paper-to-code traceability and gaps.
-- **[docs/MEASUREMENTS.md](docs/MEASUREMENTS.md)** — the honesty numbers, with their commands.
-- **[docs/guides/governance-profiles.md](docs/guides/governance-profiles.md)** — what blocks, and when.
-- **[docs/guides/spec-driven.md](docs/guides/spec-driven.md)** — the SDD workflow end to end.
-- **[docs/guides/skill-reference.md](docs/guides/skill-reference.md)** — the 21 skills.
-- **[docs/guides/git-workflow.md](docs/guides/git-workflow.md)** — branch/commit automation.
-- **[docs/guides/brownfield-getspecs.md](docs/guides/brownfield-getspecs.md)** — existing codebases.
-- **[docs/README.md](docs/README.md)** — documentation index.
+[Install](docs/INSTALL.md) · [Quickstart (60 s)](docs/guides/quickstart-60s.md) ·
+[Integrations](docs/guides/integrations.md) · [Existing projects](docs/guides/existing-projects.md) ·
+[Migrate from Kiro / spec-kit / cc-sdd](docs/guides/migrate-from.md) ·
+[Measurements](docs/MEASUREMENTS.md) · [Paper alignment and gaps](docs/PAPER-ALIGNMENT.md) ·
+[Español](README.es.md) · [Changelog](CHANGELOG.md)
 
 ## License
 
