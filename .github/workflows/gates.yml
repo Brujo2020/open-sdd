@@ -154,3 +154,34 @@ jobs:
       - name: Test suite (full)
         working-directory: tools/open-sdd
         run: npm test
+
+  # ── Container: one image, both architectures ──────────────────────────────────────────────────
+  # Added for gap G-27. Until now the `Dockerfile` was only ever built by hand, on the author's
+  # arm64 host, so no recorded amd64 image existed and a `docker run` on another architecture was
+  # unverified. This job builds the image for `linux/amd64` AND `linux/arm64` with no push, and a
+  # failing platform fails the job: a build that cannot run is worse than no build. It is
+  # independent of the `gates` and `windows` jobs above and does not touch them.
+  #
+  # QEMU is what lets the amd64 runner *execute* the arm64 layers; Buildx alone selects the platform
+  # but cannot run foreign binaries. Nothing is published, so this proves the Dockerfile is valid
+  # for both targets without inventing a registry target the release does not have.
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU (foreign-architecture emulation on the runner)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the image for linux/amd64 and linux/arm64 (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

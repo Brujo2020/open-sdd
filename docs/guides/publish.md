@@ -1,8 +1,9 @@
 # Publishing `@brujo2020/open-sdd`
 
-> **This document prepares the release. It does not perform it.** The final `npm publish` needs the
-> owner's npm credentials (or the owner's OIDC trusted-publisher decision) and an explicit go
-> decision. Nobody else, and no automation in this repository, is authorised to run it.
+> **This document prepares the release. The owner performs it.** The publish needs the owner's npm
+> credential — a granular access token, or the owner's OIDC trusted-publisher decision — and an
+> explicit go decision. Nobody else, and no automation beyond `.github/workflows/publish.yml`, is
+> authorised to run it.
 
 The repository has **two manifests and only one is publishable**:
 
@@ -22,7 +23,7 @@ Do not run the publish command until every line below is true and verified on th
 
 - [ ] **Tests are green.** From a clean install:
       `npm --prefix tools/open-sdd ci && npm --prefix tools/open-sdd run build && npm --prefix tools/open-sdd test`
-      Baseline at the time of writing: **105 test files / 1155 tests, all passing**.
+      Baseline at the time of writing: **111 test files / 1224 tests, all passing**.
 - [ ] **The build is current.** `npm run build` at the root, and `git status` shows no unexpected
       change under `tools/open-sdd/dist/` (the compiled CLI is tracked and is what ships).
 - [ ] **The version is bumped** in the root `package.json`. One version, one release:
@@ -66,6 +67,16 @@ npm install /absolute/path/to/brujo2020-open-sdd-*.tgz
 
 Remove the local tarball afterwards (`rm brujo2020-open-sdd-*.tgz`); `*.tgz` is already gitignored.
 
+The workflow has a `workflow_dispatch` input `dry_run` that runs this whole section in CI and then
+stops before publishing, so the pipeline can be exercised without spending a version:
+
+```bash
+gh workflow run publish.yml -f dry_run=true
+```
+
+A dry run executes install, build, test, the gate chain, the claims check and `npm pack --dry-run`,
+prints `Publish route: …` and `Publish dry run: …`, and publishes **nothing**.
+
 ## 3. The tag
 
 The publish workflow (`.github/workflows/publish.yml`) triggers on a version tag. Creating and
@@ -78,35 +89,114 @@ git push origin v3.0.2
 ```
 
 Tag name must match the version exactly (`v` + `package.json.version`). If the tag does not match,
-stop and fix the version before pushing.
+stop and fix the version before pushing. A version already on the registry cannot be overwritten: if
+the tag points at a version that is already published, bump the version and tag again instead of
+re-pushing the tag (see §7).
 
-## 4. Trusted publishing (OIDC) — set up once, by the owner
+## 4. The two credential routes
 
-The workflow already declares the two things OIDC needs:
+The publish step supports **two credentials, tried in this order**:
+
+1. **A granular access token** in the repository secret `NPM_TOKEN`, passed to the step as
+   `NODE_AUTH_TOKEN`. When the secret exists, npm uses it.
+2. **OIDC trusted publishing**, which needs no secret. It is attempted only when `NPM_TOKEN` is
+   absent.
+
+The workflow always declares the OIDC permission:
 
 ```yaml
 permissions:
-  id-token: write   # Required for OIDC provenance
+  id-token: write   # Required for OIDC provenance and for the trusted-publishing route
   contents: read
 ```
 
-The remaining setup is on npmjs.com and is the **owner's** action:
+The publish step routes between the two and prints the route it chose:
 
-1. Open the package settings for `@brujo2020/open-sdd` on npmjs.com.
-2. Under **Trusted Publisher**, choose **GitHub Actions** and fill in:
+```yaml
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::notice title=Publish route::NPM_TOKEN is configured — using the granular access token route."
+          else
+            unset NODE_AUTH_TOKEN
+            echo "::notice title=Publish route::No NPM_TOKEN configured — attempting the OIDC trusted-publishing route."
+          fi
+          if [ "${DRY_RUN}" = "true" ]; then
+            echo "::notice title=Publish dry run::dry_run=true — packing the tarball and publishing nothing."
+            npm pack --dry-run
+            exit 0
+          fi
+          npm publish --access public --provenance
+```
+
+An **empty** secret is treated as *no secret*: when `NPM_TOKEN` is empty the step unsets
+`NODE_AUTH_TOKEN` before calling npm, so npm never sees a blank token and the failure it reports is
+about the route actually attempted. Provenance is requested explicitly with `--provenance`; it is
+what makes the published artifact verifiable against this repository and this workflow.
+
+### (a) Route A — granular access token (the route that has actually shipped a release)
+
+This is the route that published 3.1.0 from a human terminal. Setting it up is the **owner's**
+action, once:
+
+1. Sign in to [npmjs.com](https://www.npmjs.com/) as the owner of `@brujo2020/open-sdd`.
+2. Click the account avatar → **Access Tokens** → **Generate New Token** → **Granular Access
+   Token**.
+3. Give it a name (for example `open-sdd-ci-publish`) and an expiry you are willing to rotate.
+4. Under **Packages and scopes**, choose **Only select packages and scopes**, pick the `@brujo2020`
+   scope, then `@brujo2020/open-sdd`, and set the permission to **Read and write**. (`read-only` is
+   not enough to publish.)
+5. Enable **Bypass 2FA**. This is the field that matters: the account has 2FA enabled, and a granular
+   token without bypass 2FA falls under `auth-and-writes`, which requires a one-time password that
+   CI cannot supply — so every CI publish is rejected for a missing OTP.
+6. Generate the token and copy it once (npm does not show it again).
+7. Store it as a repository secret named exactly `NPM_TOKEN`:
+
+   ```bash
+   gh secret set NPM_TOKEN
+   ```
+
+   Or: repository → **Settings** → **Secrets and variables** → **Actions** → **New repository
+   secret**, name `NPM_TOKEN`. Confirm it exists with `gh secret list`. **Never print or commit the
+   value**; `NPM_TOKEN` is the only name the workflow reads.
+
+With the secret present, the workflow takes route A and the OIDC configuration is bypassed.
+
+### (b) Route B — OIDC trusted publishing (configured, never yet succeeded here)
+
+The secret-free route. This is the reproducible one; it has **never yet gone green in this
+repository** — every run on it has failed with a 404 from npm (see §7), so treat it as set up but
+unproven.
+
+1. Open the **package** settings for `@brujo2020/open-sdd` on npmjs.com — the package's own settings
+   page, **not** the `@brujo2020` scope/organisation settings page.
+2. Under **Trusted Publisher**, choose **GitHub Actions** and fill in the three fields:
    - Organization/user: `Brujo2020`
    - Repository: `open-sdd`
    - Workflow filename: `publish.yml`
    - Environment: leave empty unless the workflow is later given one.
-3. Save. From then on, the workflow can publish with a short-lived OIDC token and no long-lived
-   `NPM_TOKEN` secret. If trusted publishing is *not* configured, the owner must instead add an
-   `NPM_TOKEN` secret and pass `NODE_AUTH_TOKEN` to the publish step — a strictly weaker setup,
-   because a long-lived token is a credential that can leak.
+3. Save. Then make sure **no `NPM_TOKEN` secret exists** (`gh secret delete NPM_TOKEN` if it does),
+   because the workflow prefers it and would never reach the OIDC route otherwise.
 
-Provenance is requested explicitly with `--provenance`; it is what makes the published artifact
-verifiable against this repository and this workflow.
+**Known suspects to check when route B fails** (in the order worth checking):
 
-## 5. The final command — the owner runs this
+- **The workflow filename must be the exact file that runs.** The value must match
+  `.github/workflows/publish.yml` → `publish.yml`. A path, a different name, or a reusable workflow
+  whose filename differs will not match.
+- **The owner string must match GitHub exactly.** `Brujo2020` is the GitHub account/org login; a
+  case or spelling difference is a mismatch.
+- **The trusted publisher must be configured ON the package, not on the scope.** The scope-level
+  page is not consulted.
+- **The account must have 2FA enabled** (it does) and the npm CLI must support trusted publishing
+  (npm ≥ 11.5.1). The workflow pins `node-version: '24'`, whose bundled npm is 11; Node 20 bundled
+  npm 10.x, which could not perform the OIDC exchange at all.
+- **The repository is public** and the workflow has `id-token: write` (it does).
+
+## 5. The final command — the owner runs this, or CI does
 
 ```bash
 npm publish --access public --provenance
@@ -115,8 +205,17 @@ npm publish --access public --provenance
 - `--access public` is required because scoped packages default to private. It is mirrored by
   `publishConfig.access` in `package.json`.
 - `--provenance` attaches the signed build attestation produced from GitHub Actions OIDC.
-- **The owner runs this, or pushes the tag in step 3 to let the owner's CI run it.** It is not run
-  by this repository's other workflows, by agents, or by anyone without the owner's credentials.
+- **The owner runs this, or pushes the tag in §3 to let the owner's CI run it.** It is not run by
+  this repository's other workflows, by agents, or by anyone without the owner's credentials.
+
+If the owner publishes by hand with 2FA, the interactive form is:
+
+```bash
+npm publish --access public --provenance --otp <code>
+```
+
+That manual, OTP-bearing publish is what put **3.1.0** on the registry; the CI route has not yet
+reproduced it.
 
 ## 6. Verify the published artifact
 
@@ -135,13 +234,42 @@ WORK="$(mktemp -d)"; cd "$WORK"
 npx --yes @brujo2020/open-sdd@latest --version
 ```
 
-Expected: `the version you just published`. If the version printed is not the version you published, you are
-resolving a different package or a cached one — check `npm view @brujo2020/open-sdd version` again
-rather than assuming the release failed.
+Expected: `the version you just published`. If the version printed is not the version you published,
+you are resolving a different package or a cached one — check `npm view @brujo2020/open-sdd version`
+again rather than assuming the release failed.
+
+To verify a **CI run** rather than a hand publish:
+
+```bash
+gh run list --workflow publish.yml --limit 5
+gh run watch          # the run id from the list
+```
+
+Read the log of the `Publish` step: it prints `Publish route: NPM_TOKEN …` or
+`Publish route: No NPM_TOKEN configured …` before it touches the registry, so the credential in play
+is never a guess. A green run on route B is the only thing that turns the trusted-publishing path
+from "configured" into "proven".
 
 Finally, confirm the *unscoped* trap is still documented and still true: `npx open-sdd@latest` is
 **not** this project. The correct invocation is always the scoped name
 `@brujo2020/open-sdd`.
+
+---
+
+## 7. If the publish fails, read this
+
+Three failures have actually been seen in this repository. Map the message to the cause before
+changing anything:
+
+| Error | What it means | What to do |
+|---|---|---|
+| `E403 … Two-factor authentication … required` | The account is in **auth-and-writes**: the credential in play is not exempt from the OTP. | Use the granular token from route (a) with **Bypass 2FA enabled**, or publish manually with `--otp <code>`. A plain automation token without bypass 2FA cannot satisfy this from CI. |
+| `E404 … PUT https://registry.npmjs.org/@brujo2020%2fopen-sdd - Not found` | **The CI authorisation failed.** npm returns **404 instead of 403** for an authorisation failure, so this is *not* "the package is missing" — the package exists and is owned by the account. | Do not create the package. Fix the credential route: check that `NPM_TOKEN` exists and has bypass 2FA (route a), or re-check the three trusted-publisher fields (route b). The `Publish route:` line printed by the step says which one was attempted. |
+| `EPUBLISHCONFLICT` / `Cannot publish over previously published version` / `version already exists` | That exact version is already on the registry. npm does not allow overwriting a published version. | Bump the version in the root `package.json`, commit, and tag the **new** version. Never re-push an existing tag hoping to overwrite; the artifact is immutable. |
+
+If the step reports route B and fails with 404, that is the unproven route: either finish the
+trusted-publisher configuration (§4b) or add the bypass-2FA `NPM_TOKEN` (§4a), which is the route
+that has shipped a release.
 
 ---
 

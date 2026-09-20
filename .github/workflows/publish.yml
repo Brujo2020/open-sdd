@@ -9,8 +9,16 @@
 # `open-sdd` instead of the scoped package. It now builds and tests the workspace, then publishes
 # from the repository root, where `files` collects tools/open-sdd/dist and the agent templates.
 #
-# Scoped packages default to private on npm, so `--access public` is explicit here and mirrored by
-# `publishConfig.access` in package.json. Provenance is requested through OIDC.
+# Scoped packages default to private on npm, so public access is requested explicitly here and
+# mirrored by `publishConfig.access` in package.json. Provenance is requested through OIDC.
+#
+# TWO CREDENTIAL ROUTES, tried in this order (see docs/guides/publish.md):
+#   1. A granular access token in the `NPM_TOKEN` secret, with "Bypass 2FA" enabled. It is passed
+#      to the publish step as NODE_AUTH_TOKEN; when the secret is configured, npm uses it.
+#   2. OIDC trusted publishing, which needs no secret at all. It is attempted only when `NPM_TOKEN`
+#      is absent. `permissions: id-token: write` is what makes this route possible.
+# Only route 2 is the reproducible, secret-free path; route 1 is the pragmatic fallback while the
+# trusted-publisher configuration is being proven. Every run prints which route it is attempting.
 
 name: Publish Package
 
@@ -19,9 +27,14 @@ on:
     tags:
       - 'v*.*.*'  # Trigger on version tags like v3.0.2
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build, test and pack without publishing (nothing reaches the registry)'
+        type: boolean
+        default: false
 
 permissions:
-  id-token: write  # Required for OIDC provenance
+  id-token: write  # Required for OIDC provenance and for the trusted-publishing route
   contents: read
 
 jobs:
@@ -62,5 +75,33 @@ jobs:
           echo "publishing $NAME@$VERSION (ref: $TAG)"
           test "$NAME" = "@brujo2020/open-sdd"
 
+      # The single publish step, with both credential routes.
+      #
+      # NODE_AUTH_TOKEN carries the granular token when the secret exists. When it does not, the
+      # variable is UNSET (not merely empty) so npm never sees a blank token and never masks an
+      # authorisation failure as a confusing one: the OIDC trusted-publishing exchange is then the
+      # only credential in play. The step states which route it is on before touching the registry.
+      #
+      # workflow_dispatch.dry_run=true stops after `npm pack --dry-run` and publishes nothing, so the
+      # whole pipeline can be exercised without spending a version.
       - name: Publish
-        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::notice title=Publish route::NPM_TOKEN is configured — using the granular access token route."
+          else
+            unset NODE_AUTH_TOKEN
+            echo "::notice title=Publish route::No NPM_TOKEN configured — attempting the OIDC trusted-publishing route."
+          fi
+
+          if [ "${DRY_RUN}" = "true" ]; then
+            echo "::notice title=Publish dry run::dry_run=true — packing the tarball and publishing nothing."
+            npm pack --dry-run
+            exit 0
+          fi
+
+          npm publish --access public --provenance

@@ -226,6 +226,8 @@ where coverage overstates).
 | Templates adapted to the observed stack, embedded TDD, one-pass consistency (spec-kit issue #1436 "templates adapted to specific tech stack and coding style"; §9.7; CSDD §3.3) | Adaptation is **evidence, not decoration**: every substituted value names the file that demonstrates it and the pair is recorded in `adaptedFrom`; anything left as `{{PLACEHOLDER}}` is listed in `unchanged` with the reason. When a test runner is observed, the tasks template carries the red-green cycle (test first, command that must fail, implementation, command that must pass) using only commands the repository declares; with no runner it emits **no** cycle rather than a promise with no oracle. It writes only to `<sddDir>/settings/templates/brownfield/` and never overwrites. `brownfield analyze` composes the checks that already exist (trace, pivot, contracts, boundaries) into one pass and names `notChecked` with its reason — an absent artifact is a declared gap, not a pass. | `core/templateAdaptation.ts` · `adaptTemplates`, `ADAPTED_TEMPLATE_DIR`, `ADAPTED_TEMPLATE_FILE`; `core/consistency.ts` · `checkConsistency`, `ConsistencyReport`; CLI `brownfield templates [--write\|--json]`, `brownfield analyze [--base\|--json]` | `construido` |
 | The constitutional ratchet and expiring waivers (CSDD §3.4 apex; invariants I1/I6; REQ-MAT-005, REQ-MAT-012) | The pivot answers "how much of the authority the spec cites resolves today?"; the ratchet answers "is that worse than the last time?" A baseline per feature lives in `.sdd/state/adhesion.json` (alignment ratio, the ids of the principles **in force**, the constitution hash, the timestamp). The first run never fails; a descent is an `error` that names the principles that fell out and does **not** self-rebase; `--accept-drop "<reason>"` authorizes that specific descent and records who/what/when; a rise updates the baseline; corrupt state is a `warning` and a reset, never a silent pass. Separately, a security allow-list entry may carry `owner` and `expires`; an expired waiver stops applying and is named by the advisory surface (`waiver-expiring`). | `core/ratchet.ts` · `runAdhesionRatchet`, `readAdhesionState`, `hashConstitution`, `adhesionStatePath`, `ADHESION_STATE_FILE`; `core/securityAllowlist.ts` · `parseSecurityAllowlist`, `expiredWaivers`, `applySecurityAllowlist`; `core/constitutionAdvice.ts` · `adviseConstitution` (`waiver-expiring`, `evidence-expired`, `amendment-aged`); CLI `status [--accept-drop]`, `govern constitution --advise` | `construido` |
 | The audit evidence bundle and SARIF (CSDD §3.3 audit support; §9.6 "only `broken` halts publication"; REQ-MAT-006/REQ-MAT-007) | One command assembles the evidence an auditor reads — constitution, specs, gates, claims, alignment and rigor — with **one sha256 per artifact** in `manifest.json` and an explicit verdict; `audit sarif` emits SARIF 2.1.0 and validates its shape before writing. Exit codes are a contract: `0` pass · `1` blocking finding (gate FAIL or broken claim) · `2` the audit could not run. `action.yml` is the same contract as a native composite GitHub Action, building the CLI from `github.action_path` so the action and the gates cannot drift; the CI workflow uploads the bundle and the SARIF to code scanning. | `cli/commands/audit.ts` · `collectEvidence`, `writeBundle`, `buildSarifLog`, `validateSarifShape`, `AUDIT_EXIT_CODES`, `renderBundleSummary`; `action.yml`; `.github/workflows/gates.yml`; CLI `audit bundle [--out] [--sarif] [--profile]`, `audit sarif [--out]` | `construido` |
+| Reproducible container entry point (§16.1) | The `Dockerfile` is multi-stage and honest about what it ships: the build stage compiles TypeScript, the runtime stage copies only `dist`, `templates` and `package.json`, and no `node_modules` reaches the final image. `.github/workflows/gates.yml` now carries a `container` job that builds it for **`linux/amd64` and `linux/arm64`** with QEMU + Buildx and `push: false`, failing the job if either platform fails; nothing is pushed. | `Dockerfile`; `.github/workflows/gates.yml` · job `container` | `construido` (both platforms are built by the job definition) · **brecha declarada** (the multi-arch job has not yet executed on GitHub and no image is published — G-27) |
+| Reproducible distribution — the release pipeline (§16) | `@brujo2020/open-sdd` publishes from the repository root on a version tag. The publish step supports **two credential routes** and states which it attempts: a granular `NPM_TOKEN` (Bypass 2FA) passed as `NODE_AUTH_TOKEN`, or OIDC trusted publishing with `id-token: write` when the secret is empty. `workflow_dispatch.dry_run` exercises install → build → test → gate chain → claims → `npm pack --dry-run` and publishes nothing. | `.github/workflows/publish.yml`; `docs/guides/publish.md` | `construido` (the artifact: 3.1.0 on the registry, from a manual OTP publish) · **brecha declarada** (no CI credential route has yet produced a green publish — G-28) |
 | The portable commit gate (§6.3 Table 19 levels A–D; §16.1; REQ-MAT-003) | The level-B boundary is a **Node** hook (`pre-commit.mjs`), so it runs on a non-POSIX host; a POSIX `/bin/sh` fallback (`pre-commit`) fails **closed** with a diagnosis when Node cannot be honoured, because a commit gate that silently degrades to "no checks" is worse than none. It judges the **staged index** (`--staged`) with C1 (advisory), C2 (blocking: secrets and destructive commands) and C3 (blocking: a completed task with no captured `_Evidence:`); when the CLI is missing it prints the three ways to fix it. `doctor` reports whether the installed hook is our current version and whether it depends on a POSIX shell. | `templates/hooks/pre-commit.mjs`, `templates/hooks/pre-commit`; `scripts/install-hooks.mjs`; `core/floorInstallation.ts` · `detectInstalledFloor`; `core/doctor.ts` · `inspectCommitHook`, `runDoctor`; CLI `floor install\|status`, `doctor` | `construido` · **brecha declarada** (level A is still a ceiling; the Windows job that would prove the portable path has never executed — G-26) |
 | Installation self-diagnosis and guided first run (spec-kit's onboarding surface, reimplemented; *Manual Maestro* v3.0 EGTAV) | `doctor` turns every startup assumption into a named check with the exact fixing command — Node range, CLI reachability, the commit hook and its portability, declared rigor, constitution, specs and the offline posture — and never reports `ok` for something it could not inspect. `tour` teaches by doing: it runs the real commands through their real handlers and stops at the human decision (ratifying a constitution is never automated). `context` is the terminal face of the MCP context pack, so a host and a terminal read the same object. | `core/doctor.ts` · `runDoctor`, `renderDoctor`, `inspectCommitHook`; `cli/commands/tour.ts` · `handleTourCommand`, `handleContextCommand`; CLI `doctor`, `tour`, `context [--json]` | `construido` |
 | The demo, the synthetic bench and the measurements (§14.3 risk-lab discipline — applied to this repository's **own** instrument, not to the paper's benches) | `scripts/demo-60s.sh` creates a throwaway repository, injects four real incoherences (an untraced delta requirement, a completed task with no `_Evidence:`, an unfilled `{{…}}` marker, a declared contract that does not exist), runs the **pinned** `tools/open-sdd/dist/cli.js` and exits non-zero if the engine fails to name any of them — a demo that cannot fail is marketing. `bench/harness.mjs` builds ten synthetic repositories from a verified-clean baseline, injects exactly one documented class per repo and reports injected/caught/missed per class; it exits `1` on a dirty baseline or a miss. `docs/MEASUREMENTS.md` records the numbers with the exact command, tool version and seed. | `scripts/demo-60s.sh`; `bench/harness.mjs`; `bench/README.md`; `docs/MEASUREMENTS.md`; `docs/guides/quickstart-60s.md` | `medido` (10/10 synthetic classes caught, reproducible offline from a clone) · **brecha declarada** (these are **synthetic** honesty numbers, not field data; the paper's κ/FPR/latency figures remain the prototype's — G-29) |
@@ -640,20 +642,29 @@ means. This is why the compliance matrix reports **50 % coverage** on this repos
 a `file:line`, which is the honest state of a descriptive constitution whose evidence is not all code
 (see also G-16).
 
-### G-24 — Four of the ten MCP registrations are unverified, and one host has no documented path
+### G-24 — Three of the four MCP registrations are now verified; Antigravity is verified only in part
 
-Paper: §6.4 / Table 4 (agent-agnostic installation); §9.5 G16/O2 ("Intercepción MCP"). The
-integration matrix (`integrations.ts`) treats `mcp.verified` as an **evidence** field, and 4 of its 10
-rows are `false`: **GitHub Copilot** (two incompatible surfaces — VS Code's `.vscode/mcp.json` with a
-`servers` object and `type: "stdio"` versus the Copilot CLI's `~/.copilot/mcp-config.json` with
-`mcpServers`), **OpenCode** (`mcp` + `type: "local"` with an array `command`, recalled but not
-re-confirmed), **Zed** (`context_servers`, inner shape unconfirmed) and **Google Antigravity** (no
-documented MCP path is known here, so `configPaths` is empty rather than invented). The consequence is
-deliberate and stated by the CLI: `integrate` prints those rows as **NO VERIFICADA**, `--write`
-refuses to touch their config files, and the user pastes the snippet after checking it against the
-host's own documentation. The matrix is therefore honest but incomplete: six hosts have a
-machine-checked registration, four do not, and "we do not know where this file goes" is the recorded
-answer rather than a plausible-looking guess.
+Paper: §6.4 / Table 4 (agent-agnostic installation); §9.5 G16/O2 ("Intercepción MCP"). The integration
+matrix (`integrations.ts`) treats `mcp.verified` as an **evidence** field, and it now carries the URL it
+was checked against, so a reader can re-verify it rather than trust it:
+
+- **GitHub Copilot** — verified against the VS Code documentation: `.vscode/mcp.json` with a `servers`
+  object and a `{type: "stdio", command, args}` entry. The Copilot CLI remains a **separate surface**
+  with `mcpServers`; modelling both rather than pretending one shape serves both.
+- **OpenCode** — verified: `opencode.json` with an `mcp` key, `type: "local"`, and an ARRAY `command`.
+- **Zed** — verified, and the verification **corrected** the earlier guess: `context_servers` entries use
+  a STRING `command` plus a separate `args` array, not the nested `command: {path, args}` object that
+  had been assumed. That correction is the argument for this field existing at all.
+- **Google Antigravity** — **partially verified, deliberately left unverified for the snippet**: the
+  documentation confirms the paths (`~/.gemini/config/mcp_config.json` globally, `.agents/mcp_config.json`
+  per workspace) but it is JavaScript-rendered and the entry shape did not survive a plain fetch. The CLI
+  therefore still prints it as **NO VERIFICADA**, `--write` still refuses to touch its config, and the
+  notes say exactly what is verified (the paths), what is not (the entry shape) and where to look
+  (`/mcp` → "View raw config").
+
+The consequence is deliberate and stated by the CLI: an unverified row is printed as **NO VERIFICADA** and
+`--write` refuses to write it, so nothing is ever written into someone's editor on the strength of a
+guess. The matrix is honest, and now three quarters verified instead of none.
 
 ### G-25 — The importers are mappings, not faithful migrations, and the losses are named
 
@@ -688,38 +699,60 @@ pre-commit hook** — only the Linux `gates` job runs `npm run hooks:install` �
 what remains untested there is the commit gate itself, and `doctor` reports the hook's POSIX
 dependence as a check precisely because that part of the gap is real.
 
-### G-27 — The container image is built for one architecture, and CI never builds it
+### G-27 — The container image is now built for both architectures by CI, but that job has not yet run
 
-Paper: §16.1 (a reproducible, host-independent entry point). `Dockerfile` pins the base tag
-(`node:20.19-alpine3.23`) and ships no `node_modules`, which is the honest part; what it does not do is
-declare a platform or build a multi-architecture manifest. `docker build -t open-sdd .` therefore
-produces whatever the builder's architecture is (arm64 on the machine this was written on), and no
-`.github/workflows` job builds or pushes the image, so there is no recorded amd64 (or multi-arch)
-image and a `docker run` on a different architecture is unverified. The README's container snippet
-works on the architecture it was built on; it does not claim more, and this gap records that.
+Paper: §16.1 (a reproducible, host-independent entry point). The gap had two halves: the image had
+only ever been built by hand, and only for the builder's architecture (arm64 on the machine this was
+written on), so no recorded amd64 image existed and a `docker run` on another architecture was
+unverified. The first half is now addressed in code: `.github/workflows/gates.yml` carries a
+`container` job that builds the `Dockerfile` for **`linux/amd64` and `linux/arm64`** with
+`docker/setup-qemu-action` + `docker/setup-buildx-action` and `push: false`, and it fails if either
+platform fails to build. Nothing is published, so this proves the Dockerfile is valid for both
+targets without inventing a registry target the release does not have.
 
-### G-28 — The package is published, but the CI trusted-publishing path is not the route that shipped it
+The `Dockerfile` itself needed **no change**: `node:20.19-alpine3.23` is a multi-architecture
+manifest that already carries both targets, and the build has no architecture-specific step (the
+build stage runs `npm ci` + `tsc` inside the target container; the runtime stage only copies `dist`,
+`templates` and `package.json`). The honest residue is that the job **has not yet executed on
+GitHub** — it first runs when this change reaches a pull request or `main` — so "CI builds both
+architectures" is a code fact, not yet a recorded green run. There is also still **no published
+image anywhere**: the gap is closed in the "CI proves both platforms build" sense, not in the
+"there is a multi-arch image a reader can pull" sense.
+
+### G-28 — The package is published; no CI credential route has yet produced a green publish
 
 Paper: §16 (reproducible distribution). The package **is** published: `@brujo2020/open-sdd` carries
 **v3.1.0** (published 2026-09-20) with **v2.0.0** (2026-09-17) as the previous version, and
 `dist-tags.latest` is **3.1.0**, matching the root `package.json` v3.1.0 — so
 `npx @brujo2020/open-sdd@latest` runs this artifact. The unscoped name `open-sdd` still does not
 exist (HTTP 404), so `npx open-sdd@latest` is **not** this project and remains the wrong invocation.
-What is still a gap is the *path*, not the artifact:
+What is still a gap is the *path*, not the artifact, and it is now narrower and better instrumented:
 
-- **The workflow's trusted-publishing (OIDC) path has never succeeded.** Every `.github/workflows/
-  publish.yml` run is red, and each fails at the `npm publish --access public --provenance` step with
-  `E404 — PUT https://registry.npmjs.org/@brujo2020%2fopen-sdd - Not found`. The last red run
-  (`35536455377`, 2026-09-20T20:43Z) still shows it, and v3.1.0 was already on the registry by then,
-  so the 404 is an authorisation failure and not a missing package. The repository's own account of it
-  (`dad42b0`) is that the OIDC exchange needs npm ≥ 11.5.1 and Node 20 bundles npm 10.x, so with an
-  npm that cannot do trusted publishing the workflow has no token to fall back on and npm masks the
-  authorisation failure as a 404. The workflow now pins Node 24 (`node-version: '24'`, npm 11), which
-  is the fix for that specific cause, but no run has yet gone green on it.
-- **Until that path is proven, a manual publish is the fallback.** The owner publishes by hand with an
-  interactive one-time password (`npm publish --access public --provenance --otp <code>`), which is
-  what put 3.1.0 on the registry without a successful workflow run. That is a human-in-the-loop
-  release step and not a reproducible one-command pipeline, which is why the gap survives the publish.
+- **Two credential routes are supported by `.github/workflows/publish.yml`.** The publish step passes
+  `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` and routes explicitly. When the secret carries a value,
+  npm publishes with that **granular access token** — which the owner must generate with
+  **Bypass 2FA**, because the account has 2FA and a token under `auth-and-writes` otherwise demands a
+  one-time password CI cannot supply. When the secret is absent the step **unsets** the variable and
+  attempts **OIDC trusted publishing**, which `permissions: id-token: write` makes possible; an empty
+  secret is treated as no secret rather than as a blank token. The step prints `Publish route: …`
+  before it touches the registry, so the credential in play is recorded in the log instead of
+  inferred, and `workflow_dispatch`'s `dry_run=true` runs the whole pipeline and stops at
+  `npm pack --dry-run`, publishing nothing.
+- **The route that shipped 3.1.0 is the manual OTP publish, not either CI route.** The owner
+  published by hand with an interactive one-time password
+  (`npm publish --access public --provenance --otp <code>`), which is what put 3.1.0 on the registry
+  without a successful workflow run. The **OIDC trusted-publishing path has never succeeded**: every
+  recorded `publish.yml` run is red at the publish step with
+  `E404 — PUT https://registry.npmjs.org/@brujo2020%2fopen-sdd - Not found`, the last red run
+  (`35536455377`, 2026-09-20T20:43Z) included, and v3.1.0 was already on the registry by then — so
+  the 404 is an authorisation failure (npm returns 404 instead of 403 for one) and not a missing
+  package. The `dad42b0` account of it (the OIDC exchange needs npm ≥ 11.5.1 and Node 20 bundled npm
+  10.x) is addressed by pinning `node-version: '24'`, but **no run has yet gone green on it**.
+- **The token route is supported but unexercised.** No recorded `publish.yml` run has published
+  through `NPM_TOKEN`, and whether the secret is configured is an owner-side action not recorded in
+  this report; no secret was added by this change. So the CI path is **unexercised for the token
+  route and still never green for OIDC** — it is not proven either way, and the manual publish
+  remains the fallback until one of the two routes produces a green workflow run.
 
 The report therefore no longer claims the registry carries only v2.0.0, and the "install in one
 command" promise in the documentation now resolves to the registry.

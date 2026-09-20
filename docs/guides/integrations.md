@@ -1,5 +1,12 @@
 # Integrations
 
+> Verification status: the snippets for **Copilot** (VS Code surface), **OpenCode** and **Zed**
+> were checked against those hosts' own documentation and each carries the URL it was checked against
+> (see the matrix in `tools/open-sdd/src/core/integrations.ts`). **Antigravity** is verified only in part:
+> its documented paths are real, but its documentation is JavaScript-rendered and the entry shape could
+> not be confirmed, so `--write` still refuses to touch its configuration. `open-sdd integrate --list`
+> is the live source of truth.
+
 Open-SDD installs into the host you already use. This guide is the human face of the
 machine-checked matrix in `tools/open-sdd/src/core/integrations.ts`: one section per host with how
 to install, what gets written and where, the exact in-chat invocation, the MCP registration snippet
@@ -27,13 +34,13 @@ pretending it was detected. An explicit host always wins.
 |---|---|---|---|---|---|
 | Claude Code | `claude-code` | `.claude/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.mcp.json` | **yes** |
 | Cursor | `cursor` | `.cursor/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.cursor/mcp.json` | **yes** |
-| GitHub Copilot | `copilot` | `.github/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.vscode/mcp.json` | no |
+| GitHub Copilot | `copilot` | `.github/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.vscode/mcp.json` | yes (VS Code surface) |
 | Codex CLI | `codex` | `.agents/skills/sdd-*/SKILL.md` | `$sdd-brownfield` | `~/.codex/config.toml` | **yes** |
 | Gemini CLI | `gemini-cli` | `.gemini/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.gemini/settings.json` | **yes** |
 | Windsurf | `windsurf` | `.windsurf/skills/sdd-*/SKILL.md` | `@sdd-brownfield` | `~/.codeium/windsurf/mcp_config.json` | **yes** |
-| OpenCode | `opencode` | `.opencode/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `opencode.json` | no |
-| Google Antigravity | `antigravity` | `.agent/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | (none documented) | no |
-| Zed | `zed` | `AGENTS.md` | `@AGENTS.md run the sdd-brownfield workflow` | Zed `settings.json` | no |
+| OpenCode | `opencode` | `.opencode/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `opencode.json` | yes |
+| Google Antigravity | `antigravity` | `.agent/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `~/.gemini/config/mcp_config.json` (global), `.agents/mcp_config.json` (workspace) | paths verified, entry shape NOT |
+| Zed | `zed` | `AGENTS.md` | `@AGENTS.md run the sdd-brownfield workflow` | Zed `settings.json` | yes |
 | Cline | `cline` | `.clinerules/sdd-*.md` | `@.clinerules/sdd-brownfield.md` | `cline_mcp_settings.json` | **yes** |
 
 **Verified** means the snippet shape (and the file the tool writes) is one this project is confident
@@ -145,7 +152,7 @@ The user scope `~/.cursor/mcp.json` takes the same shape.
 - **What gets written:** `.github/skills/sdd-*/SKILL.md`, `.sdd/settings/`, `AGENTS.md`.
   Detection markers: `.github/copilot-instructions.md`, `.github/skills/`, `.vscode/mcp.json`.
 - **Invocation in chat:** `/sdd-brownfield`.
-- **MCP registration (NOT verified).** Copilot has two surfaces with different shapes: VS Code reads
+- **MCP registration (verified — VS Code surface).** Copilot has two surfaces with different shapes: VS Code reads
   `.vscode/mcp.json` with a `servers` object and `type: "stdio"`, while the Copilot CLI uses
   `~/.copilot/mcp-config.json` with `mcpServers`. The CLI prints the VS Code shape and refuses to
   write it for you:

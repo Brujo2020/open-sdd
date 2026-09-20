@@ -165,17 +165,96 @@ describe('integrations — MCP registration is real or declared unverified', () 
 
   it('an unverified host is marked `verified:false`, printed as NO VERIFICADO and never written', async () => {
     const dir = await makeRoot();
-    const registration = mcpRegistration('zed', { cliPath: '/opt/open-sdd/dist/cli.js' });
+    const registration = mcpRegistration('antigravity', { cliPath: '/opt/open-sdd/dist/cli.js' });
     expect(registration.verified).toBe(false);
 
-    const plan = await planIntegrate({ cwd: dir, host: 'zed' });
+    const plan = await planIntegrate({ cwd: dir, host: 'antigravity' });
     expect(plan.mcp.verified).toBe(false);
     expect(plan.artifacts.find((artifact) => artifact.kind === 'mcp-config')?.action).toBe('keep');
 
     const ctx = makeIO();
-    expect(await handleIntegrateCommand(['zed'], ctx.io, dir)).toBe(0);
+    expect(await handleIntegrateCommand(['antigravity'], ctx.io, dir)).toBe(0);
     expect(ctx.text()).toContain('NO VERIFICADO');
     expect(ctx.text()).toContain('no se escribe automáticamente');
+  });
+
+  it('copilot (VS Code surface) is verified: `servers` object, `type: "stdio"`, STRING command + args array', () => {
+    const cliPath = '/opt/open-sdd/dist/cli.js';
+    const host = integrationById('copilot')!;
+    const registration = mcpRegistration('copilot', { cliPath });
+
+    expect(registration.verified).toBe(true);
+    expect(registration.path).toBe('.vscode/mcp.json');
+    expect(host.mcp.docUrl).toBe('https://code.visualstudio.com/docs/copilot/chat/mcp-servers');
+    expect(registration.content).toContain('"servers"');
+
+    const parsed = JSON.parse(registration.content) as {
+      servers: Record<string, { type: string; command: unknown; args: unknown }>;
+    };
+    const entry = parsed.servers['open-sdd'];
+    expect(entry.type).toBe('stdio');
+    // VS Code / Copilot wants a STRING `command` plus an `args` ARRAY.
+    expect(typeof entry.command).toBe('string');
+    expect(entry.command).toBe('node');
+    expect(Array.isArray(entry.args)).toBe(true);
+    expect(entry.args).toEqual([cliPath, 'mcp']);
+  });
+
+  it('opencode is verified: top-level `mcp` object, `type: "local"`, ARRAY command', () => {
+    const cliPath = '/opt/open-sdd/dist/cli.js';
+    const host = integrationById('opencode')!;
+    const registration = mcpRegistration('opencode', { cliPath });
+
+    expect(registration.verified).toBe(true);
+    expect(registration.path).toBe('opencode.json');
+    expect(host.mcp.docUrl).toBe('https://opencode.ai/docs/mcp-servers/');
+    expect(registration.content).toContain('"mcp"');
+
+    const parsed = JSON.parse(registration.content) as {
+      mcp: Record<string, { type: string; command: unknown }>;
+    };
+    const entry = parsed.mcp['open-sdd'];
+    expect(entry.type).toBe('local');
+    // OpenCode's `command` is an ARRAY, unlike the `mcpServers` family.
+    expect(Array.isArray(entry.command)).toBe(true);
+    expect(entry.command).toEqual(['node', cliPath, 'mcp']);
+  });
+
+  it('zed is verified with a STRING `command` and a sibling `args` array, not the nested `{ path, args }` guess', () => {
+    const cliPath = '/opt/open-sdd/dist/cli.js';
+    const host = integrationById('zed')!;
+    const registration = mcpRegistration('zed', { cliPath });
+
+    expect(registration.verified).toBe(true);
+    expect(host.mcp.docUrl).toBe('https://zed.dev/docs/assistant/model-context-protocol');
+    expect(registration.content).toContain('"context_servers"');
+
+    const parsed = JSON.parse(registration.content) as {
+      context_servers: Record<string, { command: unknown; args: unknown }>;
+    };
+    const entry = parsed.context_servers['open-sdd'];
+    // The correction: `command` is a STRING and `args` is its SIBLING array. The earlier guess
+    // nested `{ path, args }` inside `command`, which the docs do not support.
+    expect(typeof entry.command).toBe('string');
+    expect(entry.command).toBe('node');
+    expect(entry.command).not.toHaveProperty('path');
+    expect(Array.isArray(entry.args)).toBe(true);
+    expect(entry.args).toEqual([cliPath, 'mcp']);
+  });
+
+  it('antigravity records its two verified paths but keeps the entry shape unconfirmed', () => {
+    const host = integrationById('antigravity')!;
+    expect(host.mcp.verified).toBe(false);
+    expect(host.mcp.docUrl).toBe('https://antigravity.google/docs/mcp');
+
+    // Both documented paths are recorded; the entry shape is explicitly not.
+    expect(host.mcp.configPaths.linux).toBe('.agents/mcp_config.json');
+    const notes = host.notes.join(' ');
+    expect(notes).toContain('~/.gemini/config/mcp_config.json');
+    expect(notes).toContain('.agents/mcp_config.json');
+    expect(notes).toContain('NO CONFIRMADA');
+    expect(notes).toContain('/mcp');
+    expect(notes).toContain('View raw config');
   });
 
   it('an unknown id never yields a plausible-looking snippet', () => {
@@ -219,6 +298,40 @@ describe('integrations --write — merge, never clobber, and idempotent', () => 
     expect(merged.mcpServers['open-sdd']).toEqual({
       command: 'node',
       args: [expect.stringContaining('cli.js'), 'mcp'],
+    });
+  });
+
+  it('a newly verified project-scoped host (opencode) is written and merges its `mcp` object', async () => {
+    const dir = await makeRoot();
+    await writeFile(
+      path.join(dir, 'opencode.json'),
+      `${JSON.stringify(
+        { mcp: { 'other-tool': { type: 'local', command: ['uvx', 'other'] } }, theme: 'dark' },
+        null,
+        2,
+      )}\n`,
+      'utf8',
+    );
+
+    const ctx = makeIO();
+    expect(await handleIntegrateCommand(['opencode', '--write', '--json'], ctx.io, dir)).toBe(0);
+    const output = JSON.parse(ctx.text()) as {
+      artifacts: { kind: string; action: string }[];
+      outcome: { written: string[] };
+    };
+    expect(output.artifacts.find((artifact) => artifact.kind === 'mcp-config')?.action).toBe('update');
+    expect(output.outcome.written).toContain('opencode.json');
+
+    const merged = (await readJson(path.join(dir, 'opencode.json'))) as {
+      mcp: Record<string, unknown>;
+      theme: string;
+    };
+    // Unrelated keys survive; only our entry inside `mcp` is added.
+    expect(merged.theme).toBe('dark');
+    expect(merged.mcp['other-tool']).toEqual({ type: 'local', command: ['uvx', 'other'] });
+    expect(merged.mcp['open-sdd']).toEqual({
+      type: 'local',
+      command: ['node', expect.stringContaining('cli.js'), 'mcp'],
     });
   });
 

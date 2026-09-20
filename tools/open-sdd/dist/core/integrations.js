@@ -20,12 +20,17 @@
  * ── Config shapes this matrix encodes ───────────────────────────────────────────────────────────
  *   • JSON with a top-level `mcpServers` object (Claude Code, Cursor, Windsurf, Cline, Gemini CLI).
  *   • TOML with a `[mcp_servers.<name>]` table (Codex).
- *   • The `mcp` object with `type: "local"` and an array `command` (OpenCode) — recalled but NOT
- *     re-verified in this session, so it ships as unverified.
- *   • The `servers` object with `type: "stdio"` (VS Code / GitHub Copilot) — genuinely ambiguous
- *     because the Copilot CLI uses a different file and the `mcpServers` shape, so unverified.
- *   • Zed's `context_servers` (unverified inner shape).
- *   • Antigravity: no documented MCP path known here, so no path and no claim.
+ *   • VS Code / GitHub Copilot: a `servers` object with `type: "stdio"`, a STRING `command` and an
+ *     `args` array, in `.vscode/mcp.json` (verified against the VS Code docs). The Copilot CLI is a
+ *     SEPARATE surface — `~/.copilot/mcp-config.json` with the `mcpServers` shape — documented as an
+ *     alternative rather than pretending one entry serves both.
+ *   • OpenCode: a top-level `mcp` object with `type: "local"` and an ARRAY `command`
+ *     (`["node", "<cli>", "mcp"]`) in `opencode.json` (verified against the OpenCode docs).
+ *   • Zed: `context_servers` in `settings.json` with a STRING `command` and a sibling `args` array
+ *     (verified against the Zed docs; an earlier guess nested `{ path, args }` inside `command`).
+ *   • Antigravity: the two config PATHS are verified (`~/.gemini/config/mcp_config.json` global and
+ *     `.agents/mcp_config.json` workspace) but the docs page is JS-rendered and did not yield the
+ *     inner entry shape, so the snippet stays `verified: false`.
  */
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -41,13 +46,15 @@ const tomlString = (value) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\
 const mcpServersSnippet = (cliPath) => jsonDoc({ mcpServers: { [MCP_SERVER_NAME]: { command: 'node', args: [cliPath, 'mcp'] } } });
 /** VS Code's `.vscode/mcp.json`: a `servers` object whose entries declare `type: "stdio"`. */
 const vscodeServersSnippet = (cliPath) => jsonDoc({ servers: { [MCP_SERVER_NAME]: { type: 'stdio', command: 'node', args: [cliPath, 'mcp'] } } });
-/** OpenCode's `opencode.json`: an `mcp` object whose entries declare `type: "local"`. */
+/** OpenCode's `opencode.json`: an `mcp` object whose entries declare `type: "local"` and an ARRAY `command`. */
 const opencodeSnippet = (cliPath) => jsonDoc({
     $schema: 'https://opencode.ai/config.json',
-    mcp: { [MCP_SERVER_NAME]: { type: 'local', command: ['node', cliPath, 'mcp'], enabled: true } },
+    mcp: { [MCP_SERVER_NAME]: { type: 'local', command: ['node', cliPath, 'mcp'] } },
 });
-/** Zed's `context_servers` entry. */
-const zedSnippet = (cliPath) => jsonDoc({ context_servers: { [MCP_SERVER_NAME]: { command: { path: 'node', args: [cliPath, 'mcp'] } } } });
+/** Zed's `context_servers` entry: STRING `command` plus a sibling `args` array (not `{ path, args }`). */
+const zedSnippet = (cliPath) => jsonDoc({
+    context_servers: { [MCP_SERVER_NAME]: { command: 'node', args: [cliPath, 'mcp'], env: {} } },
+});
 /** Codex's `config.toml`. */
 const codexSnippet = (cliPath) => [
     `[mcp_servers.${MCP_SERVER_NAME}]`,
@@ -56,7 +63,13 @@ const codexSnippet = (cliPath) => [
     '',
 ].join('\n');
 const VERIFIED_JSON_MCP_SERVERS = 'Forma VERIFICADA: objeto JSON de primer nivel `mcpServers` con una entrada por servidor, `command` + `args` para stdio. Es la forma documentada de este anfitrión y la que escribe su propio comando de alta.';
-const UNVERIFIED = 'NO VERIFICADA en esta sesión: la forma y/o la ruta se recuerdan pero no se han confirmado contra la documentación del anfitrión. `open-sdd integrate --write` NO escribe configuraciones no verificadas: imprime el snippet para que lo pegues y lo compruebes.';
+// Documentation pages the snippets above were checked against. A `docUrl` is EVIDENCE: it is the
+// page a reader (or a future session) can fetch to re-confirm the exact key/shape, so it is set only
+// where the shape was actually read from that page.
+const DOC_COPILOT = 'https://code.visualstudio.com/docs/copilot/chat/mcp-servers';
+const DOC_OPENCODE = 'https://opencode.ai/docs/mcp-servers/';
+const DOC_ZED = 'https://zed.dev/docs/assistant/model-context-protocol';
+const DOC_ANTIGRAVITY = 'https://antigravity.google/docs/mcp';
 // ---------------------------------------------------------------------------------------------
 // The matrix
 // ---------------------------------------------------------------------------------------------
@@ -106,12 +119,13 @@ export const HOST_INTEGRATIONS = [
             configPaths: { linux: '.vscode/mcp.json', darwin: '.vscode/mcp.json', win32: '.vscode/mcp.json' },
             snippetFormat: 'json',
             snippet: vscodeServersSnippet,
-            verified: false,
+            verified: true,
+            docUrl: DOC_COPILOT,
         },
         detect: ['.github/copilot-instructions.md', '.github/skills/', '.vscode/mcp.json'],
         notes: [
-            UNVERIFIED,
-            'Dos superficies incompatibles: VS Code usa `.vscode/mcp.json` con un objeto `servers` y `type: "stdio"` (lo que emite el snippet), mientras que el CLI de Copilot usa `~/.copilot/mcp-config.json` con `mcpServers`. Cuál aplica depende de la superficie, y por eso no se declara verificada.',
+            'Forma VERIFICADA (superficie VS Code): objeto `servers` con `type: "stdio"`, `command` como CADENA y `args` como ARRAY, en `.vscode/mcp.json` del espacio de trabajo (el perfil de usuario se abre con `MCP: Open User Configuration`). Documentación: https://code.visualstudio.com/docs/copilot/chat/mcp-servers.',
+            'El CLI de Copilot es una superficie DISTINTA y documentada: usa `~/.copilot/mcp-config.json` con el objeto `mcpServers` de la familia Claude/Cursor. No es la misma entrada que la de VS Code: elige la que corresponda a tu superficie en lugar de mezclar formas.',
             'Instalación de skills: `open-sdd --copilot-skills --lang <es|en>`.',
         ],
     },
@@ -186,12 +200,12 @@ export const HOST_INTEGRATIONS = [
             configPaths: { linux: 'opencode.json', darwin: 'opencode.json', win32: 'opencode.json' },
             snippetFormat: 'json',
             snippet: opencodeSnippet,
-            verified: false,
+            verified: true,
+            docUrl: DOC_OPENCODE,
         },
         detect: ['.opencode/', 'opencode.json', '.opencode/skills/'],
         notes: [
-            UNVERIFIED,
-            'Se recuerda un objeto `mcp` de primer nivel con entradas `{ type: "local", command: [ ... ] }` en `opencode.json`, distinto de la familia `mcpServers`; la forma exacta del array `command` no se ha confirmado aquí.',
+            'Forma VERIFICADA: objeto `mcp` de primer nivel en `opencode.json`, entrada con `type: "local"` y `command` como ARRAY (`["node", "<cli>", "mcp"]`), distinta de la familia `mcpServers`. El `$schema` que emite el snippet es el de la propia documentación. Documentación: https://opencode.ai/docs/mcp-servers/.',
             'Instalación de skills: `open-sdd --opencode-skills --lang <es|en>`.',
         ],
     },
@@ -201,17 +215,23 @@ export const HOST_INTEGRATIONS = [
         skills: { layout: '.agent/skills/sdd-*/SKILL.md', mode: 'skills' },
         invocation: '/sdd-brownfield',
         mcp: {
-            // No documented path is known here. An empty configPaths is the honest answer: the matrix
-            // says "we do not know where this goes" instead of inventing a file and writing to it.
-            configPaths: {},
+            // The two documented paths are known; the INNER ENTRY SHAPE is not, so the snippet stays
+            // unverified. The workspace path is the one declared here (it is the repo-local one, matching
+            // the `.agents/` markers); the global path is recorded in the notes.
+            configPaths: {
+                linux: '.agents/mcp_config.json',
+                darwin: '.agents/mcp_config.json',
+                win32: '.agents/mcp_config.json',
+            },
             snippetFormat: 'json',
             snippet: mcpServersSnippet,
             verified: false,
+            docUrl: DOC_ANTIGRAVITY,
         },
         detect: ['.agent/', '.agent/skills/', '.agent/rules/'],
         notes: [
-            UNVERIFIED,
-            'No se conoce aquí una ruta de configuración MCP documentada para Antigravity, así que la matriz no declara ninguna (`configPaths` vacío) y `--write` no escribe nada: configúralo desde la interfaz del anfitrión.',
+            'RUTAS VERIFICADAS (contra https://antigravity.google/docs/mcp): global `~/.gemini/config/mcp_config.json` (en Windows `%USERPROFILE%\\.gemini\\config\\mcp_config.json`) y de espacio de trabajo `.agents/mcp_config.json`. La matriz declara la de espacio de trabajo como `configPath`.',
+            'FORMA DE LA ENTRADA NO CONFIRMADA: la página oficial se renderiza con JavaScript y su sección "MCP Configuration Structure" no expone la clave ni la estructura en una lectura simple, así que el snippet NO se presenta como un hecho y `--write` NO lo escribe. Para ver la forma exacta que genera el anfitrión, usa el Gestor MCP interactivo (`/mcp` en el prompt) → `View raw config`.',
             'El layout de skills sí está verificado por el instalador de este repositorio: `.agent/skills/sdd-*/SKILL.md` (bandera `--antigravity-skills`).',
         ],
     },
@@ -228,12 +248,13 @@ export const HOST_INTEGRATIONS = [
             },
             snippetFormat: 'json',
             snippet: zedSnippet,
-            verified: false,
+            verified: true,
+            docUrl: DOC_ZED,
         },
         detect: ['.zed/', '.rules', 'AGENTS.md'],
         notes: [
-            UNVERIFIED,
-            'Zed guarda la configuración MCP bajo `context_servers` en su `settings.json`; la ruta del archivo sí se recuerda, pero la forma interna de la entrada (`command` anidado con `path`/`args`) no se ha confirmado aquí.',
+            'Forma VERIFICADA: `context_servers` en el `settings.json` de Zed, con `command` como CADENA y `args` como array HERMANO (`{ "command": "node", "args": [...] }`). Una conjetura anterior anidaba `{ path, args }` dentro de `command`; la documentación la desmiente y el snippet ya no la usa. Documentación: https://zed.dev/docs/assistant/model-context-protocol.',
+            'Rutas: `~/.config/zed/settings.json` (macOS/Linux) y `%APPDATA%\\Zed\\settings.json` (Windows); en macOS la ruta real de la app también es `~/Library/Application Support/Zed/settings.json`.',
             'Zed no tiene comandos de barra para skills: se referencia el archivo de reglas con una mención. No hay instalador de skills para Zed en el registro de agentes, así que `--write` solo registra el MCP.',
         ],
     },
