@@ -658,6 +658,23 @@ export const planBootstrap = async (input) => {
     const project = await scanProject(cwd);
     const map = await buildModuleMap(cwd);
     const sddDir = await resolveSddDir(cwd);
+    // Templates adapted to the observed stack (evidence, not decoration). Loaded dynamically to keep
+    // the dependency one-way; a failure here never breaks the plan, it is declared in `detail`.
+    let templates = [];
+    let adaptationDetail = 'templates adaptadas: no se pudieron derivar.';
+    try {
+        const { adaptTemplates } = await import('./templateAdaptation.js');
+        const adaptation = await adaptTemplates({ cwd, modules: map.modules });
+        templates = adaptation.templates;
+        adaptationDetail =
+            `${adaptation.templates.length} plantilla(s) adaptada(s) a la evidencia` +
+                `${adaptation.complete ? '' : ' (incompleta)'}: ${adaptation.actions
+                    .map((action) => `${action.path} ${action.action}`)
+                    .join(', ')}.`;
+    }
+    catch (error) {
+        adaptationDetail = `templates adaptadas: no se pudieron derivar (${error.message}).`;
+    }
     const constitutionRel = posix(path.posix.join(sddDir, 'steering', 'constitution.md'));
     const intelligenceRel = posix(path.posix.join(sddDir, 'steering', 'codebase-intelligence.md'));
     const constitutionExists = await exists(path.join(cwd, constitutionRel));
@@ -709,6 +726,7 @@ export const planBootstrap = async (input) => {
         `Constitución descriptiva (el stack actual es un hecho establecido): \`open-sdd brownfield constitution ${root} --write\``,
         `Mapa de módulos y responsabilidades observadas (se imprime con el plan): \`open-sdd brownfield bootstrap ${root}\``,
         `Documento de inteligencia del código para agentes: \`open-sdd brownfield bootstrap ${root} --write\``,
+        `Plantillas adaptadas al stack observado (se muestran con el plan; se escriben solo donde no haya una propia): \`open-sdd brownfield templates ${root} [--write]\``,
         focus && focusSlug
             ? `Semilla del contrato de cambio para «${focus}»: \`open-sdd delta init ${focusSlug} "${focus}"\``
             : 'Sin --focus no se siembra ninguna delta: cuando decidas el primer cambio, `open-sdd delta init <feature> "<qué cambia>"`',
@@ -720,8 +738,9 @@ export const planBootstrap = async (input) => {
     const detail = [
         `Plan de bootstrap: ${map.modules.length} módulo(s), ${toCreate} artefacto(s) por crear, ${toUpdate} por regenerar, ${toKeep} conservado(s).`,
         map.detail,
+        adaptationDetail,
         'Los pasos están pensados para ejecutarse desde cualquier directorio (usan la raíz resuelta).',
     ].join(' ');
     const complete = map.complete && project.language !== 'unknown';
-    return { root, project, modules: map.modules, artifacts, steps, detail, complete };
+    return { root, project, modules: map.modules, templates, artifacts, steps, detail, complete };
 };

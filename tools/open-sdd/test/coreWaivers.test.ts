@@ -148,13 +148,20 @@ describe('core/securityAllowlist — dueño y caducidad', () => {
     const { entries, rejected } = parseSecurityAllowlist(raw);
 
     expect(rejected).toEqual([]);
-    expect(entries).toHaveLength(15);
+    // The assertion that matters is the SHAPE of every live entry, not how many there are: pinning the
+    // count made this test fail the moment a legitimate new waiver was declared (which is what
+    // happened), and a test that breaks on correct use of the feature it tests is a test that gets
+    // weakened instead of fixed.
+    expect(entries.length).toBeGreaterThanOrEqual(15);
     for (const entry of entries) {
       expect(entry.owner?.trim().length ?? 0).toBeGreaterThan(0);
       expect(entry.expires).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
     // A día de hoy la lista entera sigue vigente; pasada la fecha, caduca entera (y eso se verá).
     expect(expiredWaivers(entries, new Date('2026-01-01T00:00:00Z'))).toHaveLength(0);
-    expect(expiredWaivers(entries, new Date('2027-04-01T00:00:00Z'))).toHaveLength(15);
+    // Every live entry expires on the same declared date, so ALL of them expire together. Pinning 15
+    // broke the moment a 16th legitimate waiver was declared; the behaviour under test is "all of
+    // them", not the count.
+    expect(expiredWaivers(entries, new Date('2027-04-01T00:00:00Z'))).toHaveLength(entries.length);
   });
 });

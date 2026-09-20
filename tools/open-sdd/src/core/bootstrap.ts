@@ -30,6 +30,9 @@ import {
 } from './reverseEngineering.js';
 import { findReuseCandidates, type ReuseCandidate } from './reuseFirst.js';
 import { resolveSddDir } from './specManager.js';
+// Type-only: the adaptation module imports `buildModuleMap`, so a runtime import here would close a
+// cycle. `planBootstrap` loads it dynamically, once, at call time.
+import type { AdaptedTemplate } from './templateAdaptation.js';
 
 export interface ModuleMapEntry {
   /** Workspace/module path relative to the root. */
@@ -60,6 +63,13 @@ export interface BootstrapPlan {
   root: string;
   project: DiscoveredProject;
   modules: ModuleMapEntry[];
+  /**
+   * Templates adapted to the stack this repository actually declares (requirements/plan/tasks).
+   * Exposed by the plan because the agent that starts the change should read the adapted tasks
+   * template, not the generic one — but `planBootstrap` does NOT write them: `plan.artifacts` stays
+   * the exact list of what `bootstrap --write` touches, and the templates step names the command.
+   */
+  templates: AdaptedTemplate[];
   /** Artifacts the bootstrap would write, with whether they already exist. */
   artifacts: { path: string; action: 'create' | 'update' | 'keep'; reason: string }[];
   /** The ordered steps a human should follow, each one a runnable command when possible. */
@@ -800,6 +810,23 @@ export const planBootstrap = async (input: { cwd: string; focus?: string }): Pro
   const map = await buildModuleMap(cwd);
   const sddDir = await resolveSddDir(cwd);
 
+  // Templates adapted to the observed stack (evidence, not decoration). Loaded dynamically to keep
+  // the dependency one-way; a failure here never breaks the plan, it is declared in `detail`.
+  let templates: AdaptedTemplate[] = [];
+  let adaptationDetail = 'templates adaptadas: no se pudieron derivar.';
+  try {
+    const { adaptTemplates } = await import('./templateAdaptation.js');
+    const adaptation = await adaptTemplates({ cwd, modules: map.modules });
+    templates = adaptation.templates;
+    adaptationDetail =
+      `${adaptation.templates.length} plantilla(s) adaptada(s) a la evidencia` +
+      `${adaptation.complete ? '' : ' (incompleta)'}: ${adaptation.actions
+        .map((action) => `${action.path} ${action.action}`)
+        .join(', ')}.`;
+  } catch (error) {
+    adaptationDetail = `templates adaptadas: no se pudieron derivar (${(error as Error).message}).`;
+  }
+
   const constitutionRel = posix(path.posix.join(sddDir, 'steering', 'constitution.md'));
   const intelligenceRel = posix(path.posix.join(sddDir, 'steering', 'codebase-intelligence.md'));
 
@@ -854,6 +881,7 @@ export const planBootstrap = async (input: { cwd: string; focus?: string }): Pro
     `Constitución descriptiva (el stack actual es un hecho establecido): \`open-sdd brownfield constitution ${root} --write\``,
     `Mapa de módulos y responsabilidades observadas (se imprime con el plan): \`open-sdd brownfield bootstrap ${root}\``,
     `Documento de inteligencia del código para agentes: \`open-sdd brownfield bootstrap ${root} --write\``,
+    `Plantillas adaptadas al stack observado (se muestran con el plan; se escriben solo donde no haya una propia): \`open-sdd brownfield templates ${root} [--write]\``,
     focus && focusSlug
       ? `Semilla del contrato de cambio para «${focus}»: \`open-sdd delta init ${focusSlug} "${focus}"\``
       : 'Sin --focus no se siembra ninguna delta: cuando decidas el primer cambio, `open-sdd delta init <feature> "<qué cambia>"`',
@@ -866,10 +894,11 @@ export const planBootstrap = async (input: { cwd: string; focus?: string }): Pro
   const detail = [
     `Plan de bootstrap: ${map.modules.length} módulo(s), ${toCreate} artefacto(s) por crear, ${toUpdate} por regenerar, ${toKeep} conservado(s).`,
     map.detail,
+    adaptationDetail,
     'Los pasos están pensados para ejecutarse desde cualquier directorio (usan la raíz resuelta).',
   ].join(' ');
 
   const complete = map.complete && project.language !== 'unknown';
 
-  return { root, project, modules: map.modules, artifacts, steps, detail, complete };
+  return { root, project, modules: map.modules, templates, artifacts, steps, detail, complete };
 };

@@ -41,3 +41,7 @@ export * from './ratchet.js';
 export * from './status.js';
 export * from './bootstrap.js';
 export * from './doctor.js';
+export * from './templateAdaptation.js';
+export * from './consistency.js';
+// EARS assistant: explicit names because `EarsPattern`/`EarsReport` already exist in `ears.js` with another vocabulary.
+export { analyseEars, describeFromPlainLanguage, earsEvidencePack, renderEarsReport, mergeEarsReports, EARS_PATTERNS, EARS_NEEDS_INFORMATION, EARS_ASSISTANT_TEMPLATES, EARS_REPO_EXAMPLES, EARS_SUGGESTION_CATALOGUE, isEarsProposalApplicable } from './earsAssistant.js';

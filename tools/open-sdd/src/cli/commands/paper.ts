@@ -96,6 +96,16 @@ import {
   RATIFY_INSTRUCTION,
 } from '../../core/constitutionDraft.js';
 import { adviseConstitution, renderAdvice } from '../../core/constitutionAdvice.js';
+import {
+  analyseEars,
+  deltaStatementText,
+  isEarsProposalApplicable,
+  mergeEarsReports,
+  renderEarsReport,
+  type EarsReport,
+} from '../../core/earsAssistant.js';
+import { deltaSpecFileName } from '../../core/deltaSpec.js';
+import { jsonEnvelope } from '../jsonOut.js';
 import { buildTaskDependencyWaves } from '../../core/scheduler.js';
 import { parseTasksMarkdown, readSpecMetadata } from '../../core/specManager.js';
 
@@ -454,6 +464,129 @@ const firstSpec = async (cwd: string): Promise<string | null> => {
 export const handleGovernCommand = async (args: string[], io: CliIO, cwd: string): Promise<number> => {
   const sub = args[0] ?? 'summary';
   const root = await findRepoRoot(cwd);
+
+  if (args.includes('--advise-ears')) {
+    // El ASISTENTE EARS sobre las specs del proyecto: mismo motor que `brownfield requirements`,
+    // resumen compacto aquí. Sale 1 SOLO con una sugerencia de severidad `error`: un aviso (término
+    // vago, disparador mal colocado) es consejo, no un bloqueo. Sin specs no falla: informa que no
+    // se comprobó nada, en vez de fingir un verde.
+    const featureArg = args.slice(1).find((arg) => !arg.startsWith('-'));
+    const specsDir = path.join(root, '.sdd', 'specs');
+    const allFeatures = (await readdir(specsDir).catch(() => [] as string[])).filter((entry) => !entry.startsWith('.'));
+    const features = featureArg ? [featureArg] : allFeatures;
+
+    const relative = (file: string): string => path.relative(root, file).split(path.sep).join('/');
+    const perSpec: { feature: string; report: EarsReport }[] = [];
+    const notAnalysed: string[] = [];
+
+    if (featureArg && !allFeatures.includes(featureArg)) {
+      io.error(colors.red(`No hay especificación "${featureArg}" en ${relative(specsDir)}.`));
+      return 1;
+    }
+
+    for (const feature of features) {
+      const specDir = path.join(specsDir, feature);
+      const requirementsPath = path.join(specDir, 'requirements.md');
+      const deltaFile = path.join(specDir, deltaSpecFileName());
+      const requirementsRaw = await readFile(requirementsPath, 'utf8').catch(() => null);
+      const deltaRaw = await readFile(deltaFile, 'utf8').catch(() => null);
+      if (requirementsRaw === null && deltaRaw === null) {
+        notAnalysed.push(`${feature}: sin requirements.md ni delta.md`);
+        continue;
+      }
+      const reports: EarsReport[] = [];
+      const analysed: string[] = [];
+      if (requirementsRaw !== null) {
+        const report = analyseEars(requirementsRaw, { source: relative(requirementsPath) });
+        reports.push(report);
+        analysed.push(...(report.statements ?? []));
+      } else {
+        notAnalysed.push(`${feature}: sin requirements.md (solo se analizan los enunciados de la delta)`);
+      }
+      if (deltaRaw !== null) {
+        const deltaStatements = deltaStatementText(deltaRaw, analysed);
+        if (deltaStatements.statements > 0) {
+          reports.push(analyseEars(deltaStatements.text, { source: relative(deltaFile) }));
+        }
+      }
+      perSpec.push({ feature, report: mergeEarsReports(reports) });
+    }
+
+    const report = mergeEarsReports(perSpec.map((entry) => entry.report));
+    const errorSuggestions = report.suggestions.filter((suggestion) => suggestion.severity === 'error');
+    const warningSuggestions = report.suggestions.filter((suggestion) => suggestion.severity === 'warning');
+    const asFindings = (suggestions: typeof report.suggestions) =>
+      suggestions.map((suggestion) => ({ id: suggestion.code, message: suggestion.problem, artifact: suggestion.target }));
+    const detail =
+      `${features.length} spec(s), ${report.total} requisito(s), ${report.conforming} conforme(s): ` +
+      `${errorSuggestions.length} error(es), ${warningSuggestions.length} aviso(s), ` +
+      `${report.suggestions.filter((suggestion) => !isEarsProposalApplicable(suggestion)).length} pregunta(s) sin frase.` +
+      (notAnalysed.length > 0 ? ` No analizado: ${notAnalysed.join('; ')}.` : '');
+
+    if (args.includes('--json')) {
+      io.log(
+        JSON.stringify(
+          jsonEnvelope({
+            command: 'govern --advise-ears',
+            data: {
+              report,
+              specs: perSpec.map((entry) => ({
+                feature: entry.feature,
+                source: entry.report.source,
+                total: entry.report.total,
+                conforming: entry.report.conforming,
+                patterns: entry.report.patterns,
+                suggestions: entry.report.suggestions,
+                complete: entry.report.complete,
+              })),
+              notAnalysed,
+            },
+            errors: asFindings(errorSuggestions),
+            warnings: asFindings(warningSuggestions),
+            detail,
+          }),
+          null,
+          2,
+        ),
+      );
+      return errorSuggestions.length > 0 ? 1 : 0;
+    }
+
+    io.log('');
+    io.log(heading('Asistente EARS — specs del proyecto'));
+    io.log('');
+    io.log(`  ${detail}`);
+    io.log('');
+    if (report.total === 0) {
+      io.log(`  ${colors.yellow('!')} No se analizó ningún requisito: no se ha comprobado nada.`);
+    }
+    for (const entry of perSpec) {
+      io.log(
+        `  ${entry.feature.padEnd(22)} ${String(entry.report.total).padStart(4)} req · ${String(entry.report.conforming).padStart(4)} conforme(s) · ${entry.report.suggestions.length} sugerencia(s)`,
+      );
+    }
+    if (report.suggestions.length > 0) {
+      io.log('');
+      report.suggestions.forEach((suggestion, index) => {
+        const mark = suggestion.severity === 'error' ? colors.red('error') : colors.yellow('aviso');
+        io.log(`  [${index + 1}] ${mark.padEnd(14)} ${suggestion.code.padEnd(22)} ${suggestion.target.slice(0, 70)}`);
+        io.log(`      ${dim(suggestion.problem)}`);
+      });
+      io.log('');
+      io.log(
+        dim(
+          `  Detalle con propuestas y ejemplos: open-sdd brownfield requirements <feature> --suggest (${report.suggestions.length} sugerencia(s)).`,
+        ),
+      );
+    } else if (report.total > 0) {
+      io.log('');
+      io.log(`  ${colors.green('Sin sugerencias:')} todos los requisitos analizados son EARS.`);
+      io.log(`  ${dim(renderEarsReport(report).find((line) => line.includes('patrones')) ?? '')}`);
+    }
+    for (const note of notAnalysed) io.log(`  ${colors.yellow('!')} ${note}`);
+    io.log('');
+    return errorSuggestions.length > 0 ? 1 : 0;
+  }
 
   if (sub === 'invariants') {
     io.log('');

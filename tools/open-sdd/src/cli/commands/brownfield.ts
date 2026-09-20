@@ -36,6 +36,19 @@ import { repairFromSpec } from '../../core/regeneration.js';
 import { contractsFileName, extractContracts, testCommandFor, verifyContracts } from '../../core/executionContract.js';
 import { REUSE_FIRST_RULE, findReuseCandidates } from '../../core/reuseFirst.js';
 import { planBootstrap, writeCodeIntelligence } from '../../core/bootstrap.js';
+import { adaptTemplates } from '../../core/templateAdaptation.js';
+import { checkConsistency } from '../../core/consistency.js';
+import {
+  analyseEars,
+  deltaStatementText,
+  earsEvidencePack,
+  isEarsProposalApplicable,
+  mergeEarsReports,
+  renderEarsReport,
+  type EarsReport,
+  type EarsSuggestion,
+} from '../../core/earsAssistant.js';
+import { jsonEnvelope, type FindingInput } from '../jsonOut.js';
 
 const heading = (t: string): string => colors.bold(colors.cyan(t));
 const dim = (t: string): string => colors.dim(t);
@@ -522,6 +535,98 @@ export const handleBrownfieldCommand = async (args: string[], io: CliIO, cwd: st
     return failures.length > 0 ? 1 : 0;
   }
 
+  if (sub === 'templates') {
+    // Plantillas adaptadas al stack observado: el positional es una RUTA (como en survey/bootstrap).
+    const write = args.includes('--write');
+    const json = args.includes('--json');
+    const result = await adaptTemplates({ cwd: target, write });
+
+    if (json) {
+      io.log(JSON.stringify(result, null, 2));
+      return result.complete ? 0 : 1;
+    }
+
+    io.log('');
+    io.log(heading(`Plantillas adaptadas — ${path.basename(target) || target}`));
+    io.log('');
+    io.log(`  ${dim(result.detail)}`);
+    io.log('');
+    for (const template of result.templates) {
+      const action = result.actions.find((candidate) => candidate.path === template.path);
+      const mark = action?.action === 'keep' ? colors.dim('keep') : colors.green('create');
+      io.log(`  ${colors.bold(template.kind.padEnd(13))} ${mark.padEnd(18)} ${template.path}`);
+      io.log(`      ${dim(template.rationale)}`);
+      for (const evidence of template.adaptedFrom) io.log(`        ${dim(`adaptado: ${evidence}`)}`);
+      for (const item of template.unchanged) io.log(`        ${colors.yellow('sin observar:')} ${item}`);
+      io.log('');
+      io.log(dim(`── ${template.kind} ──`));
+      io.log(template.content.replace(/\n$/, ''));
+      io.log('');
+    }
+    if (write) {
+      for (const written of result.written) io.log(`  ${colors.green('✓')} escrita ${written}`);
+      const kept = result.actions.filter((item) => item.action === 'keep');
+      for (const item of kept) io.log(dim(`  = ${item.path} existía: se conserva`));
+    } else {
+      io.log(dim('  Añade --write para escribirlas en .sdd/settings/templates/brownfield/ (nunca sobrescribe una plantilla existente).'));
+    }
+    io.log('');
+    return result.complete ? 0 : 1;
+  }
+
+  if (sub === 'analyze') {
+    // Una sola pasada: requisitos↔tareas, objetivos de la delta↔diff, pivote constitucional,
+    // contratos declarados y fronteras contra el código.
+    const root = await findRepoRoot(cwd);
+    const feature = positional[0] ?? (await firstSpec(root));
+    if (!feature) {
+      io.error(colors.red('No hay especificación que analizar. Pasa un nombre de feature.'));
+      return 1;
+    }
+    const baseIdx = args.findIndex((a) => a === '--base');
+    const base = baseIdx >= 0 ? args[baseIdx + 1] : undefined;
+    const derived = changedFilesFor(root, base);
+    const gitUsable = !/no disponible|falló/.test(derived.source);
+    const report = await checkConsistency({
+      cwd: root,
+      feature,
+      ...(gitUsable ? { changedFiles: derived.files } : {}),
+    });
+
+    if (args.includes('--json')) {
+      io.log(JSON.stringify(report, null, 2));
+      return report.findings.some((finding) => finding.severity === 'error') ? 1 : 0;
+    }
+
+    io.log('');
+    io.log(heading(`Consistencia cruzada — ${report.feature}`));
+    io.log('');
+    if (report.findings.length === 0) {
+      io.log(`  ${colors.green('Sin hallazgos')} en lo inspeccionado.`);
+    }
+    for (const finding of report.findings) {
+      const mark =
+        finding.severity === 'error'
+          ? colors.red('error')
+          : finding.severity === 'warning'
+            ? colors.yellow('aviso')
+            : colors.dim('info');
+      io.log(`  ${mark.padEnd(18)} ${finding.code.padEnd(26)} ${finding.message}`);
+      if (finding.artifacts.length > 0) io.log(`      ${dim(`artefactos: ${finding.artifacts.join(', ')}`)}`);
+    }
+    io.log('');
+    io.log(`  ${colors.bold('Comprobado')} (${report.checked.length}):`);
+    for (const item of report.checked) io.log(`    ✓ ${item}`);
+    if (report.notChecked.length > 0) {
+      io.log(`  ${colors.bold('NO comprobado')} (${report.notChecked.length}) — no cuenta como aprobado:`);
+      for (const item of report.notChecked) io.log(`    ${colors.yellow('!')} ${item}`);
+    }
+    io.log('');
+    io.log(`  ${report.complete ? colors.green(report.detail) : colors.yellow(report.detail)}`);
+    io.log('');
+    return report.findings.some((finding) => finding.severity === 'error') ? 1 : 0;
+  }
+
   if (sub === 'survey' || sub === 'constitution') {
     // `--draft` is handled BEFORE the descriptive constitution is built: the draft is a proposal, not
     // an authoritative artifact, and it must not inherit the "in force" reading of the flow below.
@@ -653,6 +758,295 @@ export const handleBrownfieldCommand = async (args: string[], io: CliIO, cwd: st
     }
     io.log('');
     return issues.some((i) => i.severity === 'error') ? 1 : 0;
+  }
+
+  if (sub === 'requirements') {
+    // El ASISTENTE EARS sobre la spec de una feature: requirements.md y, cuando existe, los
+    // enunciados de la delta. No reescribe nada por heurística: `--write` exige `--apply <índice|código>`.
+    const root = await findRepoRoot(cwd);
+    const words = args.slice(1);
+    const valueFlags = new Set(['--apply']);
+    const feature = words
+      .filter((arg, index) => {
+        if (arg.startsWith('-')) return false;
+        const previous = words[index - 1];
+        return !(previous && valueFlags.has(previous));
+      })
+      .map((arg) => arg.trim())
+      .filter((arg) => arg.length > 0)[0] ?? (await firstSpec(root));
+    if (!feature) {
+      io.error(colors.red('No hay especificación que analizar. Pasa un nombre de feature o crea una spec primero.'));
+      return 1;
+    }
+
+    const relative = (file: string): string => path.relative(root, file).split(path.sep).join('/');
+    const specDir = path.join(root, '.sdd', 'specs', feature);
+    const requirementsPath = path.join(specDir, 'requirements.md');
+    const deltaFile = path.join(specDir, deltaSpecFileName());
+    const requirementsRaw = await readIfExists(requirementsPath);
+    const deltaRaw = await readIfExists(deltaFile);
+    if (requirementsRaw === null && deltaRaw === null) {
+      io.error(
+        colors.red(
+          `No hay ${relative(requirementsPath)} ni ${relative(deltaFile)} para "${feature}": no hay requisitos que analizar.`,
+        ),
+      );
+      return 1;
+    }
+
+    const reports: EarsReport[] = [];
+    const notes: string[] = [];
+    const analysedStatements: string[] = [];
+    if (requirementsRaw !== null) {
+      const report = analyseEars(requirementsRaw, { source: relative(requirementsPath) });
+      reports.push(report);
+      analysedStatements.push(...(report.statements ?? []));
+    } else {
+      notes.push(`no existe ${relative(requirementsPath)}: solo se analizan los enunciados de la delta`);
+    }
+    if (deltaRaw !== null) {
+      const deltaStatements = deltaStatementText(deltaRaw, analysedStatements);
+      if (deltaStatements.statements > 0) {
+        reports.push(analyseEars(deltaStatements.text, { source: relative(deltaFile) }));
+      }
+      if (deltaStatements.duplicates > 0) {
+        notes.push(
+          `${deltaStatements.duplicates} enunciado(s) de la delta repiten requirements.md: no se cuentan dos veces`,
+        );
+      }
+    }
+    const report = mergeEarsReports(reports);
+    const errorSuggestions = report.suggestions.filter((suggestion) => suggestion.severity === 'error');
+    const warningSuggestions = report.suggestions.filter((suggestion) => suggestion.severity === 'warning');
+    const asFindings = (suggestions: EarsSuggestion[]): FindingInput[] =>
+      suggestions.map((suggestion) => ({ id: suggestion.code, message: suggestion.problem, artifact: suggestion.target }));
+
+    const json = args.includes('--json');
+    const suggest = args.includes('--suggest');
+    const write = args.includes('--write');
+    const applyIndex = args.indexOf('--apply');
+    const selection = applyIndex >= 0 ? (args[applyIndex + 1] ?? '').trim() : null;
+
+    /** Las líneas candidatas a reescribir: requirements.md primero, la delta después. */
+    const files: { path: string; rel: string; text: string }[] = [];
+    if (requirementsRaw !== null) files.push({ path: requirementsPath, rel: relative(requirementsPath), text: requirementsRaw });
+    if (deltaRaw !== null) files.push({ path: deltaFile, rel: relative(deltaFile), text: deltaRaw });
+
+    const prefixOf = (line: string): string =>
+      line.match(/^(\s*[-*+]\s+(?:Statement\s*:\s*)?)/i)?.[1] ?? line.match(/^(\s*)/)?.[1] ?? '';
+
+    const selectSuggestions = (): { selected: EarsSuggestion[]; refusals: string[] } => {
+      const refusals: string[] = [];
+      const selected: EarsSuggestion[] = [];
+      if (selection === null || selection.length === 0) return { selected, refusals };
+      for (const token of selection.split(',').map((part) => part.trim()).filter(Boolean)) {
+        if (/^\d+$/.test(token)) {
+          const index = Number(token);
+          const suggestion = report.suggestions[index - 1];
+          if (!suggestion) {
+            refusals.push(`--apply ${token}: no existe la sugerencia ${token} (hay ${report.suggestions.length}).`);
+            continue;
+          }
+          selected.push(suggestion);
+          continue;
+        }
+        const matches = report.suggestions.filter((suggestion) => suggestion.code.toUpperCase() === token.toUpperCase());
+        if (matches.length === 0) {
+          refusals.push(`--apply ${token}: ningún hallazgo usa el código ${token}.`);
+          continue;
+        }
+        selected.push(...matches);
+      }
+      for (const suggestion of selected) {
+        if (!isEarsProposalApplicable(suggestion)) {
+          refusals.push(
+            `${suggestion.code} en "${suggestion.target}" es una PREGUNTA, no una frase: falta un dato que no se inventa. Respóndela y reescribe el requisito a mano.`,
+          );
+        }
+      }
+      const targets = selected.map((suggestion) => suggestion.target);
+      if (new Set(targets).size !== targets.length) {
+        refusals.push('Dos selecciones tocan la misma línea: aplica una cada vez para no encadenar reescrituras a ciegas.');
+      }
+      return { selected, refusals };
+    };
+
+    if (selection !== null || write) {
+      if (selection === null || selection.length === 0) {
+        // Sin selección explícita no se escribe NADA: una reescritura en bloque desde una heurística
+        // reescribiría requisitos que nadie revisó.
+        io.error(
+          colors.red(
+            '--write exige una selección explícita: open-sdd brownfield requirements <feature> --apply <índice|código> --write. Nada se ha escrito.',
+          ),
+        );
+        return 1;
+      }
+
+      const { selected, refusals } = selectSuggestions();
+      if (refusals.length > 0) {
+        if (json) {
+          io.log(
+            JSON.stringify(
+              jsonEnvelope({
+                command: 'brownfield requirements',
+                data: { feature, report, applied: [], diff: [], written: false, refusals },
+                errors: refusals.map((message) => ({ id: 'APPLY', message })),
+                warnings: asFindings(warningSuggestions),
+                ok: false,
+                detail: 'Selección rechazada: nada se ha escrito.',
+              }),
+              null,
+              2,
+            ),
+          );
+          return 1;
+        }
+        io.log('');
+        io.log(heading(`Asistente EARS — ${feature}`));
+        for (const refusal of refusals) io.log(`  ${colors.red('rechazada')} ${refusal}`);
+        io.log('');
+        io.log(`  ${colors.red('Nada se ha escrito:')} la selección no es aplicable.`);
+        io.log('');
+        return 1;
+      }
+
+      // Todo o nada: si una sola línea no se encuentra, no se escribe ningún fichero.
+      const diff: string[] = [];
+      const applied: { index: number; code: string; target: string; file: string; added: string[] }[] = [];
+      const updated = new Map<string, string>();
+      const missing: string[] = [];
+
+      for (const suggestion of selected) {
+        const index = report.suggestions.indexOf(suggestion) + 1;
+        const file = files.find((candidate) =>
+          candidate.text.split('\n').some((line) => line.trim() === suggestion.target),
+        );
+        if (!file) {
+          missing.push(`no se encontró la línea exacta de ${suggestion.code} en requirements.md ni en delta.md`);
+          continue;
+        }
+        const text = updated.get(file.path) ?? file.text;
+        const lines = text.split('\n');
+        const lineIndex = lines.findIndex((line) => line.trim() === suggestion.target);
+        if (lineIndex < 0) {
+          missing.push(`${suggestion.code}: la línea ya se reescribió en esta misma ejecución.`);
+          continue;
+        }
+        const prefix = prefixOf(lines[lineIndex]);
+        const replacement = suggestion.proposal.split('\n').map((line) => `${prefix}${line.trim()}`);
+        diff.push(`--- a/${file.rel}`, `+++ b/${file.rel}`, `- ${lines[lineIndex]}`);
+        for (const line of replacement) diff.push(`+ ${line}`);
+        lines.splice(lineIndex, 1, ...replacement);
+        updated.set(file.path, lines.join('\n'));
+        applied.push({ index, code: suggestion.code, target: suggestion.target, file: file.rel, added: replacement });
+      }
+
+      if (missing.length > 0) {
+        if (json) {
+          io.log(
+            JSON.stringify(
+              jsonEnvelope({
+                command: 'brownfield requirements',
+                data: { feature, report, applied: [], diff, written: false, refusals: missing },
+                errors: missing.map((message) => ({ id: 'APPLY', message })),
+                warnings: asFindings(warningSuggestions),
+                ok: false,
+                detail: 'Aplicación rechazada: nada se ha escrito.',
+              }),
+              null,
+              2,
+            ),
+          );
+          return 1;
+        }
+        io.log('');
+        io.log(heading(`Asistente EARS — ${feature}`));
+        for (const message of missing) io.log(`  ${colors.red('rechazada')} ${message}`);
+        io.log('');
+        io.log(`  ${colors.red('Nada se ha escrito:')} la aplicación es todo o nada.`);
+        io.log('');
+        return 1;
+      }
+
+      if (json) {
+        io.log(
+          JSON.stringify(
+            jsonEnvelope({
+              command: 'brownfield requirements',
+              data: {
+                feature,
+                report,
+                applied,
+                diff,
+                written: write,
+                files: [...updated.keys()].map((file) => relative(file)),
+                evidencePack: earsEvidencePack(report, { maxSuggestions: report.suggestions.length }),
+              },
+              errors: asFindings(errorSuggestions.filter((suggestion) => !selected.includes(suggestion))),
+              warnings: asFindings(warningSuggestions.filter((suggestion) => !selected.includes(suggestion))),
+              detail: write
+                ? `Aplicadas ${applied.length} sugerencia(s) seleccionada(s): ${[...updated.keys()].map((file) => relative(file)).join(', ')}.`
+                : `Diff de ${applied.length} sugerencia(s): sin --write no se ha escrito nada.`,
+            }),
+            null,
+            2,
+          ),
+        );
+        return errorSuggestions.filter((suggestion) => !selected.includes(suggestion)).length > 0 ? 1 : 0;
+      }
+
+      io.log('');
+      io.log(heading(`Asistente EARS — ${feature}`));
+      io.log('');
+      for (const line of diff) {
+        io.log(line.startsWith('- ') ? colors.red(line) : line.startsWith('+ ') ? colors.green(line) : dim(line));
+      }
+      io.log('');
+      if (write) {
+        for (const [file, text] of updated) await writeFile(file, text, 'utf8');
+        io.log(`  ${colors.green('✓')} ${applied.length} sugerencia(s) aplicadas en ${[...updated.keys()].map((file) => relative(file)).join(', ')}`);
+      } else {
+        io.log(dim('  Solo diff: añade --write para aplicar la selección. Nada se ha escrito.'));
+      }
+      const remaining = errorSuggestions.filter((suggestion) => !selected.includes(suggestion));
+      io.log('');
+      return remaining.length > 0 ? 1 : 0;
+    }
+
+    const evidence = earsEvidencePack(report, { maxSuggestions: report.suggestions.length });
+    if (json) {
+      io.log(
+        JSON.stringify(
+          jsonEnvelope({
+            command: 'brownfield requirements',
+            data: { feature, report, evidencePack: evidence, notes },
+            errors: asFindings(errorSuggestions),
+            warnings: asFindings(warningSuggestions),
+            detail: report.detail,
+          }),
+          null,
+          2,
+        ),
+      );
+      return errorSuggestions.length > 0 ? 1 : 0;
+    }
+
+    io.log('');
+    for (const line of renderEarsReport(report, { suggest })) io.log(line);
+    if (!suggest && report.suggestions.length > 0) {
+      io.log('');
+      io.log(dim('  Añade --suggest para ver cada propuesta con su porqué y un ejemplo real de este repositorio.'));
+    }
+    for (const note of notes) io.log(dim(`  ${note}`));
+    io.log('');
+    io.log(
+      dim(
+        '  Escribir exige selección: --apply <índice|código> muestra el diff; añade --write para aplicarlo. Nunca se reescribe la spec desde una heurística en bloque.',
+      ),
+    );
+    io.log('');
+    return errorSuggestions.length > 0 ? 1 : 0;
   }
 
   if (sub === 'impact' || sub === 'contracts' || sub === 'reuse') {
@@ -977,6 +1371,6 @@ export const handleBrownfieldCommand = async (args: string[], io: CliIO, cwd: st
     return report.refusals.length > 0 || report.status === 'drift' ? 1 : 0;
   }
 
-  io.log(`Subcomando desconocido: ${sub}. Usa: survey | constitution [target] [--write|--draft] | bootstrap [target] [--focus "<texto>"] [--write] [--json] | impact <feature> [--base <ref>] | contracts <feature> [--write] [--verify] [--base <ref>] | reuse <feature> [--symbols A,B] [--base <ref>] | forecast "<descripción>" [--symbols A,B] [--json] | repair <feature> --target <artefacto> [--command "<cmd>"] [--requirement REQ-X] [--evidence "<texto>"] [--write] [--json]`);
+  io.log(`Subcomando desconocido: ${sub}. Usa: survey | constitution [target] [--write|--draft] | bootstrap [target] [--focus "<texto>"] [--write] [--json] | templates [target] [--write] [--json] | requirements <feature> [--suggest] [--json] [--apply <índice|código>] [--write] | analyze <feature> [--base <ref>] [--json] | impact <feature> [--base <ref>] | contracts <feature> [--write] [--verify] [--base <ref>] | reuse <feature> [--symbols A,B] [--base <ref>] | forecast "<descripción>" [--symbols A,B] [--json] | repair <feature> --target <artefacto> [--command "<cmd>"] [--requirement REQ-X] [--evidence "<texto>"] [--write] [--json]`);
   return 1;
 };
