@@ -350,6 +350,15 @@ const detectCargoModules = async (cwd) => {
  * Python: explicit `uv`/`poetry` workspace members, Poetry `packages`, and the nested
  * `pyproject.toml` / `setup.py` layouts that make a repo a monorepo without a workspace table.
  */
+/** Contenido de un fichero, o null si no esta o no se puede leer: el informe no debe reventar por eso. */
+const readTextIfPresent = async (cwd, name) => {
+    try {
+        return await readFile(path.join(cwd, name), 'utf8');
+    }
+    catch {
+        return null;
+    }
+};
 const detectPythonModules = async (cwd) => {
     const modules = new Map();
     const unreadable = [];
@@ -569,6 +578,8 @@ export const scanProject = async (cwd = process.cwd()) => {
     let packageManager;
     let buildTool;
     let testFramework;
+    /** Archivos que DECLARAN el runner: se citan en el informe en vez de afirmarlo sin prueba. */
+    let testFrameworkEvidence = [];
     const frameworks = new Set();
     let sawAnyManifest = false;
     for (const root of roots) {
@@ -703,6 +714,35 @@ export const scanProject = async (cwd = process.cwd()) => {
         if (language === 'unknown' && ((await checkExists('pyproject.toml')) || (await checkExists('requirements.txt')))) {
             language = 'Python';
             packageManager = (await checkExists('poetry.lock')) ? 'poetry' : (await checkExists('uv.lock')) ? 'uv' : 'pip';
+            // A Python project was detected without naming its runner, so every command that derives from the
+            // framework fell back to an invented `npm test` — for a project that has no npm at all. pytest is
+            // named only when something DECLARES it: a pytest.ini / tox.ini / noxfile, a [tool.pytest…] table,
+            // or the dependency itself. Without that evidence the framework stays unknown and the honest
+            // fallback (a command marked derived) applies, which is better than a confident wrong answer.
+            const pythonRunnerEvidence = [];
+            for (const candidate of ['pytest.ini', 'tox.ini', 'noxfile.py', 'setup.cfg']) {
+                if (await checkExists(candidate))
+                    pythonRunnerEvidence.push(candidate);
+            }
+            if (pythonRunnerEvidence.length === 0) {
+                const pyproject = await readTextIfPresent(cwd, 'pyproject.toml');
+                if (pyproject && /\[tool\.pytest|pytest\s*[=<>~]/i.test(pyproject))
+                    pythonRunnerEvidence.push('pyproject.toml');
+            }
+            if (pythonRunnerEvidence.length === 0) {
+                const requirements = await readTextIfPresent(cwd, 'requirements.txt');
+                if (requirements && /^\s*pytest\b/im.test(requirements))
+                    pythonRunnerEvidence.push('requirements.txt');
+            }
+            if (pythonRunnerEvidence.length === 0) {
+                const setupCfg = await readTextIfPresent(cwd, 'setup.cfg');
+                if (setupCfg && /^\s*pytest\b/im.test(setupCfg))
+                    pythonRunnerEvidence.push('setup.cfg');
+            }
+            if (pythonRunnerEvidence.length > 0) {
+                testFramework = 'pytest';
+                testFrameworkEvidence = pythonRunnerEvidence;
+            }
         }
         if (language === 'unknown') {
             const dotnetSolution = (await walkFiles(cwd, (fileName) => fileName.endsWith('.sln'), 2))[0];
