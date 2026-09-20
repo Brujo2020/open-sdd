@@ -6,7 +6,7 @@ This guide explains how the **Claude Code Subagents** install target (`--claude-
 
 ## Installation Recap
 
-- Install with `npx cc-sdd@latest --claude-agent --lang <code>`.
+- Install with `npx @brujo2020/open-sdd@latest --claude-agent --lang <code>`.
 - Files are placed under:
   - `.claude/commands/sdd/` – 12 high-level commands (spec, steering, validation).
   - `.claude/agents/sdd/` – 9 Subagent definitions used for deeper analysis, file expansion, and reporting.
@@ -56,7 +56,7 @@ Need to re-run just one phase? Mention `@agents-spec-design`, `@agents-spec-task
 
 ## Recommended Usage Pattern
 
-1. Run `npx cc-sdd@latest --claude-agent --lang <code>` to ensure Subagent assets exist.
+1. Run `npx @brujo2020/open-sdd@latest --claude-agent --lang <code>` to ensure Subagent assets exist.
 2. Prepare Project Memory via `/steering` (and optionally `/steering-custom`) so Subagents inherit accurate architecture/product rules.
 3. Use `spec-quick <feature> [--auto]` for rapid drafts, then review `requirements.md`, `design.md`, `tasks.md` just like the manual flow.
 4. Run validation commands manually if the feature touches existing systems or critical boundaries.

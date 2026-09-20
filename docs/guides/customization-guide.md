@@ -2031,7 +2031,7 @@ diff \
 
 **Solution**: Return to defaults and gradually re-customize
 ```bash
-npx cc-sdd@latest --overwrite=force
+npx @brujo2020/open-sdd@latest --overwrite=force
 ```
 
 ### Generated Content Differs from Expectations

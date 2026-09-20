@@ -34,7 +34,7 @@ what lives here from what the install creates in a target project.
 - Use `/sdd-spec-status [feature-name]` to check progress
 
 ## Development Guidelines
-<!-- DEV_GUIDELINES: injected at install time with language-specific guidelines (npx cc-sdd@latest --lang <code>) -->
+<!-- DEV_GUIDELINES: injected at install time with language-specific guidelines (npx @brujo2020/open-sdd@latest --lang <code>) -->
 - Think in English, generate responses in English. All Markdown content written to project files (e.g., requirements.md, design.md, tasks.md, research.md, validation reports) MUST be written in the target language configured for this specification (see spec.json.language).
 
 ## Minimal Workflow

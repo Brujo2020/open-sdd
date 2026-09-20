@@ -285,7 +285,7 @@ All notable changes to this project will be documented in this file.
 - Introduce Agent Skills mode as the primary installation target across 8 platforms: Claude Code, Codex, Cursor, GitHub Copilot, Windsurf, OpenCode, Gemini CLI, and Antigravity ([#141](https://github.com/gotalab/cc-sdd/pull/141))
 - Add new workflow entry points for skills mode, including `/kiro-discovery`, `/kiro-spec-batch`, and long-running autonomous `/kiro-impl` with reviewer/debugger support ([#141](https://github.com/gotalab/cc-sdd/pull/141))
 - Add `.kiro/settings/` rules and templates for boundary-first planning, design synthesis, review gates, task decomposition, and steering customization ([#141](https://github.com/gotalab/cc-sdd/pull/141))
-- Add `cc-sdd-new-agent`, a plan-first SOP for adding new supported agents or migrating existing agents to skills mode ([#141](https://github.com/gotalab/cc-sdd/pull/141))
+- Add `open-sdd-new-agent`, a plan-first SOP for adding new supported agents or migrating existing agents to skills mode ([#141](https://github.com/gotalab/cc-sdd/pull/141))
 
 ### Changed
 - Reposition cc-sdd around skills-mode workflows and native subagent dispatch, with updated docs, guides, and onboarding across the repository ([#141](https://github.com/gotalab/cc-sdd/pull/141))
@@ -322,7 +322,7 @@ All notable changes to this project will be documented in this file.
   - `.opencode/commands/` with 11 kiro commands
   - OpenCode Agents (subagent version) in `.opencode/agents/`
   - OPENCODE.md project memory template
-  - Installation via `npx cc-sdd@latest --opencode` or `--opencode-agent`
+  - Installation via `npx @brujo2020/open-sdd@latest --opencode` or `--opencode-agent`
 
 ### Changed
 - Update recommended models to latest versions ([#128](https://github.com/gotalab/cc-sdd/pull/128), [#129](https://github.com/gotalab/cc-sdd/pull/129))
@@ -375,7 +375,7 @@ All notable changes to this project will be documented in this file.
 
 ### Summary
 
-- Consolidates every feature shipped in 2.0.0-alpha.1〜alpha.6 and promotes them to `npx cc-sdd@latest`.
+- Consolidates every feature shipped in 2.0.0-alpha.1〜alpha.6 and promotes them to `npx @brujo2020/open-sdd@latest`.
 - Adds validation commands, Research.md, steering/memory upgrades, and 7-agent / 13-language parity.
 - For migration steps, see `docs/guides/migration-guide.md` (referenced from release notes as well).
 
@@ -551,7 +551,7 @@ See the comprehensive [Migration Guide](docs/guides/migration-guide.md) for deta
 ## [2.0.0-alpha.3] - 2025-10-22
 
 ### Added
-- Windsurf IDE agent definition, manifest, and workflow templates so `npx cc-sdd@next --windsurf` installs `.windsurf/workflows/` and AGENTS.md alongside shared settings.
+- Windsurf IDE agent definition, manifest, and workflow templates so `npx @brujo2020/open-sdd@next --windsurf` installs `.windsurf/workflows/` and AGENTS.md alongside shared settings.
 - `realManifestWindsurf` vitest coverage that exercises dry-run and apply flows across macOS/Linux runtimes.
 - `--windsurf` CLI alias support and accompanying argument parser tests.
 
@@ -593,7 +593,7 @@ See the comprehensive [Migration Guide](docs/guides/migration-guide.md) for deta
 ## [2.0.0-alpha.1] - 2025-10-08
 
 ### Added
-- Interactive CLI installer with guided setup (`npx cc-sdd@latest`)
+- Interactive CLI installer with guided setup (`npx @brujo2020/open-sdd@latest`)
   - Organized file display by Commands / Project Memory / Settings categories
   - Interactive project memory handling (overwrite/append/keep)
 - Codex CLI official support with 11 prompts in `.codex/prompts/`
@@ -712,7 +712,7 @@ See the comprehensive [Migration Guide](docs/guides/migration-guide.md) for deta
   - Gemini CLI with TOML configuration
   - Codex CLI with GPT-5 optimized prompts
 - cc-sdd npm package for easy distribution ([#39](https://github.com/gotalab/cc-sdd/pull/39))
-- Complete CLI tool with `npx cc-sdd@latest` installation
+- Complete CLI tool with `npx @brujo2020/open-sdd@latest` installation
 - Template system supporting multiple platforms and OS variants
 - 8 core commands for spec-driven workflow
   - spec-init, spec-requirements, spec-design, spec-tasks

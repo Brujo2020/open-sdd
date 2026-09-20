@@ -1,9 +1,9 @@
 ---
-name: cc-sdd-new-agent
+name: open-sdd-new-agent
 description: Add or extend coding-agent support in cc-sdd by executing the SOP in docs/cc-sdd/sop-new-agent.md end-to-end. Use when introducing a new agent, adding a subagent-capable variant, or evaluating migration of an existing supported agent to skills-based templates.
 ---
 
-# CC-SDD New Agent Integration
+# OPEN-SDD New Agent Integration
 
 ## Goal
 

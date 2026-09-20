@@ -8,8 +8,8 @@ This guide covers migration paths across Open-SDD releases, detailing architectu
 
 | Goal | Recommended action |
 | --- | --- |
-| Keep the legacy 1.x workflow untouched | Run `npx cc-sdd@1.1.5` whenever you install/refresh files. Continue editing agent-specific prompt folders (only the original 8 spec/steering commands exist). |
-| Adopt unified templates, research/design split, and consistent behavior across all 8 supported agents | Reinstall with `npx cc-sdd@latest` (=2.0.0) and customize only `.sdd/settings/templates/*` plus `.sdd/settings/rules/` (full 11-command set, including validate-*). |
+| Keep the legacy 1.x workflow untouched | Run `npx @brujo2020/open-sdd@1.1.5` whenever you install/refresh files. Continue editing agent-specific prompt folders (only the original 8 spec/steering commands exist). |
+| Adopt unified templates, research/design split, and consistent behavior across all 8 supported agents | Reinstall with `npx @brujo2020/open-sdd@latest` (=2.0.0) and customize only `.sdd/settings/templates/*` plus `.sdd/settings/rules/` (full 11-command set, including validate-*). |
 
 > ⚠️ Mixing 1.x and 2.x layouts in the same `.kiro` tree is not supported. Pick one path per repo/branch.
 
@@ -26,8 +26,8 @@ This guide covers migration paths across Open-SDD releases, detailing architectu
 1.1.5 is no longer on `@latest`, but you can pin it explicitly:
 
 ```bash
-npx cc-sdd@1.1.5 --claude-code   # legacy flag name (use --cursor / --gemini / etc. for others)
-npx cc-sdd@1.1.5 --lang ja       # legacy i18n flags still work
+npx @brujo2020/open-sdd@1.1.5 --claude-code   # legacy flag name (use --cursor / --gemini / etc. for others)
+npx @brujo2020/open-sdd@1.1.5 --lang ja       # legacy i18n flags still work
 ```
 
 - You can keep working in the style of directly editing agent-specific folders such as `.claude/commands/*`, `.cursor/prompts/*`, and `.codex/prompts/*`.
@@ -59,9 +59,9 @@ npx cc-sdd@1.1.5 --lang ja       # legacy i18n flags still work
 
 2. **Install v2 cleanly (reuse interactive choices)**
    ```bash
-   npx cc-sdd@latest                 # default (Claude Code)
-   npx cc-sdd@latest --cursor        # other agents
-   npx cc-sdd@latest --claude-agent  # Subagents mode
+   npx @brujo2020/open-sdd@latest                 # default (Claude Code)
+   npx @brujo2020/open-sdd@latest --cursor        # other agents
+   npx @brujo2020/open-sdd@latest --claude-agent  # Subagents mode
    ```
    - The installer now prompts per file group (overwrite / append / keep). You can choose “append” for steering/specs to merge existing documents, or “keep” to skip untouched assets.
 
@@ -78,7 +78,7 @@ npx cc-sdd@1.1.5 --lang ja       # legacy i18n flags still work
    - Research/design templates reference this folder, so migrate existing notes here.
 
 6. **Update automation**
-   - Point all scripts/docs to `npx cc-sdd@latest`; retire `@next` usage.
+   - Point all scripts/docs to `npx @brujo2020/open-sdd@latest`; retire `@next` usage.
    - Map old manual command invocations to the 11 supported ones (`spec-*`, `validate-*`, `steering*`).
 
 ---
@@ -118,14 +118,14 @@ npx cc-sdd@1.1.5 --lang ja       # legacy i18n flags still work
 
 1. **Reinstall** with the latest version (skills mode for your platform):
    ```bash
-   npx cc-sdd@latest --claude-skills     # Claude Code (default)
-   npx cc-sdd@latest --codex-skills      # Codex
-   npx cc-sdd@latest --cursor-skills     # Cursor IDE
-   npx cc-sdd@latest --copilot-skills    # GitHub Copilot
-   npx cc-sdd@latest --windsurf-skills   # Windsurf IDE
-   npx cc-sdd@latest --opencode-skills   # OpenCode
-   npx cc-sdd@latest --gemini-skills     # Gemini CLI
-   npx cc-sdd@latest --antigravity       # Antigravity
+   npx @brujo2020/open-sdd@latest --claude-skills     # Claude Code (default)
+   npx @brujo2020/open-sdd@latest --codex-skills      # Codex
+   npx @brujo2020/open-sdd@latest --cursor-skills     # Cursor IDE
+   npx @brujo2020/open-sdd@latest --copilot-skills    # GitHub Copilot
+   npx @brujo2020/open-sdd@latest --windsurf-skills   # Windsurf IDE
+   npx @brujo2020/open-sdd@latest --opencode-skills   # OpenCode
+   npx @brujo2020/open-sdd@latest --gemini-skills     # Gemini CLI
+   npx @brujo2020/open-sdd@latest --antigravity       # Antigravity
    ```
 
 2. **Remove legacy skill references** -- if you have custom scripts or documentation referencing `sdd-impl`, update them to `/sdd-impl`.

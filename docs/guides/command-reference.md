@@ -295,7 +295,7 @@ proper separation of concerns and allow for focused, high-quality requirement an
 |-------|-------|----------|
 | ❌ "Ambiguous feature name" | Vague description | Provide more specific description or choose from AI's suggestions |
 | ❌ "Feature already exists" | Name conflict | AI auto-appends number (e.g., `-2`), or choose different name |
-| ❌ "Template missing" | Corrupted installation | Reinstall cc-sdd: `npx cc-sdd@latest` |
+| ❌ "Template missing" | Corrupted installation | Reinstall cc-sdd: `npx @brujo2020/open-sdd@latest` |
 | ⚠️ Generated name unclear | Short description | Provide longer, more detailed feature description |
 
 **Pro Tips**:
@@ -1691,7 +1691,7 @@ Or implement all remaining tasks:
 
 ### "Template missing"
 **Cause**: Corrupted or incomplete installation  
-**Solution**: Reinstall cc-sdd: `npx cc-sdd@latest`
+**Solution**: Reinstall cc-sdd: `npx @brujo2020/open-sdd@latest`
 
 ### Tasks not completing
 **Cause**: Checkbox format incorrect in tasks.md  

@@ -75,7 +75,7 @@ set into a target project.
 
 Skills in this checkout:
 - Each skill is a directory with a `SKILL.md` file.
-- This repository's own agent skills live under `.agents/skills/` (`sdd-help`, `cc-sdd-new-agent`).
+- This repository's own agent skills live under `.agents/skills/` (`sdd-help`, `open-sdd-new-agent`).
 - Skills run inline with access to conversation context and delegate parallel research to subagents.
 - `sdd-review` — task-local adversarial review protocol
 - `sdd-debug` — root-cause-first debug protocol

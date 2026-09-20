@@ -6,8 +6,7 @@
   "bin": {
     "open-sdd": "./tools/cc-sdd/dist/cli.js",
     "sdd-open": "./tools/cc-sdd/dist/cli.js",
-    "sdd": "./tools/cc-sdd/dist/cli.js",
-    "cc-sdd": "./tools/cc-sdd/dist/cli.js"
+    "sdd": "./tools/cc-sdd/dist/cli.js"
   },
   "repository": {
     "type": "git",
