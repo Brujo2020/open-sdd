@@ -2,7 +2,9 @@
 
 How to move an installed `open-sdd` to a newer release, and how to refresh the artifacts it put on
 disk. This page is about **upgrading between our versions**. For the historical v1.x → v2 → v3 paths
-(with their flag and layout changes), see [Migration Guide](migration-guide.md).
+(with their flag and layout changes), see [Migration Guide](migration-guide.md). For moving a project
+that currently uses Kiro, spec-kit or cc-sdd, see
+[Migrating from Kiro, spec-kit and cc-sdd](migrate-from.md).
 
 The order that matters: update the CLI first, then re-run the installers inside each repository.
 Nothing here deletes or rewrites your specs.

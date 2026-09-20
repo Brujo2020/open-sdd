@@ -41,6 +41,7 @@ including what it did not.
 
 **Docs:** [60-second demo](docs/guides/quickstart-60s.md) · [Install](docs/INSTALL.md) ·
 [Existing projects](docs/guides/existing-projects.md) · [Upgrade](docs/guides/upgrade.md) ·
+[Integrations](docs/guides/integrations.md) · [Migrate from](docs/guides/migrate-from.md) ·
 [Measurements](docs/MEASUREMENTS.md) · [Paper alignment](docs/PAPER-ALIGNMENT.md)
 
 > Full traceability of the paper's architecture onto this code — including what is *not*
@@ -136,7 +137,10 @@ What is different here, and verifiable in this repository:
   (8 skills-based), and no model backend ships.
 
 What this does **not** claim: parity of ecosystem, polish or adoption. Those are spec-kit's and
-Kiro's strengths today. This is a qualitative comparison, not a benchmark.
+Kiro's strengths today. This is a qualitative comparison, not a benchmark. If you are coming from
+Kiro, spec-kit or cc-sdd, [Migrating from Kiro, spec-kit and cc-sdd](docs/guides/migrate-from.md)
+maps their artifacts and layouts onto this one, and
+[Integrations](docs/guides/integrations.md) is the per-agent install matrix.
 
 ---
 
@@ -586,6 +590,8 @@ open-sdd/
 - **[docs/INSTALL.md](docs/INSTALL.md)** — every install path, verification and uninstall.
 - **[docs/guides/upgrade.md](docs/guides/upgrade.md)** — upgrading between versions and refreshing the gate.
 - **[docs/guides/existing-projects.md](docs/guides/existing-projects.md)** — the brownfield on-ramp.
+- **[docs/guides/integrations.md](docs/guides/integrations.md)** — the per-agent install matrix and how to verify or remove each install.
+- **[docs/guides/migrate-from.md](docs/guides/migrate-from.md)** — migrating from Kiro, spec-kit and cc-sdd.
 - **[docs/QUICK-START.md](docs/QUICK-START.md)** — install and run in five minutes.
 - **[docs/INSTALLATION.md](docs/INSTALLATION.md)** — the legacy installation reference.
 - **[docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md)** — paper-to-code traceability and gaps.

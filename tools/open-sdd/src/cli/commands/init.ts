@@ -954,7 +954,13 @@ export interface IntegrateArtifact {
 
 export interface IntegratePlan {
   cwd: string;
-  host: { id: string; label: string; source: 'declarado' | 'detectado'; evidence: string[]; alternatives: string[] };
+  host: {
+    id: string;
+    label: string;
+    source: 'declarado' | 'detectado' | 'defecto';
+    evidence: string[];
+    alternatives: string[];
+  };
   skills: HostIntegration['skills'];
   invocation: string;
   mcp: {
@@ -1137,7 +1143,7 @@ export const planIntegrate = async (input: PlanIntegrateInput): Promise<Integrat
   const { cwd } = input;
 
   let host: HostIntegration;
-  let source: 'declarado' | 'detectado';
+  let source: 'declarado' | 'detectado' | 'defecto';
   let evidence: string[];
   let alternatives: string[];
 
@@ -1154,15 +1160,21 @@ export const planIntegrate = async (input: PlanIntegrateInput): Promise<Integrat
     alternatives = [];
   } else {
     const detected = await detectIntegration(cwd);
-    if (!detected) {
-      throw new Error(
-        `No se observó ningún anfitrión en ${cwd}. Pasa uno explícito (${HOST_INTEGRATIONS.map((item) => item.id).join(', ')}) o consulta la matriz con \`open-sdd integrate --list\`.`,
-      );
+    if (detected) {
+      host = integrationById(detected.id)!;
+      source = 'detectado';
+      evidence = detected.evidence;
+      alternatives = detected.alternatives;
+    } else {
+      // Same fallback as `init`: the default is proposed AND declared as a default, never as a
+      // detection. `--write` still requires the user to have asked for it.
+      host = integrationById('claude-code')!;
+      source = 'defecto';
+      evidence = [
+        `no se observó ningún marcador de anfitrión (${HOST_INTEGRATIONS.flatMap((item) => item.detect).join(', ')})`,
+      ];
+      alternatives = [];
     }
-    host = integrationById(detected.id)!;
-    source = 'detectado';
-    evidence = detected.evidence;
-    alternatives = detected.alternatives;
   }
 
   const language: 'es' | 'en' =

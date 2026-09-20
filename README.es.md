@@ -43,7 +43,8 @@ spec. Es agnóstico de modelo, vive en Git junto a tu código y reporta lo que r
 
 **Documentación:** [Demo de 60 segundos](docs/guides/quickstart-60s.md) ·
 [Instalación](docs/INSTALL.md) · [Proyectos existentes](docs/guides/existing-projects.md) ·
-[Actualización](docs/guides/upgrade.md) · [Mediciones](docs/MEASUREMENTS.md) ·
+[Actualización](docs/guides/upgrade.md) · [Integraciones](docs/guides/integrations.md) ·
+[Migrar desde](docs/guides/migrate-from.md) · [Mediciones](docs/MEASUREMENTS.md) ·
 [Alineación con el paper](docs/PAPER-ALIGNMENT.md)
 
 > La trazabilidad completa de la arquitectura del paper sobre este código —incluido lo que **no**
@@ -143,7 +144,10 @@ Lo que aquí es distinto, y verificable en este repositorio:
   definiciones de agente (8 basadas en skills), y no ship ningún backend de modelo.
 
 Lo que **no** se afirma: paridad de ecosistema, de pulido o de adopción. Esas son hoy las fortalezas
-de spec-kit y de Kiro. Esto es una comparación cualitativa, no un benchmark.
+de spec-kit y de Kiro. Esto es una comparación cualitativa, no un benchmark. Si vienes de Kiro,
+spec-kit o cc-sdd, [Migrar desde Kiro, spec-kit y cc-sdd](docs/guides/migrate-from.md) mapea sus
+artefactos y layouts sobre este, y [Integraciones](docs/guides/integrations.md) es la matriz de
+instalación por agente.
 
 ---
 
@@ -597,6 +601,8 @@ open-sdd/
 - **[docs/INSTALL.md](docs/INSTALL.md)** — todas las rutas de instalación, verificación y desinstalación.
 - **[docs/guides/upgrade.md](docs/guides/upgrade.md)** — actualizar entre versiones y refrescar el gate.
 - **[docs/guides/existing-projects.md](docs/guides/existing-projects.md)** — la ruta brownfield.
+- **[docs/guides/integrations.md](docs/guides/integrations.md)** — la matriz de instalación por agente y cómo verificar o quitar cada instalación.
+- **[docs/guides/migrate-from.md](docs/guides/migrate-from.md)** — migrar desde Kiro, spec-kit y cc-sdd.
 - **[docs/QUICK-START.md](docs/QUICK-START.md)** — instalar y ejecutar en cinco minutos.
 - **[docs/INSTALLATION.md](docs/INSTALLATION.md)** — la referencia de instalación heredada.
 - **[docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md)** — trazabilidad paper→código y brechas.
