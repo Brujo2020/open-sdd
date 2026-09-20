@@ -10,6 +10,8 @@ mustNotTouch:
   - "src/**"
   - "test/**"
   - "package.json"
+preconditions:
+  - ".sdd/specs/<feature>/requirements.md"
 handoffs:
   - plan
 parallelSafe: false
@@ -49,6 +51,15 @@ $ARGUMENTS
 ```
 
 If the input names a feature, use it. If not, read the current state and ask which feature to clarify.
+
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** the rewritten `.sdd/specs/<feature>/requirements.md` plus the question/answer ledger under `.sdd/specs/<feature>/clarify/`.
+- **Identified — refuses:** it refuses to answer its own questions and refuses to edit application source or the constitution.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd brownfield clarify <feature> --answers … --write` re-runs the analysis after applying answers and reports `resolved`/`stillOpen` with `codeBefore`/`codeAfter`; `open-sdd delta validate <feature> --json` **exits 1** on a broken delta (BLOCKS hand-off to `plan`).
+- **Measured — components:** `ears` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
+- **Pivoted — the constitution is the pivot:** the constitution is the pivot: answers are folded into EARS statements with the pattern named, an unratified draft cannot authorise an answer, and `open-sdd status --check --json` validates the spec against the principles.
 
 ## Pre-Execution Checks
 

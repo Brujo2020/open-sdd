@@ -10,6 +10,9 @@ mustNotTouch:
   - ".sdd/specs/<feature>/plan.md"
   - "src/**"
   - "test/**"
+preconditions:
+  - ".sdd/steering/constitution.md"
+  - ".sdd/settings/rigor.json"
 handoffs:
   - implement
 parallelSafe: true
@@ -43,6 +46,15 @@ $ARGUMENTS
 
 If no feature is named, produce the repository-level checklist. If a feature is named, scope the
 items to it.
+
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** `.sdd/specs/<feature>/checklist.md` (or repository-scope `.sdd/checklist.md`).
+- **Identified — refuses:** it refuses to tick an item without running that item's command, and refuses to invent a threshold, a policy or a check.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** every runnable item names the command that decides it; `open-sdd govern rigor --gates` and `open-sdd govern conformance` (exit 0) back the derived items and `open-sdd gates run` **exits 1** on failure (BLOCKS readiness); an item no command can decide is labelled human-judgement.
+- **Measured — components:** `gates` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
+- **Pivoted — the constitution is the pivot:** the constitution is the pivot: the checklist is derived from the ratified constitution's principles in force, a draft constitution makes the items advisory, and `open-sdd status --check --json` is the pivot check.
 
 ## Pre-Execution Checks
 

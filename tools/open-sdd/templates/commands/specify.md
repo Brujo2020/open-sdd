@@ -10,6 +10,8 @@ mustNotTouch:
   - "src/**"
   - "test/**"
   - "package.json"
+preconditions:
+  - ".sdd/steering/constitution.md"
 handoffs:
   - clarify
   - plan
@@ -19,11 +21,12 @@ moves:
 commands:
   - "open-sdd status --json"
   - "open-sdd status <feature> --json"
+  - "open-sdd brownfield specify <feature> \"<description>\" --json"
   - "open-sdd brownfield requirements <feature> --suggest --json"
   - "open-sdd brownfield analyze <feature> --json"
   - "open-sdd delta init <feature> \"<title>\""
 scripts:
-  - "open-sdd status --json"
+  - "open-sdd brownfield specify <feature> \"<description>\" --json"
   - "open-sdd brownfield requirements <feature> --suggest --json"
   - "open-sdd delta init <feature> \"<title>\""
 ---
@@ -42,6 +45,15 @@ $ARGUMENTS
 
 If the intent is thin, ask for the missing subject, actor and observable result before writing
 anything. A requirement invented from silence is the most expensive kind of bug.
+
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** `.sdd/specs/<feature>/requirements.md` (numbered EARS statements, pattern named) and `spec.json`.
+- **Identified — refuses:** it refuses to write the constitution, application source, tests or manifests; implementation, refactor or deploy intent becomes a deferred note, never a requirement.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd brownfield requirements <feature> --suggest --json` re-checks every statement against the real EARS patterns and **exits 1** when the spec cannot be analysed (BLOCKS hand-off to `plan`); `open-sdd delta validate <feature> --json` **exits 1** on an invalid delta.
+- **Measured — components:** `ears` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
+- **Pivoted — the constitution is the pivot:** the constitution is the pivot: requirements are written under the ratified constitution in EARS form with the pattern named (`When … the system shall …`, `If … the system shall …`), an unknowable datum becomes a question instead of a fabricated requirement, and `open-sdd status --check --json` validates the spec against the principles.
 
 ## Pre-Execution Checks
 
@@ -70,40 +82,47 @@ anything. A requirement invented from silence is the most expensive kind of bug.
 open-sdd status --json
 ```
 
-2. For an existing codebase, declare the contract of change first; then the requirements have a
-   scope to live in:
+2. Turn the natural-language intent into a first-pass spec with the engine's specify front door. It
+   writes the spec artifacts and the questions it cannot answer; read both:
+
+```bash
+open-sdd brownfield specify <feature> "<description>" --json
+```
+
+3. For an existing codebase, declare the contract of change; then the requirements have a scope to
+   live in:
 
 ```bash
 open-sdd delta init <feature> "<title>"
 ```
 
-3. Draft the requirements in EARS. **Name the pattern for each statement** and keep exactly one
+4. Draft the requirements in EARS. **Name the pattern for each statement** and keep exactly one
    behaviour per statement:
    - *Ubiquitous* — "The system shall …"
    - *Event-driven* — "When <trigger>, the system shall …"
    - *State-driven* — "While <state>, the system shall …"
    - *Unwanted behaviour* — "If <condition>, the system shall …"
    - *Optional feature* — "Where <feature is configured>, the system shall …"
-4. Use the engine's EARS assistant to check and suggest rewrites against the real patterns:
+5. Use the engine's EARS assistant to check and suggest rewrites against the real patterns:
 
 ```bash
 open-sdd brownfield requirements <feature> --suggest --json
 ```
 
-5. Read the machine report: it names every statement that is not yet checkable and every pattern it
+6. Read the machine report: it names every statement that is not yet checkable and every pattern it
    could not match. Fix the prose; do not argue with the report.
-6. Give each requirement a stable id of the form `REQ-<AREA>-<NNN>` scoped to this feature or delta,
+7. Give each requirement a stable id of the form `REQ-<AREA>-<NNN>` scoped to this feature or delta,
    and never renumber an id that already shipped.
-7. **An unknowable datum becomes a question, not a fabricated requirement.** If the human did not say
+8. **An unknowable datum becomes a question, not a fabricated requirement.** If the human did not say
    the timeout, the limit, the owner or the retention period, write it into the open-questions list
    and hand it to `clarify`.
-8. Ask the engine what the change touches, so the requirements do not silently contradict the code:
+9. Ask the engine what the change touches, so the requirements do not silently contradict the code:
 
 ```bash
 open-sdd brownfield analyze <feature> --json
 ```
 
-9. Confirm the feature's artifacts parse and are in the phase you think they are:
+10. Confirm the feature's artifacts parse and are in the phase you think they are:
 
 ```bash
 open-sdd status <feature> --json

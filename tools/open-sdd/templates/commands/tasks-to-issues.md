@@ -9,6 +9,8 @@ mustNotTouch:
   - ".sdd/steering/constitution.md"
   - "src/**"
   - "test/**"
+preconditions:
+  - ".sdd/specs/<feature>/tasks.md"
 handoffs: []
 parallelSafe: true
 moves:
@@ -35,6 +37,15 @@ $ARGUMENTS
 
 The input may name the feature and the tracker (for example a repository and label). If the tracker is
 unknown, ask before publishing anywhere.
+
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** one issue payload per task under `.sdd/specs/<feature>/issues/`, and the tracker entries when a tracker is configured and reachable.
+- **Identified — refuses:** it refuses to edit `tasks.md` or any spec artifact, and refuses to report a publication that did not occur.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd status <feature> --json` confirms the task set in scope and `open-sdd delta validate <feature> --json` **exits 1** on a broken requirement id (BLOCKS publication); publication is proven by the tracker's returned id, otherwise the report says `NOT PUBLISHED`.
+- **Measured — components:** `traceability` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
+- **Pivoted — the constitution is the pivot:** the constitution is the pivot: issues carry the constitution's constraints as acceptance criteria, an issue that would violate a principle is not published, and `open-sdd status --check --json` is the pivot check.
 
 ## Pre-Execution Checks
 

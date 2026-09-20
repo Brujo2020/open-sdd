@@ -31,8 +31,9 @@ import { ensureDir, fileExists } from '../utils/fs.js';
 // ---------------------------------------------------------------------------------------------
 // The template inventory
 // ---------------------------------------------------------------------------------------------
-/** The thirteen prompt templates this project ships, by file id (the file name without `.md`). */
+/** The twenty-two prompt templates this project ships, by file id (the file name without `.md`). */
 export const COMMAND_TEMPLATE_IDS = [
+    'onboard',
     'constitution',
     'specify',
     'clarify',
@@ -45,6 +46,14 @@ export const COMMAND_TEMPLATE_IDS = [
     'tasks-to-issues',
     'brownfield',
     'status',
+    'contracts',
+    'impact',
+    'reuse',
+    'gates',
+    'audit',
+    'import',
+    'doctor',
+    'tour',
     'release',
 ];
 /** Bumped only when the rendering itself changes; the body hash is what detects real staleness. */

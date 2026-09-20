@@ -10,6 +10,8 @@ mustNotTouch:
   - ".sdd/steering/constitution.md"
   - "src/**"
   - "test/**"
+preconditions:
+  - ".sdd/specs/<feature>/tasks.md"
 handoffs:
   - implement
   - analyze
@@ -21,9 +23,10 @@ commands:
   - "open-sdd status --check --json"
   - "open-sdd brownfield analyze <feature> --json"
   - "open-sdd brownfield contracts <feature> --json"
+  - "open-sdd brownfield converge <feature> --json"
   - "open-sdd govern rigor --gates"
 scripts:
-  - "open-sdd status --json"
+  - "open-sdd brownfield converge <feature> --json"
   - "open-sdd brownfield analyze <feature> --json"
   - "open-sdd brownfield contracts <feature> --json"
 ---
@@ -41,6 +44,15 @@ $ARGUMENTS
 ```
 
 If no feature is named, read the state and ask which feature to converge.
+
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** `.sdd/specs/<feature>/convergence.md` and the tasks appended to `.sdd/specs/<feature>/tasks.md`.
+- **Identified — refuses:** it refuses to rewrite existing tasks, requirements or plan, and refuses to mark a feature converged while a drift item is open.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd brownfield analyze <feature> --json` **exits 1** on error findings and `open-sdd status --check --json` **exits 1** when the constitution is violated; a failing check BLOCKS the convergence claim.
+- **Measured — components:** `alignment` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
+- **Pivoted — the constitution is the pivot:** the constitution is the pivot: drift is measured against the ratified constitution, the disagreement is routed to the constitution command rather than settled by preference, and `open-sdd status --check --json` is the pivot check.
 
 ## Pre-Execution Checks
 
@@ -96,10 +108,17 @@ open-sdd govern rigor --gates
    - the regeneration status where the engine exposes it: what can be regenerated from the specs and
      what cannot;
    - the deferred items and their proposed owner.
-6. Append a task to `tasks.md` for every unbuilt or drifted element, using the same shape `tasks`
-   requires: id, requirement, paths, the real test command, and `_Evidence:_`. Never renumber or
-   rewrite existing tasks.
-7. Do not mark the feature converged while any drift item is unresolved or any new task is open.
+6. Run the engine's converge pass, which derives the drift items and appends the unbuilt work as
+   tasks with their traceability intact. Read what it appended before adding anything by hand:
+
+```bash
+open-sdd brownfield converge <feature> --json
+```
+
+7. Append a task to `tasks.md` for every unbuilt or drifted element the engine did **not** already
+   cover, using the same shape `tasks` requires: id, requirement, paths, the real test command, and
+   `_Evidence:_`. Never renumber or rewrite existing tasks.
+8. Do not mark the feature converged while any drift item is unresolved or any new task is open.
 
 ## The constitution is the pivot
 

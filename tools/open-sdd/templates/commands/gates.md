@@ -4,6 +4,8 @@ description: Resolve and run the declared rigor level's gate chain, with the enf
 writes: []
 mustNotTouch:
   - "**"
+preconditions:
+  - ".sdd/settings/rigor.json"
 handoffs:
   - analyze
   - release
@@ -39,6 +41,15 @@ $ARGUMENTS
 ```
 
 The input may name a profile. If it does not, use the profile the repository declares and say which.
+
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** report only — it writes nothing (its `writes` list is empty on purpose).
+- **Identified — refuses:** it refuses to edit a spec or a source file to make a gate pass, and refuses to report a green chain it did not run.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd gates run` **exits 1** when the chain fails (BLOCKS the merge or release); `open-sdd gates chain --profile regulated`, `open-sdd gates crosswalk`, `open-sdd gates enforcement` and `open-sdd floor status` report the resolved controls, the crosswalk, the levels and the installed floor.
+- **Measured — components:** `gates` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
+- **Pivoted — the constitution is the pivot:** the constitution is the pivot: every blocking control cites a ratified principle, an unratified constitution makes the controls uncitable, and `open-sdd status --check --json` is the pivot check.
 
 ## Pre-Execution Checks
 

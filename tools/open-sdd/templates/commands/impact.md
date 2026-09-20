@@ -4,6 +4,8 @@ description: Measure the blast radius and forecast of a change before anything i
 writes: []
 mustNotTouch:
   - "**"
+preconditions:
+  - ".sdd/specs/<feature>/delta.md"
 handoffs:
   - plan
   - contracts
@@ -36,6 +38,15 @@ $ARGUMENTS
 
 The input names the feature, or describes the change in natural language. If neither is present, ask
 for the description rather than guessing at a change nobody stated.
+
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** report only — it writes nothing (its `writes` list is empty on purpose).
+- **Identified — refuses:** it refuses to edit code or specs, and refuses to forecast a change nobody described: it asks for the description instead.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd brownfield impact <feature>` and `open-sdd brownfield forecast "<description>" --json` are the checks; `open-sdd brownfield analyze <feature> --json` **exits 1** when the feature cannot be analysed (BLOCKS a confident impact claim) and `open-sdd delta validate <feature> --json` **exits 1** on a broken delta.
+- **Measured — components:** none — this template is read-only and changes no SDD score component; `open-sdd status --json` is identical before and after by design.
+- **Pivoted — the constitution is the pivot:** the constitution is the pivot: an impact that breaks a principle in force is reported as a constitutional conflict, and `open-sdd status --check --json` is the pivot check.
 
 ## Pre-Execution Checks
 

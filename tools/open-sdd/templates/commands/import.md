@@ -8,6 +8,8 @@ mustNotTouch:
   - ".sdd/steering/constitution.md"
   - "src/**"
   - "test/**"
+preconditions:
+  []
 handoffs:
   - brownfield
   - specify
@@ -44,6 +46,15 @@ $ARGUMENTS
 
 The input may name the source (`kiro`, `spec-kit`, `cc-sdd`). Without one, detect what is present and
 report it.
+
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** the mapped `.sdd/specs/` and `.sdd/steering/` artifacts produced by `open-sdd import`, plus its per-file plan; nothing existing is overwritten.
+- **Identified — refuses:** it refuses to overwrite an existing artifact and refuses to claim a 1:1 conversion: what cannot be mapped is skipped and listed.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd import --json` reports per-file `copy`/`convert`/`skip` (exit 0) — the skips ARE the check and must be reported; `open-sdd status --check --json` **exits 1** until the imported seeds are reconciled with the constitution.
+- **Measured — components:** `traceability` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
+- **Pivoted — the constitution is the pivot:** the constitution is the pivot: imported requirements inherit no authority from their old tool, they are candidates until reconciled, and `open-sdd status --check --json` is the pivot check.
 
 ## Pre-Execution Checks
 

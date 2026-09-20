@@ -2,7 +2,7 @@
 id: brownfield
 description: Run the whole brownfield entry path — recon, constitution draft, ratification, delta, and the check — on an existing codebase.
 writes:
-  - ".sdd/steering/constitution.md"
+  - ".sdd/steering/constitution.draft.md"
   - ".sdd/specs/"
   - ".sdd/settings/"
 mustNotTouch:
@@ -14,6 +14,8 @@ mustNotTouch:
   - "**/*.go"
   - "package.json"
   - "Dockerfile"
+preconditions:
+  []
 handoffs:
   - constitution
   - specify
@@ -25,8 +27,9 @@ moves:
 commands:
   - "open-sdd brownfield survey ."
   - "open-sdd brownfield bootstrap . --json"
-  - "open-sdd brownfield constitution . --draft"
-  - "open-sdd brownfield constitution . --write"
+  - "open-sdd brownfield constitution . --draft --write"
+  - "open-sdd brownfield constitution . --interview --answers <path> --write"
+  - "open-sdd govern constitution --ratify --by \"<name>\" --rationale \"<reason>\" --write"
   - "open-sdd brownfield impact <feature>"
   - "open-sdd brownfield contracts <feature> --json"
   - "open-sdd brownfield reuse <feature>"
@@ -37,7 +40,7 @@ commands:
 scripts:
   - "open-sdd brownfield survey ."
   - "open-sdd brownfield bootstrap . --json"
-  - "open-sdd brownfield constitution . --draft"
+  - "open-sdd brownfield constitution . --draft --write"
   - "open-sdd delta validate <feature> --json"
   - "open-sdd status --check --json"
 ---
@@ -62,6 +65,15 @@ $ARGUMENTS
 
 The input may name the target directory and the feature. If the feature for the delta is missing, ask;
 do not invent a slug.
+
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** the constitution **draft** `.sdd/steering/constitution.draft.md`, the feature's `.sdd/specs/<feature>/` artifacts and `.sdd/settings/`.
+- **Identified — refuses:** it refuses to create, modify or delete application source or tests — recon is read-only — and refuses to act on implementation intent, which becomes a deferred note.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd delta validate <feature> --json` **exits 1** on an invalid delta (BLOCKS the change contract) and `open-sdd status --check --json` **exits 1** when the constitution is absent or violated; `open-sdd brownfield contracts <feature> --json` reports uncovered files as holes, not passes.
+- **Measured — components:** `constitution`, `contracts` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
+- **Pivoted — the constitution is the pivot:** the constitution is the pivot: the descriptive constitution must be ratified by a named human to have authority, the report never presents a draft as ratified, and `open-sdd status --check --json` is the pivot check.
 
 ## Pre-Execution Checks
 
@@ -95,20 +107,27 @@ open-sdd brownfield survey .
 open-sdd brownfield bootstrap . --json
 ```
 
-3. Produce the descriptive constitution as a draft:
+3. Produce the descriptive constitution as a draft — it is written to
+   `.sdd/steering/constitution.draft.md` and is explicitly **not in force**:
 
 ```bash
-open-sdd brownfield constitution . --draft
+open-sdd brownfield constitution . --draft --write
 ```
 
 4. Ask the human **only** the decisions the repository cannot answer (scope of the first change, which
-   proposed amendments to accept, what is explicitly out of scope), then write the document:
+   proposed amendments to accept, what is explicitly out of scope). If the draft leaves open
+   questions, use the interview cycle to apply the answers and re-validate:
 
 ```bash
-open-sdd brownfield constitution . --write
+open-sdd brownfield constitution . --interview --answers <path> --write
 ```
 
-   Mark it `Status: DRAFT` until a named human ratifies it. **An unratified draft has no authority.**
+   Then **hand over**: give the human the ratify command and do not run it for them. Only a named
+   person with a rationale promotes the draft, and an unratified draft has no authority:
+
+```bash
+open-sdd govern constitution --ratify --by "<name>" --rationale "<reason>" --write
+```
 
 5. For the feature, declare the contract of change:
 

@@ -53,6 +53,15 @@ $ARGUMENTS
 If the input is empty, ask the human for the one thing only a human can decide: which principles the
 team wants the code to obey. Do not invent principles from enthusiasm.
 
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** the constitution **draft** `.sdd/steering/constitution.draft.md` (and proposal material under `.sdd/settings/constitution/`); only the human's ratify command produces the in-force `.sdd/steering/constitution.md`.
+- **Identified — refuses:** it refuses to touch the in-force `constitution.md`, and refuses to create, modify or delete application source, tests or manifests; it also refuses to ratify itself.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd status --check --json` validates the repository against the constitution and **exits 1** when it is absent, unratified or violated (BLOCKS every downstream verdict); `open-sdd status --json` reports the `constitution` component.
+- **Measured — components:** `constitution` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
+- **Pivoted — the constitution is the pivot:** this template produces the authority itself: requirements it drafts are in EARS form with the pattern named, unknown data becomes a question, and `open-sdd status --check --json` is the pivot check.
+
 ## Pre-Execution Checks
 
 1. Read `.sdd/settings/extensions.yml` when it exists. If it declares `hooks.before_constitution`,
@@ -69,11 +78,12 @@ open-sdd brownfield survey .
 
 ## Scope guard
 
-- **May write:** `.sdd/steering/constitution.md`, proposal material under
-  `.sdd/settings/constitution/`, and the extension file `.sdd/settings/extensions.yml` **only** when
-  the human explicitly asks to register a hook.
-- **Must not touch:** application source or tests under any language, build manifests, or the
-  Dockerfile. This command never creates, modifies or deletes application code.
+- **May write:** the constitution **draft** `.sdd/steering/constitution.draft.md`, proposal material
+  under `.sdd/settings/constitution/`, and the extension file `.sdd/settings/extensions.yml` **only**
+  when the human explicitly asks to register a hook. Never the in-force `constitution.md`.
+- **Must not touch:** the in-force `.sdd/steering/constitution.md` (only the human's `--ratify`
+  replaces it), application source or tests under any language, build manifests, or the Dockerfile.
+  This command never creates, modifies or deletes application code.
 - **Deferred intents:** if the input contains implementation, refactor, deploy or migration intent
   ("rename the service", "upgrade the runtime", "ship it"), do **not** execute it. Record it as a
   deferred note under `.sdd/settings/constitution/deferred.md` with the exact wording the human used,

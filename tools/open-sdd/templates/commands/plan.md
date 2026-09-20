@@ -10,6 +10,9 @@ mustNotTouch:
   - ".sdd/steering/constitution.md"
   - "src/**"
   - "test/**"
+preconditions:
+  - ".sdd/specs/<feature>/requirements.md"
+  - ".sdd/specs/<feature>/spec.json"
 handoffs:
   - tasks
 parallelSafe: false
@@ -43,6 +46,15 @@ $ARGUMENTS
 ```
 
 If no feature is named, read the state and ask which one to plan.
+
+## Contract — the five guarantees for this template
+
+- **Identified — produces:** `.sdd/specs/<feature>/plan.md` (alias `design.md`) and `research.md`.
+- **Identified — refuses:** it refuses to rewrite `requirements.md`, the constitution, source or tests; out-of-scope improvements become deferred notes.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd brownfield analyze <feature> --json` and `open-sdd brownfield contracts <feature> --json` back every claim about existing code (contracts **exits 0** while reporting uncovered files — that report IS the check); `open-sdd delta validate <feature> --json` **exits 1** on an invalid delta (BLOCKS hand-off to `tasks`).
+- **Measured — components:** `gates` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
+- **Pivoted — the constitution is the pivot:** the constitution is the pivot: the ratified constitution outranks design preference, and `open-sdd status --check --json` rejects a plan that violates a principle in force instead of softening it.
 
 ## Pre-Execution Checks
 

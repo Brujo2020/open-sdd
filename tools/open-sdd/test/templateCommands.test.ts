@@ -36,11 +36,20 @@ const citedVerbs = (raw: string): string[] => {
   const body = raw.slice(frontmatter.length);
   const declared = [...frontmatter.matchAll(/^\s+-\s*"?(open-sdd[^"\n]*)"?\s*$/gm)].map((match) => match[1]);
   const found = new Set<string>();
-  for (const text of [declared.join('\n'), body]) {
+  // Only CODE counts as a citation: inline spans and fenced blocks. A sentence that happens to
+  // mention the tool ("open-sdd produces real artifacts") is prose, not a command, and treating it as
+  // an error made this test fail on a correct template. The declared frontmatter list stays
+  // authoritative and is scanned as-is.
+  const codeBlocks = [...body.matchAll(/\x60\x60\x60[\s\S]*?\x60\x60\x60/g)].map((match) => match[0]).join('\n');
+  const codeSpans = [...body.matchAll(/\x60[^\x60\n]+\x60/g)].map((match) => match[0]).join('\n');
+  for (const text of [declared.join('\n'), codeBlocks, codeSpans]) {
     for (const match of text.matchAll(/(^|[^\w@/.-])open-sdd[ \t]+([a-z][a-z0-9-]*)/g)) found.add(match[2]);
   }
   return [...found].sort();
 };
+
+/** Cuenta total de citas encontradas, para que el test no pueda pasar por no encontrar nada. */
+const countCitations = (files) => files.reduce((total, file) => total + citationsIn(file).size, 0);
 
 describe('templates/commands', () => {
   it('toda invocación `open-sdd …` citada existe en el despachador del CLI', () => {
