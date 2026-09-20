@@ -227,7 +227,7 @@ where coverage overstates).
 | The constitutional ratchet and expiring waivers (CSDD §3.4 apex; invariants I1/I6; REQ-MAT-005, REQ-MAT-012) | The pivot answers "how much of the authority the spec cites resolves today?"; the ratchet answers "is that worse than the last time?" A baseline per feature lives in `.sdd/state/adhesion.json` (alignment ratio, the ids of the principles **in force**, the constitution hash, the timestamp). The first run never fails; a descent is an `error` that names the principles that fell out and does **not** self-rebase; `--accept-drop "<reason>"` authorizes that specific descent and records who/what/when; a rise updates the baseline; corrupt state is a `warning` and a reset, never a silent pass. Separately, a security allow-list entry may carry `owner` and `expires`; an expired waiver stops applying and is named by the advisory surface (`waiver-expiring`). | `core/ratchet.ts` · `runAdhesionRatchet`, `readAdhesionState`, `hashConstitution`, `adhesionStatePath`, `ADHESION_STATE_FILE`; `core/securityAllowlist.ts` · `parseSecurityAllowlist`, `expiredWaivers`, `applySecurityAllowlist`; `core/constitutionAdvice.ts` · `adviseConstitution` (`waiver-expiring`, `evidence-expired`, `amendment-aged`); CLI `status [--accept-drop]`, `govern constitution --advise` | `construido` |
 | The audit evidence bundle and SARIF (CSDD §3.3 audit support; §9.6 "only `broken` halts publication"; REQ-MAT-006/REQ-MAT-007) | One command assembles the evidence an auditor reads — constitution, specs, gates, claims, alignment and rigor — with **one sha256 per artifact** in `manifest.json` and an explicit verdict; `audit sarif` emits SARIF 2.1.0 and validates its shape before writing. Exit codes are a contract: `0` pass · `1` blocking finding (gate FAIL or broken claim) · `2` the audit could not run. `action.yml` is the same contract as a native composite GitHub Action, building the CLI from `github.action_path` so the action and the gates cannot drift; the CI workflow uploads the bundle and the SARIF to code scanning. | `cli/commands/audit.ts` · `collectEvidence`, `writeBundle`, `buildSarifLog`, `validateSarifShape`, `AUDIT_EXIT_CODES`, `renderBundleSummary`; `action.yml`; `.github/workflows/gates.yml`; CLI `audit bundle [--out] [--sarif] [--profile]`, `audit sarif [--out]` | `construido` |
 | Reproducible container entry point (§16.1) | The `Dockerfile` is multi-stage and honest about what it ships: the build stage compiles TypeScript, the runtime stage copies only `dist`, `templates` and `package.json`, and no `node_modules` reaches the final image. `.github/workflows/gates.yml` now carries a `container` job that builds it for **`linux/amd64` and `linux/arm64`** with QEMU + Buildx and `push: false`, failing the job if either platform fails; nothing is pushed. | `Dockerfile`; `.github/workflows/gates.yml` · job `container` | `construido` (both platforms are built by the job definition) · **brecha declarada** (the multi-arch job has not yet executed on GitHub and no image is published — G-27) |
-| Reproducible distribution — the release pipeline (§16) | `@brujo2020/open-sdd` publishes from the repository root on a version tag. The publish step supports **two credential routes** and states which it attempts: a granular `NPM_TOKEN` (Bypass 2FA) passed as `NODE_AUTH_TOKEN`, or OIDC trusted publishing with `id-token: write` when the secret is empty. `workflow_dispatch.dry_run` exercises install → build → test → gate chain → claims → `npm pack --dry-run` and publishes nothing. | `.github/workflows/publish.yml`; `docs/guides/publish.md` | `construido` (the artifact: 3.1.0 on the registry, from a manual OTP publish) · **brecha declarada** (no CI credential route has yet produced a green publish — G-28) |
+| Reproducible distribution — the release pipeline (§16) | `@brujo2020/open-sdd` publishes from the repository root on a version tag. The publish step supports **two credential routes** and states which it attempts: a granular `NPM_TOKEN` (Bypass 2FA) passed as `NODE_AUTH_TOKEN`, or OIDC trusted publishing with `id-token: write` when the secret is empty. `workflow_dispatch.dry_run` exercises install → build → test → gate chain → claims → `npm pack --dry-run` and publishes nothing. | `.github/workflows/publish.yml`; `docs/guides/publish.md` | `construido` (the artifact: 3.1.1 on the registry, from a manual OTP publish) · **brecha declarada** (no CI credential route has yet produced a green publish — G-28) |
 | The portable commit gate (§6.3 Table 19 levels A–D; §16.1; REQ-MAT-003) | The level-B boundary is a **Node** hook (`pre-commit.mjs`), so it runs on a non-POSIX host; a POSIX `/bin/sh` fallback (`pre-commit`) fails **closed** with a diagnosis when Node cannot be honoured, because a commit gate that silently degrades to "no checks" is worse than none. It judges the **staged index** (`--staged`) with C1 (advisory), C2 (blocking: secrets and destructive commands) and C3 (blocking: a completed task with no captured `_Evidence:`); when the CLI is missing it prints the three ways to fix it. `doctor` reports whether the installed hook is our current version and whether it depends on a POSIX shell. | `templates/hooks/pre-commit.mjs`, `templates/hooks/pre-commit`; `scripts/install-hooks.mjs`; `core/floorInstallation.ts` · `detectInstalledFloor`; `core/doctor.ts` · `inspectCommitHook`, `runDoctor`; CLI `floor install\|status`, `doctor` | `construido` · **brecha declarada** (level A is still a ceiling; the Windows job that would prove the portable path has never executed — G-26) |
 | Installation self-diagnosis and guided first run (spec-kit's onboarding surface, reimplemented; *Manual Maestro* v3.0 EGTAV) | `doctor` turns every startup assumption into a named check with the exact fixing command — Node range, CLI reachability, the commit hook and its portability, declared rigor, constitution, specs and the offline posture — and never reports `ok` for something it could not inspect. `tour` teaches by doing: it runs the real commands through their real handlers and stops at the human decision (ratifying a constitution is never automated). `context` is the terminal face of the MCP context pack, so a host and a terminal read the same object. | `core/doctor.ts` · `runDoctor`, `renderDoctor`, `inspectCommitHook`; `cli/commands/tour.ts` · `handleTourCommand`, `handleContextCommand`; CLI `doctor`, `tour`, `context [--json]` | `construido` |
 | The demo, the synthetic bench and the measurements (§14.3 risk-lab discipline — applied to this repository's **own** instrument, not to the paper's benches) | `scripts/demo-60s.sh` creates a throwaway repository, injects four real incoherences (an untraced delta requirement, a completed task with no `_Evidence:`, an unfilled `{{…}}` marker, a declared contract that does not exist), runs the **pinned** `tools/open-sdd/dist/cli.js` and exits non-zero if the engine fails to name any of them — a demo that cannot fail is marketing. `bench/harness.mjs` builds ten synthetic repositories from a verified-clean baseline, injects exactly one documented class per repo and reports injected/caught/missed per class; it exits `1` on a dirty baseline or a miss. `docs/MEASUREMENTS.md` records the numbers with the exact command, tool version and seed. | `scripts/demo-60s.sh`; `bench/harness.mjs`; `bench/README.md`; `docs/MEASUREMENTS.md`; `docs/guides/quickstart-60s.md` | `medido` (10/10 synthetic classes caught, reproducible offline from a clone) · **brecha declarada** (these are **synthetic** honesty numbers, not field data; the paper's κ/FPR/latency figures remain the prototype's — G-29) |
@@ -811,6 +811,66 @@ finding the bench surfaced is recorded rather than smoothed over: the expired-wa
 the advisory surface, and the `gates run` console line truncates the finding detail at 180 characters,
 so the gate fails correctly while its reason is not visible in the console.
 
+### G-30 — The Stop hook has never been observed blocking a real agent end-to-end on this machine
+
+Paper: §6.3, Table 19 (the per-tool ceiling), §16.1. `stopHook.ts` is the one mechanism in this
+repository that would block an agent *inside its own loop*, and its design is argued from documented
+contracts rather than from an observed block. What is verified: the exit-code adapter's mapping
+(`0 → 0`, anything else `→ 2`), that its argv is byte-for-byte the commit gate's `GATE_ARGS` (a test
+re-parses `templates/hooks/pre-commit.mjs` and fails on drift), that the two snippets serialize to the
+documented shapes (`claude-code` exec form `command` + `args`; `codex` shell-string `command`), and
+that every other host is refused. What is **not** verified: that either host, given this hook,
+actually refused to end a turn while the gate was failing. No host was run end-to-end here —
+`docs/guides/stop-hook.md` says so in its own "Honest limits" — so the blocking behaviour rests on the
+hosts' documentation, not on a recorded block. Two further limits travel with it: `stop_hook_active`
+is deliberately not consumed, so the hook will re-block on every `Stop` while the gate fails (a
+potential loop, documented rather than guarded), and Codex's project hooks load only when the `.codex/`
+layer is trusted via `/hooks` (trust is recorded against the hook's hash, so an edit re-prompts). The
+honest reading: the adapter removes the fail-open defect this repository could see in its own code; it
+does not yet demonstrate that a host blocks.
+
+### G-31 — The 22 prompt templates are the default flow, but `open-sdd --help` does not mention them
+
+Paper: §6.4 / Table 4 (agent-agnostic installation). The templates are the default integration —
+`init --write` installs them into the host's command directory, and they are what works with no MCP and
+no network — but `open-sdd --help` today lists `init` only as "One-shot project bootstrap" and names
+neither the 22 templates nor a way to list them; the only places they surface are the `init` plan's own
+`command-templates` artifact, `COMMAND_TEMPLATE_IDS`, `templates/commands/`, and
+`docs/guides/integrations.md`. That is a discoverability defect, not a missing capability: the flow
+exists and is exercised by `coreCommandTemplates.test.ts`. It is recorded here rather than marked fixed
+because the fix is a parallel change to the CLI help surface (`src/index.ts`, `src/cli/i18n.ts` — both
+present); until it lands, a reader who only runs `--help` cannot learn that 22 workflows are installed.
+
+### G-32 — The biography's thresholds are chosen, not empirically calibrated
+
+Paper: §4.5 (living documentation); *Manual Maestro* v3.0. `specBiography.ts` derives a `breathing`
+verdict from measured git numbers, which is the honest part: nothing is asserted without them. But the
+two boundaries it derives from are **decisions, not truths**, and the module's own header says so:
+`STALE_CODE_COMMITS = 3` ("an isolated commit can be a fix that does not change the contract; three
+code commits without the spec moving is already material movement") and `ALIVE_SPEC_SHARE = 1/3` ("one
+in three pieces that move since birth belongs to the spec"). No corpus calibrates either number; the
+test suite pins the boundary (two code commits do not cross it, three do) but pinning a threshold is
+not validating it. A repository with a legitimate two-commit fix cadence will read `quiet` and one with
+three will read `stale` by fiat. The honest label: a heuristic with a stated rationale, not a measured
+instrument — and `ambiguous` is deliberately absent from the verdict domain rather than faked.
+
+### G-33 — The branch role is a report; nothing installs branch protection
+
+Paper: §6.3, Table 19; §5.1 invariant I1 (authority on verdicts). `gitflow.ts` answers what a branch
+role requires and, separately, what actually blocks — and the second list names only the installed
+floor: the level-B pre-commit hook (C1/C2/C3 over the staged index) and the level-C pull-request
+workflow (the full chain). The module states in its own output that **this tool installs no branch
+protection, no required reviews and no push blocking**, so no role has a lock of its own and a direct
+commit to `main` passes. For this repository the public GitHub rulesets API returns an empty list
+(`GET /repos/brujo2020/open-sdd/rulesets` → `[]`), which evidences that no ruleset is configured; the
+legacy branch-protection endpoint requires authentication (`401` unauthenticated), so the report can
+evidence the ruleset absence and not the legacy setting, and it says which is which. The gap is
+inherited from the paper's own ownership argument (the floor belongs to the organisation, not to the
+tool); what this repository adds is that it is now *named at the moment the role is read*, instead of
+being left implicit in a policy table.
+
+---
+
 ## 6. Where the paper and the code genuinely disagree
 
 1. **Conformity level** — paper claims C2 for its described instance (Table 18 caption); this code
@@ -914,6 +974,15 @@ disagree, the code had to pick one, and this report says which.
 7. Do **not** cite `docs/MEASUREMENTS.md`'s 10/10 as field recall or precision: it is a synthetic
    self-consistency check on repositories this project wrote (G-29). The paper's prototype figures
    remain the prototype's (G-02).
-8. Do **not** present the integration matrix's `verified: false` rows as supported MCP configurations
-   (G-24), the importers as lossless migrations (G-25), or the Windows job as a green portability
-   proof (G-26). Each of those is a declared gap, and the CLI prints it as one.
+8. Do **not** present an integration-matrix row as a supported MCP configuration when its `verified`
+   field is `false` (G-24) — no shipped row is `false` today, and a row added later that is will print
+   as **NO VERIFICADA** — nor the importers as lossless migrations (G-25). Do **not** call the Windows
+   job a green portability proof: it is red on the current head and the commit gate has never run there
+   (G-26). Each of those is a declared gap, and the CLI prints it as one.
+9. Attribute the prompt-template workflow to **spec-kit** (`templates/commands/*.md`): what open-sdd
+   contributes is the executable engine each prompt calls, not the way of working itself (G-31). Do not
+   read `specBiography`'s `breathing` verdict as a quality judgement, and do not treat its thresholds
+   (`STALE_CODE_COMMITS = 3`, `ALIVE_SPEC_SHARE = 1/3`) as calibrated — they are declared heuristics
+   (G-32), and the on-repository `stale` figure moves with every commit.
+10. Do **not** read `gitflow`'s "required" list as enforcement: no branch protection, required review or
+    push block is installed, and only the level-B commit hook and the level-C PR workflow block (G-33).
