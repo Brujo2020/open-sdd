@@ -5,29 +5,29 @@ it. All commands are runnable from the repository root unless stated otherwise.
 
 ## Prerequisites
 
-- **Node.js** with ESM support. The tracked `tools/cc-sdd/dist/` is plain ESM JavaScript and needs
+- **Node.js** with ESM support. The tracked `tools/open-sdd/dist/` is plain ESM JavaScript and needs
   no build; this checkout was verified with Node v26.7.0.
 - **npm** for the from-source build (TypeScript + Vitest dev dependencies live in
-  `tools/cc-sdd/package.json`).
+  `tools/open-sdd/package.json`).
 - No engines constraint is declared in either `package.json`.
 
 The package exposes four bin names, all pointing at the same CLI:
-`open-sdd`, `sdd-open`, `sdd`, `cc-sdd` (root `package.json` → `tools/cc-sdd/dist/cli.js`).
+`open-sdd`, `sdd-open`, `sdd`, `open-sdd` (root `package.json` → `tools/open-sdd/dist/cli.js`).
 
 ## Option 1 — From a clone (per-project, no global install)
 
 ```bash
 git clone https://github.com/Brujo2020/open-sdd
 cd open-sdd
-npm --prefix tools/cc-sdd install
-npm --prefix tools/cc-sdd run build
+npm --prefix tools/open-sdd install
+npm --prefix tools/open-sdd run build
 ```
 
 Then install the skills into a target repository by running the CLI **inside that repository**:
 
 ```bash
 cd /path/to/your-project
-node /path/to/open-sdd/tools/cc-sdd/dist/cli.js --claude-skills -y
+node /path/to/open-sdd/tools/open-sdd/dist/cli.js --claude-skills -y
 ```
 
 The CLI resolves the target from its working directory, so always run it from inside the project you
@@ -35,7 +35,7 @@ are installing into.
 
 ## Option 2 — The `install.sh` helper
 
-`install.sh` wraps Option 1: it builds the CLI if `tools/cc-sdd/dist/cli.js` is missing, then runs it
+`install.sh` wraps Option 1: it builds the CLI if `tools/open-sdd/dist/cli.js` is missing, then runs it
 inside the repository you pass as the first argument.
 
 ```bash
@@ -55,13 +55,13 @@ target is not a directory.
 From the checkout, the root script builds and installs globally:
 
 ```bash
-npm run install:global        # npm --prefix tools/cc-sdd run build && npm install -g ./tools/cc-sdd
+npm run install:global        # npm --prefix tools/open-sdd run build && npm install -g ./tools/open-sdd
 ```
 
 Or install the package directory directly:
 
 ```bash
-npm install -g ./tools/cc-sdd
+npm install -g ./tools/open-sdd
 open-sdd --help
 ```
 
@@ -128,7 +128,7 @@ In non-TTY environments, `prompt` mode falls back to `skip` and the CLI prints a
 ### Dry run first
 
 ```bash
-node tools/cc-sdd/dist/cli.js --claude-skills --dry-run
+node tools/open-sdd/dist/cli.js --claude-skills --dry-run
 ```
 
 `--dry-run` prints the resolved artifacts and the summary of what would be written, and changes
@@ -148,10 +148,10 @@ Git automation ships as `assisted` and **never pushes**: `auto_branch` and `auto
 
 ```bash
 # The CLI responds:
-node tools/cc-sdd/dist/cli.js --version
+node tools/open-sdd/dist/cli.js --version
 
 # The chain resolves:
-node tools/cc-sdd/dist/cli.js gates chain --profile regulated
+node tools/open-sdd/dist/cli.js gates chain --profile regulated
 
 # The skills landed in the target project (example for Claude Code Skills):
 ls /path/to/your-project/.claude/skills | head

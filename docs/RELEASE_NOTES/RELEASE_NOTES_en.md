@@ -1,9 +1,9 @@
 # Release Notes
 
-New features and improvements for cc-sdd. See [CHANGELOG.md](../../CHANGELOG.md) for technical changes.
+New features and improvements for open-sdd. See [CHANGELOG.md](../../CHANGELOG.md) for technical changes.
 
 > **Historical archive.** These entries record releases made under the project's earlier naming,
-> when the CLI was branded `cc-sdd` and its skills and slash commands used a `kiro-` / `kiro:`
+> when the CLI was branded `open-sdd` and its skills and slash commands used a `kiro-` / `kiro:`
 > prefix. That prefix was later replaced by `sdd-` (skills) and bare command names such as
 > `/spec-init` (slash commands). The entries below are kept verbatim as a record of what shipped at
 > the time and are **not** updated to the current names; see the [Migration Guide](../guides/migration-guide.md)
@@ -20,22 +20,22 @@ No unreleased features at this time. The latest stable release is v3.0.2.
 ## 🔧 Ver 3.0.2 (2026-04-14) – Patch Fixes & Docs Cleanup
 
 ### Summary
-Patch release that keeps the Codex `spec-reviewer` role valid for cross-spec review and removes a README reference that no longer aligns with cc-sdd.
+Patch release that keeps the Codex `spec-reviewer` role valid for cross-spec review and removes a README reference that no longer aligns with open-sdd.
 
 ### Fixed
-- Added the missing `description` field to the Codex `spec-reviewer` template so Codex keeps the custom role available instead of ignoring it as malformed ([#160](https://github.com/gotalab/cc-sdd/pull/160))
+- Added the missing `description` field to the Codex `spec-reviewer` template so Codex keeps the custom role available instead of ignoring it as malformed ([#160](https://github.com/gotalab/open-sdd/pull/160))
 
 ### Documentation
-- Removed the README Amazon book reference after the linked title shifted to promote `ai-sdd`, a closed-source clone of cc-sdd without attribution ([#157](https://github.com/gotalab/cc-sdd/pull/157))
+- Removed the README Amazon book reference after the linked title shifted to promote `ai-sdd`, a closed-source clone of open-sdd without attribution ([#157](https://github.com/gotalab/open-sdd/pull/157))
 
 ### Resources
-- **Pull Requests**: [#157](https://github.com/gotalab/cc-sdd/pull/157), [#160](https://github.com/gotalab/cc-sdd/pull/160)
+- **Pull Requests**: [#157](https://github.com/gotalab/open-sdd/pull/157), [#160](https://github.com/gotalab/open-sdd/pull/160)
 - **Full Changelog**: [CHANGELOG.md](../../CHANGELOG.md#302---2026-04-14)
 - **Release Notes**: [English](./RELEASE_NOTES_en.md)
 
 ### Installation
 ```bash
-npx cc-sdd@latest
+npx @brujo2020/open-sdd@latest
 ```
 
 ---
@@ -43,26 +43,26 @@ npx cc-sdd@latest
 ## 🛡️ Ver 3.0.1 (2026-04-11) – Path Safety Hardening
 
 ### Summary
-Patch release focused on safer filesystem handling in `cc-sdd`, plus a small follow-up fix for mojibake and English wording.
+Patch release focused on safer filesystem handling in `open-sdd`, plus a small follow-up fix for mojibake and English wording.
 
 ### Fixed
-- Fixed the mojibake in the Claude Code Skills `kiro-impl` template so the feature-flag protocol renders the `→` arrow correctly ([#154](https://github.com/gotalab/cc-sdd/pull/154))
+- Fixed the mojibake in the Claude Code Skills `kiro-impl` template so the feature-flag protocol renders the `→` arrow correctly ([#154](https://github.com/gotalab/open-sdd/pull/154))
 
 ### Security
 - Hardened manifest, template, and shared-rule path handling so generated file operations stay within their expected roots
-- Rejected unsafe traversal-style inputs and writes through symlinked destinations during execution ([#155](https://github.com/gotalab/cc-sdd/pull/155))
+- Rejected unsafe traversal-style inputs and writes through symlinked destinations during execution ([#155](https://github.com/gotalab/open-sdd/pull/155))
 
 ### Documentation
-- Updated a few English docs lines to replace `team-scale AI-driven development` with the more natural `AI-driven development at team scale` ([#155](https://github.com/gotalab/cc-sdd/pull/155))
+- Updated a few English docs lines to replace `team-scale AI-driven development` with the more natural `AI-driven development at team scale` ([#155](https://github.com/gotalab/open-sdd/pull/155))
 
 ### Resources
-- **Pull Requests**: [#154](https://github.com/gotalab/cc-sdd/pull/154), [#155](https://github.com/gotalab/cc-sdd/pull/155)
+- **Pull Requests**: [#154](https://github.com/gotalab/open-sdd/pull/154), [#155](https://github.com/gotalab/open-sdd/pull/155)
 - **Full Changelog**: [CHANGELOG.md](../../CHANGELOG.md#301---2026-04-11)
 - **Release Notes**: [English](./RELEASE_NOTES_en.md)
 
 ### Installation
 ```bash
-npx cc-sdd@latest
+npx @brujo2020/open-sdd@latest
 ```
 
 ---
@@ -70,23 +70,23 @@ npx cc-sdd@latest
 ## 🎉 Ver 3.0.0 (2026-04-10) – Skills Mode & Autonomous Implementation
 
 ### 🎯 Highlights
-- **Agent Skills as the primary workflow**: cc-sdd now centers on `--*-skills` installs and a unified 17-skill workflow across 8 platforms.
+- **Agent Skills as the primary workflow**: open-sdd now centers on `--*-skills` installs and a unified 17-skill workflow across 8 platforms.
 - **Specs you can run**: `/kiro-discovery`, `/kiro-spec-batch`, and long-running autonomous `/kiro-impl` turn approved specs into an execution control plane, not just project documents.
-- **Native subagent dispatch**: autonomous implementation, review, and debug loops now live inside cc-sdd without relying on the external Ralph Loop project.
+- **Native subagent dispatch**: autonomous implementation, review, and debug loops now live inside open-sdd without relying on the external Ralph Loop project.
 
 ### ✨ Added
-- Skills-based agents for Cursor, GitHub Copilot, OpenCode, Gemini CLI, Windsurf, and Antigravity, alongside upgraded Claude Code Skills and Codex Skills support ([#141](https://github.com/gotalab/cc-sdd/pull/141))
+- Skills-based agents for Cursor, GitHub Copilot, OpenCode, Gemini CLI, Windsurf, and Antigravity, alongside upgraded Claude Code Skills and Codex Skills support ([#141](https://github.com/gotalab/open-sdd/pull/141))
 - New workflow entry points:
   - `/kiro-discovery` for idea triage and roadmap routing
   - `/kiro-spec-batch` for parallel multi-spec creation
-  - `/kiro-impl` for autonomous implementation with reviewer/debugger loops ([#141](https://github.com/gotalab/cc-sdd/pull/141))
-- New rules/templates for boundary-first planning, design synthesis, review gates, task decomposition, and steering customization under `.kiro/settings/` ([#141](https://github.com/gotalab/cc-sdd/pull/141))
-- `cc-sdd-new-agent`, a SOP-style skill for adding or migrating supported agents ([#141](https://github.com/gotalab/cc-sdd/pull/141))
+  - `/kiro-impl` for autonomous implementation with reviewer/debugger loops ([#141](https://github.com/gotalab/open-sdd/pull/141))
+- New rules/templates for boundary-first planning, design synthesis, review gates, task decomposition, and steering customization under `.kiro/settings/` ([#141](https://github.com/gotalab/open-sdd/pull/141))
+- `open-sdd-new-agent`, a SOP-style skill for adding or migrating supported agents ([#141](https://github.com/gotalab/open-sdd/pull/141))
 
 ### 🔧 Changed
-- Default install target is now `claude-code-skills`, making skills mode the out-of-the-box experience ([#141](https://github.com/gotalab/cc-sdd/pull/141))
-- Documentation, onboarding, and positioning have been rewritten around the v3 workflow and “long-running autonomous implementation” model ([#141](https://github.com/gotalab/cc-sdd/pull/141))
-- Issue auto-close automation now activates only when maintainers intentionally apply the `awaiting-response` label ([#138](https://github.com/gotalab/cc-sdd/pull/138))
+- Default install target is now `claude-code-skills`, making skills mode the out-of-the-box experience ([#141](https://github.com/gotalab/open-sdd/pull/141))
+- Documentation, onboarding, and positioning have been rewritten around the v3 workflow and “long-running autonomous implementation” model ([#141](https://github.com/gotalab/open-sdd/pull/141))
+- Issue auto-close automation now activates only when maintainers intentionally apply the `awaiting-response` label ([#138](https://github.com/gotalab/open-sdd/pull/138))
 
 ### ⚠️ Breaking / Migration Notes
 - Skills mode is now the primary path. Command-based installs remain deprecated and should be migrated to `--*-skills`.
@@ -97,13 +97,13 @@ npx cc-sdd@latest
 - See [docs/guides/migration-guide.md](../guides/migration-guide.md) for upgrade guidance.
 
 ### 🔗 Resources
-- **Pull Requests**: [#141](https://github.com/gotalab/cc-sdd/pull/141), [#138](https://github.com/gotalab/cc-sdd/pull/138)
+- **Pull Requests**: [#141](https://github.com/gotalab/open-sdd/pull/141), [#138](https://github.com/gotalab/open-sdd/pull/138)
 - **Full Changelog**: [CHANGELOG.md](../../CHANGELOG.md#300---2026-04-10)
 - **Release Notes**: [English](./RELEASE_NOTES_en.md)
 
 ### 📦 Installation
 ```bash
-npx cc-sdd@latest
+npx @brujo2020/open-sdd@latest
 ```
 
 ---
@@ -119,7 +119,7 @@ npx cc-sdd@latest
 ### New Contributors
 * @hiiamkazuto made their first contribution in #134
 
-- Resources: [CHANGELOG.md](../../CHANGELOG.md#211---2026-02-02), PRs: [#134](https://github.com/gotalab/cc-sdd/pull/134), [#135](https://github.com/gotalab/cc-sdd/pull/135)
+- Resources: [CHANGELOG.md](../../CHANGELOG.md#211---2026-02-02), PRs: [#134](https://github.com/gotalab/open-sdd/pull/134), [#135](https://github.com/gotalab/open-sdd/pull/135)
 
 ---
 
@@ -130,14 +130,14 @@ npx cc-sdd@latest
 - **Model Updates**: Updated recommended models to Opus 4.5, GPT-5.2, and Gemini 3 Flash for improved performance.
 
 ### ✨ Added
-- **OpenCode** ([#117](https://github.com/gotalab/cc-sdd/pull/117), [#127](https://github.com/gotalab/cc-sdd/pull/127))
+- **OpenCode** ([#117](https://github.com/gotalab/open-sdd/pull/117), [#127](https://github.com/gotalab/open-sdd/pull/127))
   - `.opencode/commands/` with all 11 kiro commands
   - OpenCode Agents (subagent version) in `.opencode/agents/`
   - OPENCODE.md project memory template
-  - Installation: `npx cc-sdd@latest --opencode` or `--opencode-agent`
+  - Installation: `npx @brujo2020/open-sdd@latest --opencode` or `--opencode-agent`
 
 ### 🔧 Changed
-- Updated recommended models ([#128](https://github.com/gotalab/cc-sdd/pull/128), [#129](https://github.com/gotalab/cc-sdd/pull/129))
+- Updated recommended models ([#128](https://github.com/gotalab/open-sdd/pull/128), [#129](https://github.com/gotalab/open-sdd/pull/129))
   - Claude: Opus 4.5
   - OpenAI: GPT-5.2
   - Google: Gemini 3 Flash
@@ -151,7 +151,7 @@ npx cc-sdd@latest
 ### 🙏 New Contributors
 * @inovue made their first contribution in #117
 
-- Resources: [CHANGELOG.md](../../CHANGELOG.md#210---2026-02-01), PRs: [#117](https://github.com/gotalab/cc-sdd/pull/117), [#127](https://github.com/gotalab/cc-sdd/pull/127), [#128](https://github.com/gotalab/cc-sdd/pull/128), [#129](https://github.com/gotalab/cc-sdd/pull/129)
+- Resources: [CHANGELOG.md](../../CHANGELOG.md#210---2026-02-01), PRs: [#117](https://github.com/gotalab/open-sdd/pull/117), [#127](https://github.com/gotalab/open-sdd/pull/127), [#128](https://github.com/gotalab/open-sdd/pull/128), [#129](https://github.com/gotalab/open-sdd/pull/129)
 
 ---
 
@@ -163,7 +163,7 @@ npx cc-sdd@latest
 ### New Contributors
 * @tpapamichail made their first contribution in #121
 
-- Resources: [CHANGELOG.md](../../CHANGELOG.md#205---2026-01-08), PR: [#121](https://github.com/gotalab/cc-sdd/pull/121)
+- Resources: [CHANGELOG.md](../../CHANGELOG.md#205---2026-01-08), PR: [#121](https://github.com/gotalab/open-sdd/pull/121)
 
 ---
 
@@ -174,14 +174,14 @@ npx cc-sdd@latest
 - Fixed registry.ts with review improvements.
 
 ### Documentation
-- Added AI-Assisted SDD book reference to cc-sdd documentation.
+- Added AI-Assisted SDD book reference to open-sdd documentation.
 
 ### New Contributors
 * @irisTa56 made their first contribution in #118
 * @leosamp made their first contribution in #109
 * @Kakenyan made their first contribution in #107
 
-- Resources: [CHANGELOG.md](../../CHANGELOG.md#204---2026-01-07), PRs: [#118](https://github.com/gotalab/cc-sdd/pull/118), [#109](https://github.com/gotalab/cc-sdd/pull/109), [#107](https://github.com/gotalab/cc-sdd/pull/107)
+- Resources: [CHANGELOG.md](../../CHANGELOG.md#204---2026-01-07), PRs: [#118](https://github.com/gotalab/open-sdd/pull/118), [#109](https://github.com/gotalab/open-sdd/pull/109), [#107](https://github.com/gotalab/open-sdd/pull/107)
 
 ---
 
@@ -190,7 +190,7 @@ npx cc-sdd@latest
 - Refined recommended OpenAI models for Codex CLI, Cursor, GitHub Copilot, and Windsurf to explicitly include `gpt-5.1-codex medium/high` as the primary code-focused option, with `gpt-5.1 medium/high` as a general-purpose fallback.
 - Updated DEV_GUIDELINES-related tests so they match the stricter language-handling rules introduced in v2.0.2, keeping runtime behavior unchanged while ensuring `npm test` passes cleanly for v2.0.3.
 
-- Resources: [CHANGELOG.md](../../CHANGELOG.md#203---2025-11-15), PR: [#104](https://github.com/gotalab/cc-sdd/pull/104)
+- Resources: [CHANGELOG.md](../../CHANGELOG.md#203---2025-11-15), PR: [#104](https://github.com/gotalab/open-sdd/pull/104)
 
 ---
 
@@ -200,7 +200,7 @@ npx cc-sdd@latest
 - Tightened language handling so all generated Markdown (requirements, design, tasks, research, validation) uses the spec’s target language and falls back to English (`en`) when `spec.json.language` is not set.
 - Made EARS patterns and traceability more consistent by keeping EARS trigger phrases in English, localizing only the variable slots, and enforcing numeric requirement IDs (e.g. `Requirement 1`, `1.1`, `2.3`) so requirements → design → tasks mappings are stable and fail fast when IDs are missing or invalid.
 
-- Resources: [CHANGELOG.md](../../CHANGELOG.md#202---2025-11-15), PR: [#102](https://github.com/gotalab/cc-sdd/pull/102)
+- Resources: [CHANGELOG.md](../../CHANGELOG.md#202---2025-11-15), PR: [#102](https://github.com/gotalab/open-sdd/pull/102)
 
 ---
 
@@ -210,7 +210,7 @@ npx cc-sdd@latest
 Documentation-only release improving README clarity and visual consistency.
 
 ### Resources
-- PRs: [#93](https://github.com/gotalab/cc-sdd/pull/93), [#94](https://github.com/gotalab/cc-sdd/pull/94)
+- PRs: [#93](https://github.com/gotalab/open-sdd/pull/93), [#94](https://github.com/gotalab/open-sdd/pull/94)
 - [CHANGELOG.md](../../CHANGELOG.md#201---2025-11-10)
 
 ---
@@ -218,14 +218,14 @@ Documentation-only release improving README clarity and visual consistency.
 ## 🎉 Ver 2.0.0 (2025-11-09) – Stable Release
 
 ### Highlights at a Glance
-- **`npx cc-sdd@latest` = full stack SDD**: all alpha capabilities (research.md, validation commands, Subagents, Windsurf) are now GA.
+- **`npx @brujo2020/open-sdd@latest` = full stack SDD**: all alpha capabilities (research.md, validation commands, Subagents, Windsurf) are now GA.
 - **Spec-to-impl fidelity**: Research/Design/Tasks templates now enforce requirement IDs, component density rules, and Supporting References for long-form details.
 - **Brownfield guardrails**: `/kiro:validate-*` commands, parallel-task analysis, and steering-wide project memory reduce drift before any code change.
 - **Global parity**: 7 AI agents × 13 languages share the same templates, prompts, and installation flow.
 
 ### Upgrade Essentials
 1. Follow the [Migration Guide](../guides/migration-guide.md) for template layout changes (`.kiro/settings/templates/*`) and new steering behavior (directory-wide load).
-2. Update automation/scripts to call `npx cc-sdd@latest` (the `@next` tag is reserved for future previews).
+2. Update automation/scripts to call `npx @brujo2020/open-sdd@latest` (the `@next` tag is reserved for future previews).
 3. Regenerate steering + spec templates once to pick up Research.md, the new design rules, and tasks parallel markers.
 
 ### Key Capabilities in this release
@@ -238,7 +238,7 @@ Documentation-only release improving README clarity and visual consistency.
 ### Resources
 - Full technical diff: see [CHANGELOG.md](../../CHANGELOG.md#200---2025-11-09).
 - Migration specifics: [docs/guides/migration-guide.md](../guides/migration-guide.md).
-- PLAN references: `docs/cc-sdd/v2.0.0/PLAN.md` for release tasks, `docs/cc-sdd/v2.0.0/PLAN2.md` for design-template scope.
+- PLAN references: `docs/open-sdd/v2.0.0/PLAN.md` for release tasks, `docs/open-sdd/v2.0.0/PLAN2.md` for design-template scope.
 
 Once your project templates are regenerated on v2.0.0, all spec/todo automation should operate without additional flags.
 
@@ -253,11 +253,11 @@ Once your project templates are regenerated on v2.0.0, all spec/todo automation 
 - **Enhanced Documentation**: Improved user experience with clarified installation instructions and npm badge addition.
 
 ### 🔧 Improvements
-- Updated EARS format to lowercase syntax ([#88](https://github.com/gotalab/cc-sdd/pull/88))
+- Updated EARS format to lowercase syntax ([#88](https://github.com/gotalab/open-sdd/pull/88))
   - Changed from "WHILE/WHEN/WHERE/IF" to "while/when/where/if"
   - More natural and readable requirements description
-- Clarified installation documentation ([#87](https://github.com/gotalab/cc-sdd/pull/87))
-- Added npm `next` version badge to README files ([#86](https://github.com/gotalab/cc-sdd/pull/86))
+- Clarified installation documentation ([#87](https://github.com/gotalab/open-sdd/pull/87))
+- Added npm `next` version badge to README files ([#86](https://github.com/gotalab/open-sdd/pull/86))
 
 ---
 
@@ -267,18 +267,18 @@ Once your project templates are regenerated on v2.0.0, all spec/todo automation 
 - **Comprehensive Customization Guide**: Added customization guide with 7 practical examples and complete command reference, making it easier to tailor templates to your project needs.
 
 ### 📖 New Documentation
-- **Customization Guide** ([#83](https://github.com/gotalab/cc-sdd/pull/83))
+- **Customization Guide** ([#83](https://github.com/gotalab/open-sdd/pull/83))
   - Template customization patterns
   - Agent-specific workflow examples
   - Project-specific rule examples
   - 7 practical customization examples
-- **Command Reference** ([#83](https://github.com/gotalab/cc-sdd/pull/83))
+- **Command Reference** ([#83](https://github.com/gotalab/open-sdd/pull/83))
   - Detailed usage for all 11 `/kiro:*` commands
   - Parameter descriptions and practical examples
 
 ### 🔧 Improvements
-- Clarified template customization instructions ([#85](https://github.com/gotalab/cc-sdd/pull/85))
-- Customization guide review improvements ([#84](https://github.com/gotalab/cc-sdd/pull/84))
+- Clarified template customization instructions ([#85](https://github.com/gotalab/open-sdd/pull/85))
+- Customization guide review improvements ([#84](https://github.com/gotalab/open-sdd/pull/84))
 
 ---
 
@@ -288,10 +288,10 @@ Once your project templates are regenerated on v2.0.0, all spec/todo automation 
 - **Automated GitHub Issue Management**: Automatically closes inactive issues after 10 days, streamlining project management.
 
 ### ⚙️ Automation
-- Automated GitHub issue lifecycle management ([#80](https://github.com/gotalab/cc-sdd/pull/80))
+- Automated GitHub issue lifecycle management ([#80](https://github.com/gotalab/open-sdd/pull/80))
   - Auto-close stale issues after 10 days of inactivity
   - Configurable stale detection workflow
-  - English-only workflow messaging ([#81](https://github.com/gotalab/cc-sdd/pull/81))
+  - English-only workflow messaging ([#81](https://github.com/gotalab/open-sdd/pull/81))
 
 ### 🔧 Improvements
 - Updated stale detection period to 10 days
@@ -302,7 +302,7 @@ Once your project templates are regenerated on v2.0.0, all spec/todo automation 
 ## 🚀 Ver 2.0.0-alpha.3 (2025-10-22)
 
 ### 🎯 Highlights
-- **Windsurf IDE support**: Added a dedicated manifest, workflow templates under `.windsurf/workflows/`, and an AGENTS.md quickstart so Windsurf users can run the full kiro Spec-Driven Development workflow with `npx cc-sdd@next --windsurf`.
+- **Windsurf IDE support**: Added a dedicated manifest, workflow templates under `.windsurf/workflows/`, and an AGENTS.md quickstart so Windsurf users can run the full kiro Spec-Driven Development workflow with `npx @brujo2020/open-sdd@next --windsurf`.
 - **CLI experience refresh**: Updated completion guides and recommended models so the setup summary now points Windsurf users to the correct follow-up commands and manual QA flow.
 
 ### 🧪 Quality & Tooling
@@ -310,7 +310,7 @@ Once your project templates are regenerated on v2.0.0, all spec/todo automation 
 - Extended CLI argument parsing to recognize the `--windsurf` alias and ensured the agent registry emits the correct layout metadata.
 
 ### 📚 Documentation
-- Refreshed the root README, CLI docs (`tools/cc-sdd/README*`), and legacy guides (`docs/README/README_{en,ja,zh-TW}.md`) with Windsurf instructions, updated quick-start matrices, and the manual QA checklist using `npx cc-sdd@next --windsurf`.
+- Refreshed the root README, CLI docs (`tools/open-sdd/README*`), and legacy guides (`docs/README/README_{en,ja,zh-TW}.md`) with Windsurf instructions, updated quick-start matrices, and the manual QA checklist using `npx @brujo2020/open-sdd@next --windsurf`.
 
 ### 📈 Key Metrics
 - **Supported platforms**: 7 (Claude Code, Cursor IDE, Gemini CLI, Codex CLI, GitHub Copilot, Qwen Code, Windsurf IDE)
@@ -375,7 +375,7 @@ Refreshed for clarity and conciseness
 
 ### 🔧 Technical Improvements
 Enhanced development experience and maintainability
-- **GitHub URL updates** - Migration support to gotalab/cc-sdd
+- **GitHub URL updates** - Migration support to gotalab/open-sdd
 - **Typo corrections** - "Clade Code" → "Claude Code"
 - **CHANGELOG organization** - Moved to docs directory
 
@@ -396,10 +396,10 @@ Unified spec-driven development across four platforms
 - ⚡ **Gemini CLI** - TOML structured configuration
 - 🧠 **Codex CLI** - GPT-5 optimized prompt design
 
-### 📦 cc-sdd Package Distribution Started
-[cc-sdd](https://www.npmjs.com/package/cc-sdd) - AI-DLC + Spec Driven Development
+### 📦 open-sdd Package Distribution Started
+[open-sdd](https://www.npmjs.com/package/open-sdd) - AI-DLC + Spec Driven Development
 - Claude Code & Gemini CLI support
-- Installable via `npx cc-sdd@latest`
+- Installable via `npx @brujo2020/open-sdd@latest`
 
 ### 🔄 Development Workflow Complete Overhaul
 Fundamental review of entire spec-driven development workflow

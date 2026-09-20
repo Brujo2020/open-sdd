@@ -2,7 +2,7 @@
 #
 # Level C is the half of the floor that asks no vendor's permission and cannot be silently
 # withdrawn: CI runs the full declared gate chain on every pull request. Together with the
-# pre-commit hook (level B, `tools/cc-sdd/templates/hooks/pre-commit`) it makes the guarantee
+# pre-commit hook (level B, `tools/open-sdd/templates/hooks/pre-commit`) it makes the guarantee
 # checkable instead of declared — see `open-sdd floor status` and gap G-11 in
 # docs/PAPER-ALIGNMENT.md.
 #
@@ -21,6 +21,8 @@ on:
 
 permissions:
   contents: read
+  # Required by the SARIF upload step below. The gate chain itself only needs contents: read.
+  security-events: write
 
 jobs:
   gates:
@@ -36,42 +38,42 @@ jobs:
           node-version: '20'
 
       - name: Install workspace
-        working-directory: tools/cc-sdd
+        working-directory: tools/open-sdd
         run: npm ci
 
       - name: Build
-        working-directory: tools/cc-sdd
+        working-directory: tools/open-sdd
         run: npm run build
 
       - name: Test suite
-        working-directory: tools/cc-sdd
+        working-directory: tools/open-sdd
         run: npm test
 
       - name: Install the commit gate (level B)
         run: npm run hooks:install
 
       - name: Resolve the declared gate chain
-        run: node tools/cc-sdd/dist/cli.js gates chain --profile regulated
+        run: node tools/open-sdd/dist/cli.js gates chain --profile regulated
 
       - name: Run the gate chain against the change
         run: |
           BASE="${{ github.event.pull_request.base.sha }}"
           if [ -z "$BASE" ]; then BASE="HEAD~1"; fi
-          node tools/cc-sdd/dist/cli.js gates run --base "$BASE"
+          node tools/open-sdd/dist/cli.js gates run --base "$BASE"
 
       - name: Decision discipline (decidable properties)
-        run: node tools/cc-sdd/dist/cli.js govern discipline
+        run: node tools/open-sdd/dist/cli.js govern discipline
         continue-on-error: true
 
       - name: Enforce the declared rigor level (the constitution is required from Spec-Anchored)
-        run: node tools/cc-sdd/dist/cli.js govern rigor
+        run: node tools/open-sdd/dist/cli.js govern rigor
 
       - name: Validate the delta spec, when the change declares one
         run: |
           for spec in .sdd/specs/*/delta.md; do
             [ -f "$spec" ] || continue
             feature="$(basename "$(dirname "$spec")")"
-            node tools/cc-sdd/dist/cli.js delta validate "$feature"
+            node tools/open-sdd/dist/cli.js delta validate "$feature"
           done
 
       - name: Execution contracts — a declared contract that does not exist fails the build
@@ -81,12 +83,38 @@ jobs:
           for spec in .sdd/specs/*/delta.md; do
             [ -f "$spec" ] || continue
             feature="$(basename "$(dirname "$spec")")"
-            node tools/cc-sdd/dist/cli.js brownfield contracts "$feature" --base "$BASE"
+            node tools/open-sdd/dist/cli.js brownfield contracts "$feature" --base "$BASE"
           done
 
       - name: Claims registry (§9.6) — a broken claim fails the build
-        run: node tools/cc-sdd/dist/cli.js assure claims --verify
+        run: node tools/open-sdd/dist/cli.js assure claims --verify
+
+      # The evidence bundle an auditor reads: constitution, specs, gates, claims, alignment and
+      # rigor, with one sha256 per artifact in manifest.json (REQ-MAT-006). It exits 1 on a gate
+      # FAIL or a broken claim and 2 when the audit could not run, so it fails the job like any
+      # other gate. The SARIF report (REQ-MAT-007) is the same verdict for code scanning.
+      - name: Audit evidence bundle with one sha256 per artifact
+        run: |
+          node tools/open-sdd/dist/cli.js audit bundle \
+            --out .sdd/audit/ci \
+            --sarif .sdd/audit/open-sdd.sarif
+
+      - name: Upload the evidence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-sdd-audit-bundle
+          path: .sdd/audit/ci
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload SARIF to code scanning (REQ-MAT-007)
+        if: always() && hashFiles('.sdd/audit/open-sdd.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .sdd/audit/open-sdd.sarif
+          category: open-sdd
 
       - name: Report the enforcement floor
         if: always()
-        run: node tools/cc-sdd/dist/cli.js floor status
+        run: node tools/open-sdd/dist/cli.js floor status

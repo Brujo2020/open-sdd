@@ -6,6 +6,6 @@ name the reference architecture uses for the second element of the Documentary T
 
 This file exists because this repository's older tooling resolves the Triad slot as `design.md`.
 Rather than maintain two divergent documents, the mapping is declared here and both names are
-accepted by `tools/cc-sdd/src/core/triad.ts` (`TRIAD[1].aliases = ['design.md']`).
+accepted by `tools/open-sdd/src/core/triad.ts` (`TRIAD[1].aliases = ['design.md']`).
 
 Read `plan.md`.

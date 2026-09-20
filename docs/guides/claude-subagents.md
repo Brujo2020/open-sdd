@@ -14,7 +14,7 @@ This guide explains how the **Claude Code Subagents** install target (`--claude-
 
 ## How `spec-quick` Orchestrates Subagents
 
-`spec-quick` is a macro-command that calls four Subagents in sequence—`spec-init` (inline), `spec-requirements`, `spec-design`, and `spec-tasks`—to generate a brand-new spec in one run. Internally, the command follows the same instructions defined in `tools/cc-sdd/templates/agents/claude-code-agent/commands/spec-quick.md`.
+`spec-quick` is a macro-command that calls four Subagents in sequence—`spec-init` (inline), `spec-requirements`, `spec-design`, and `spec-tasks`—to generate a brand-new spec in one run. Internally, the command follows the same instructions defined in `tools/open-sdd/templates/agents/claude-code-agent/commands/spec-quick.md`.
 
 ### Modes
 

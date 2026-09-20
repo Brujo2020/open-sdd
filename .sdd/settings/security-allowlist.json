@@ -42,7 +42,7 @@
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/README.md",
+      "path": "tools/open-sdd/README.md",
       "ids": [
         "curl-pipe-shell"
       ],
@@ -52,7 +52,7 @@
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/src/cli/commands/paper.ts",
+      "path": "tools/open-sdd/src/cli/commands/paper.ts",
       "ids": [
         "ignore-previous"
       ],
@@ -62,7 +62,7 @@
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/src/core/gateRunner.ts",
+      "path": "tools/open-sdd/src/core/gateRunner.ts",
       "ids": [
         "rm-rf-root",
         "system-prompt-exfil"
@@ -73,7 +73,7 @@
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/src/core/memory.ts",
+      "path": "tools/open-sdd/src/core/memory.ts",
       "ids": [
         "hidden-comment-instruction"
       ],
@@ -83,7 +83,7 @@
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/test/coreGateRunner.test.ts",
+      "path": "tools/open-sdd/test/coreGateRunner.test.ts",
       "ids": [
         "aws-access-key",
         "private-key-block",
@@ -98,7 +98,7 @@
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/test/coreMemory.test.ts",
+      "path": "tools/open-sdd/test/coreMemory.test.ts",
       "ids": [
         "ignore-previous",
         "hidden-comment-instruction"
@@ -109,38 +109,38 @@
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/dist/core/gateRunner.js",
+      "path": "tools/open-sdd/dist/core/gateRunner.js",
       "ids": [
         "rm-rf-root",
         "system-prompt-exfil"
       ],
-      "reason": "Compiled twin of tools/cc-sdd/src/core/gateRunner.ts: the emitted artifact contains the same detector pattern table (dist is committed so the package ships the CLI).",
+      "reason": "Compiled twin of tools/open-sdd/src/core/gateRunner.ts: the emitted artifact contains the same detector pattern table (dist is committed so the package ships the CLI).",
       "actor": "spec:paper-alignment",
       "owner": "mantenimiento (spec de registro)",
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/dist/cli/commands/paper.js",
+      "path": "tools/open-sdd/dist/cli/commands/paper.js",
       "ids": [
         "ignore-previous"
       ],
-      "reason": "Compiled twin of tools/cc-sdd/src/cli/commands/paper.ts: the assure-memory demo probe string.",
+      "reason": "Compiled twin of tools/open-sdd/src/cli/commands/paper.ts: the assure-memory demo probe string.",
       "actor": "spec:paper-alignment",
       "owner": "mantenimiento (spec de registro)",
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/dist/core/memory.js",
+      "path": "tools/open-sdd/dist/core/memory.js",
       "ids": [
         "hidden-comment-instruction"
       ],
-      "reason": "Compiled twin of tools/cc-sdd/src/core/memory.ts: the memory poisoning scanner pattern table.",
+      "reason": "Compiled twin of tools/open-sdd/src/core/memory.ts: the memory poisoning scanner pattern table.",
       "actor": "spec:paper-alignment",
       "owner": "mantenimiento (spec de registro)",
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/test/coreChangeImpact.test.ts",
+      "path": "tools/open-sdd/test/coreChangeImpact.test.ts",
       "ids": [
         "drop-table"
       ],
@@ -150,13 +150,23 @@
       "expires": "2027-03-31"
     },
     {
-      "path": "tools/cc-sdd/test/coreConstitution.test.ts",
+      "path": "tools/open-sdd/test/coreConstitution.test.ts",
       "ids": [
         "ignore-previous"
       ],
       "reason": "Fixture: las pruebas de resistencia a inyeccion deben alimentar al detector con los patrones que existen para cazar.",
       "actor": "spec:paper-alignment",
       "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/templates/shared/settings/templates/specs/requirements.md",
+      "ids": [
+        "hidden-comment-instruction"
+      ],
+      "reason": "Es la PLANTILLA de requisitos que el producto copia a cada proyecto: sus comentarios HTML son la guia que se le da al agente al rellenarla. El patron es correcto y aqui es intencionado; se declara en vez de silenciarse.",
+      "owner": "mantenimiento (plantillas)",
+      "actor": "spec:tool-maturity",
       "expires": "2027-03-31"
     }
   ]

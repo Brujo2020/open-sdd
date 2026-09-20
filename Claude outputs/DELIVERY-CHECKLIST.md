@@ -33,7 +33,7 @@
   - Reports status with next steps
 - [x] `CREDITS.md` — Full attribution
   - Mario Alejandro (Principal Innovation Advisor, NTT DATA)
-  - cc-sdd foundation (SDD methodology)
+  - open-sdd foundation (SDD methodology)
   - GotaLab partnership
   - NTT DATA global standards
 
@@ -52,7 +52,7 @@
 - [x] **ESM support** — proper import/export paths
 
 ### Code Standards
-- [x] **Clean paths** — ALL cc-sdd references removed
+- [x] **Clean paths** — ALL open-sdd references removed
 - [x] **No external APIs** — Claude API integration ready (simulated)
 - [x] **Proper error handling** — All edge cases covered
 - [x] **Production patterns** — CLI, file I/O, readline prompts
@@ -126,8 +126,8 @@
 ✅ **Production-Ready**: All code passes TypeScript strict mode with 0 errors
 ✅ **Easy to Install**: One-command deployment + step-by-step manual option
 ✅ **Well Documented**: Bilingual (English/Spanish) with examples and code
-✅ **Properly Attributed**: Full credits to cc-sdd foundation & GotaLab
-✅ **Clean Code**: Zero cc-sdd path references, modern TypeScript patterns
+✅ **Properly Attributed**: Full credits to open-sdd foundation & GotaLab
+✅ **Clean Code**: Zero open-sdd path references, modern TypeScript patterns
 ✅ **Future-Ready**: Ready for Claude API integration, CI/CD pipelines, test suites
 
 ---
@@ -142,4 +142,4 @@ Extract and deploy with: `bash DEPLOY.sh /path/to/open-sdd`
 
 **Generated:** 2026-09-17
 **Package Version:** 2.0 (Production)
-**Attribution:** cc-sdd foundation, Mario Alejandro (NTT DATA), GotaLab partnership
+**Attribution:** open-sdd foundation, Mario Alejandro (NTT DATA), GotaLab partnership

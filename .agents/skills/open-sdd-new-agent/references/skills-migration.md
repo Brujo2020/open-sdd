@@ -1,6 +1,6 @@
 # Skills Migration Guide for Existing Agents
 
-Use this guide when the target agent is already supported in `cc-sdd` and now offers a native Skills mechanism.
+Use this guide when the target agent is already supported in `open-sdd` and now offers a native Skills mechanism.
 
 ## Decision Rule
 
@@ -19,16 +19,16 @@ Use in-place migration only when the user explicitly asks for a breaking change.
 - Verify invocation style differences from command mode
 
 2. Compare current implementation
-- Check `tools/cc-sdd/src/agents/registry.ts` for current `agent-id`
-- Check current manifest in `tools/cc-sdd/templates/manifests/`
-- Check current templates in `tools/cc-sdd/templates/agents/{agent-id}/`
-- Check existing real-manifest test coverage in `tools/cc-sdd/test/`
+- Check `tools/open-sdd/src/agents/registry.ts` for current `agent-id`
+- Check current manifest in `tools/open-sdd/templates/manifests/`
+- Check current templates in `tools/open-sdd/templates/agents/{agent-id}/`
+- Check existing real-manifest test coverage in `tools/open-sdd/test/`
 
 3. Define migration target
 - New variant id: `{agent-id}-skills`
-- New templates root: `tools/cc-sdd/templates/agents/{agent-id}-skills/`
-- New manifest: `tools/cc-sdd/templates/manifests/{agent-id}-skills.json`
-- New test: `tools/cc-sdd/test/realManifest{AgentName}Skills.test.ts`
+- New templates root: `tools/open-sdd/templates/agents/{agent-id}-skills/`
+- New manifest: `tools/open-sdd/templates/manifests/{agent-id}-skills.json`
+- New test: `tools/open-sdd/test/realManifest{AgentName}Skills.test.ts`
 
 4. Implement skills-specific behavior
 - Registry `layout.commandsDir` points to skills directory
@@ -45,10 +45,10 @@ Use in-place migration only when the user explicitly asks for a breaking change.
 ## Recommended Base Example
 
 Use these files as concrete reference for skills-mode implementation:
-- `tools/cc-sdd/src/agents/registry.ts` (`claude-code-skills` entry)
-- `tools/cc-sdd/templates/manifests/claude-code-skills.json`
-- `tools/cc-sdd/templates/agents/claude-code-skills/`
-- `tools/cc-sdd/test/realManifestClaudeCodeSkills.test.ts`
+- `tools/open-sdd/src/agents/registry.ts` (`claude-code-skills` entry)
+- `tools/open-sdd/templates/manifests/claude-code-skills.json`
+- `tools/open-sdd/templates/agents/claude-code-skills/`
+- `tools/open-sdd/test/realManifestClaudeCodeSkills.test.ts`
 
 ## Review Output Requirement
 

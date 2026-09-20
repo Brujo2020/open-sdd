@@ -3,11 +3,11 @@
 # The repository has two manifests and only one of them is publishable:
 #
 #   package.json                -> @brujo2020/open-sdd  (the artifact users install)
-#   tools/cc-sdd/package.json   -> the build toolchain, marked "private": true
+#   tools/open-sdd/package.json   -> the build toolchain, marked "private": true
 #
-# Publishing ran from `tools/cc-sdd` before the rename, which would have shipped an unscoped
+# Publishing ran from `tools/open-sdd` before the rename, which would have shipped an unscoped
 # `open-sdd` instead of the scoped package. It now builds and tests the workspace, then publishes
-# from the repository root, where `files` collects tools/cc-sdd/dist and the agent templates.
+# from the repository root, where `files` collects tools/open-sdd/dist and the agent templates.
 #
 # Scoped packages default to private on npm, so `--access public` is explicit here and mirrored by
 # `publishConfig.access` in package.json. Provenance is requested through OIDC.
@@ -37,22 +37,22 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install workspace
-        working-directory: tools/cc-sdd
+        working-directory: tools/open-sdd
         run: npm ci
 
       - name: Build
-        working-directory: tools/cc-sdd
+        working-directory: tools/open-sdd
         run: npm run build
 
       - name: Test suite (a red suite blocks the release)
-        working-directory: tools/cc-sdd
+        working-directory: tools/open-sdd
         run: npm test
 
       - name: Verify the gate chain on the release tree
-        run: node tools/cc-sdd/dist/cli.js gates run
+        run: node tools/open-sdd/dist/cli.js gates run
 
       - name: Verify the claims registry
-        run: node tools/cc-sdd/dist/cli.js assure claims --verify
+        run: node tools/open-sdd/dist/cli.js assure claims --verify
 
       - name: Confirm the published identity
         run: |

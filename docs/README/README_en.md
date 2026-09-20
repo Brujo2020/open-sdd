@@ -1,6 +1,6 @@
 # Multi-Platform Spec-Driven Development
 
-> ⚠️ **Legacy documentation (archived).** This page reflects an early cc-sdd workflow and is kept for reference only. For the latest instructions, see the [current README](../../README.md).
+> ⚠️ **Legacy documentation (archived).** This page reflects an early open-sdd workflow and is kept for reference only. For the latest instructions, see the [current README](../../README.md).
 
 > 🚀 **Supported Platforms**  
 > 🤖 **Claude Code** | 🔮 **Cursor** | ⚡ **Gemini CLI** | 🧠 **Codex CLI**

@@ -1,0 +1,203 @@
+# open-sdd | the merge boundary and the audit bundle, as a native GitHub Action.
+#
+# This is a COMPOSITE action: it builds the CLI from the repository the action was fetched from
+# (`github.action_path`) and then runs it in the caller's workspace. Nothing is installed
+# globally and no version is resolved from PATH or from the npm registry, so the action and the
+# gates it enforces cannot drift apart.
+#
+# The contract it enforces (mirrored in docs/guides/ci-integration.md):
+#   0 = pass · 1 = blocking finding (gate FAIL or broken claim) · 2 = the audit could not run
+#
+# `gates run` and the audit bundle both fail the job on a blocking finding; the SARIF report is
+# uploaded to code scanning so the same finding is also visible in the Security tab.
+
+name: 'open-sdd gates'
+description: >-
+  Run the Open-SDD Zero-Trust gate chain, the constitutional status check and the audit evidence
+  bundle, and publish SARIF 2.1.0 to code scanning. Fails the job on a blocking finding.
+
+author: 'Open-SDD'
+
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  feature:
+    description: 'Feature spec to audit. Empty means every spec under .sdd/specs.'
+    required: false
+    default: ''
+  level:
+    description: >-
+      Minimum rigor level the run must satisfy: spec-first | spec-anchored | spec-as-source.
+      The declared level in .sdd/settings/rigor.json must be at least this; the action never
+      lowers a repository's declared rigor.
+    required: false
+    default: 'spec-first'
+  sarif:
+    description: 'Path of the SARIF 2.1.0 report, relative to the repository root.'
+    required: false
+    default: '.sdd/audit/open-sdd.sarif'
+  profile:
+    description: 'Gate-chain reduction profile: solo | team | regulated.'
+    required: false
+    default: 'solo'
+  base:
+    description: >-
+      Git ref the gate chain diffs against. Empty derives it from the pull request base commit,
+      falling back to HEAD~1.
+    required: false
+    default: ''
+  upload-sarif:
+    description: >-
+      Upload the SARIF report to code scanning. Requires `security-events: write` on the job.
+    required: false
+    default: 'true'
+  node-version:
+    description: 'Node.js version used to build and run the CLI.'
+    required: false
+    default: '20'
+
+outputs:
+  bundle:
+    description: 'Directory of the evidence bundle (contains manifest.json and every artifact).'
+    value: ${{ steps.bundle.outputs.dir }}
+  manifest:
+    description: 'Path of the bundle manifest.json, with one sha256 per artifact.'
+    value: ${{ steps.bundle.outputs.manifest }}
+  sarif:
+    description: 'Path of the SARIF 2.1.0 report.'
+    value: ${{ steps.bundle.outputs.sarif }}
+  exit-code:
+    description: 'Exit code of the audit bundle: 0 pass, 1 blocking finding, 2 could not run.'
+    value: ${{ steps.bundle.outputs.exit_code }}
+  verdict:
+    description: 'pass | blocked.'
+    value: ${{ steps.bundle.outputs.verdict }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    # ── The pinned CLI: built from the action's own checkout, never resolved from PATH ──────────
+    - name: Build the pinned open-sdd CLI
+      shell: bash
+      run: |
+        set -euo pipefail
+        CLI_ROOT="${{ github.action_path }}"
+        if [ ! -f "$CLI_ROOT/tools/open-sdd/package.json" ]; then
+          echo "::error::tools/open-sdd/package.json not found under $CLI_ROOT; this action must run from an open-sdd checkout."
+          exit 2
+        fi
+        npm ci --prefix "$CLI_ROOT/tools/open-sdd"
+        npm run build --prefix "$CLI_ROOT/tools/open-sdd"
+        echo "OPEN_SDD_CLI=$CLI_ROOT/tools/open-sdd/dist/cli.js" >> "$GITHUB_ENV"
+
+    - name: Resolve the diff base
+      id: base
+      shell: bash
+      run: |
+        set -euo pipefail
+        BASE="${{ inputs.base }}"
+        if [ -z "$BASE" ]; then
+          BASE="${{ github.event.pull_request.base.sha }}"
+        fi
+        if [ -z "$BASE" ]; then
+          BASE="HEAD~1"
+        fi
+        echo "ref=$BASE" >> "$GITHUB_OUTPUT"
+
+    # ── The declared rigor level must be at least the requested one ─────────────────────────────
+    - name: Enforce the requested rigor level
+      shell: bash
+      env:
+        REQUESTED: ${{ inputs.level }}
+      run: |
+        set -euo pipefail
+        node -e '
+          const fs = require("fs");
+          const rank = { "spec-first": 1, "spec-anchored": 2, "spec-as-source": 3 };
+          const requested = process.env.REQUESTED;
+          let declared = "spec-first";
+          try {
+            const parsed = JSON.parse(fs.readFileSync(".sdd/settings/rigor.json", "utf8"));
+            if (typeof parsed.level === "string" && parsed.level.length > 0) declared = parsed.level;
+          } catch {}
+          if (!rank[requested]) {
+            console.error("unknown level: " + requested);
+            process.exit(2);
+          }
+          if (rank[declared] < rank[requested]) {
+            console.error("declared rigor " + declared + " is below the requested " + requested + ".");
+            console.error("Raise the bar in .sdd/settings/rigor.json: node " + process.env.OPEN_SDD_CLI + " govern rigor --set " + requested + " --rationale \"<why>\"");
+            process.exit(1);
+          }
+        '
+        node "$OPEN_SDD_CLI" govern rigor
+
+    # ── The Zero-Trust chain against the change (the same step the repository's own CI runs) ────
+    - name: Resolve the declared gate chain
+      shell: bash
+      run: node "$OPEN_SDD_CLI" gates chain --profile "${{ inputs.profile }}"
+
+    - name: Run the gate chain against the change
+      shell: bash
+      run: node "$OPEN_SDD_CLI" gates run --profile "${{ inputs.profile }}" --base "${{ steps.base.outputs.ref }}"
+
+    - name: Constitutional status check
+      shell: bash
+      run: |
+        set -euo pipefail
+        FEATURE="${{ inputs.feature }}"
+        if [ -n "$FEATURE" ]; then
+          node "$OPEN_SDD_CLI" status "$FEATURE" --check
+        else
+          node "$OPEN_SDD_CLI" status --check
+        fi
+
+    # ── The evidence bundle + SARIF. The exit code is the contract; 1 and 2 both fail the job ────
+    - name: Audit evidence bundle and SARIF 2.1.0
+      id: bundle
+      shell: bash
+      run: |
+        set -uo pipefail
+        FEATURE="${{ inputs.feature }}"
+        BUNDLE_DIR=".sdd/audit/ci"
+        SARIF_PATH="${{ inputs.sarif }}"
+        node "$OPEN_SDD_CLI" audit bundle $FEATURE \
+          --out "$BUNDLE_DIR" \
+          --sarif "$SARIF_PATH" \
+          --profile "${{ inputs.profile }}"
+        CODE=$?
+        {
+          echo "dir=$BUNDLE_DIR"
+          echo "manifest=$BUNDLE_DIR/manifest.json"
+          echo "sarif=$SARIF_PATH"
+          echo "exit_code=$CODE"
+          if [ "$CODE" -eq 0 ]; then echo "verdict=pass"; else echo "verdict=blocked"; fi
+        } >> "$GITHUB_OUTPUT"
+        if [ "$CODE" -eq 2 ]; then
+          echo "::error::The audit could not run (exit 2). See the bundle step log."
+        elif [ "$CODE" -eq 1 ]; then
+          echo "::error::The audit found a blocking finding (gate FAIL or broken claim). See $BUNDLE_DIR/manifest.json."
+        fi
+        exit "$CODE"
+
+    - name: Upload the evidence bundle
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: open-sdd-audit-bundle
+        path: .sdd/audit/ci
+        if-no-files-found: warn
+        retention-days: 30
+
+    - name: Upload SARIF to code scanning
+      if: ${{ always() && inputs.upload-sarif == 'true' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif }}
+        category: open-sdd

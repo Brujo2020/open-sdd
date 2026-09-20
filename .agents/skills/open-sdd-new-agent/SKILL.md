@@ -1,20 +1,20 @@
 ---
 name: open-sdd-new-agent
-description: Add or extend coding-agent support in cc-sdd by executing the SOP in docs/cc-sdd/sop-new-agent.md end-to-end. Use when introducing a new agent, adding a subagent-capable variant, or evaluating migration of an existing supported agent to skills-based templates.
+description: Add or extend coding-agent support in open-sdd by executing the SOP in docs/open-sdd/sop-new-agent.md end-to-end. Use when introducing a new agent, adding a subagent-capable variant, or evaluating migration of an existing supported agent to skills-based templates.
 ---
 
 # OPEN-SDD New Agent Integration
 
 ## Goal
 
-Add a production-ready agent integration to `tools/cc-sdd` with complete research, implementation, and verification artifacts.
+Add a production-ready agent integration to `tools/open-sdd` with complete research, implementation, and verification artifacts.
 Use the existing SOP and templates in this repository instead of inventing a new process.
 
 ## Default Operation Mode
 
 Use `plan-first` as the default:
-- First deliverable: `docs/cc-sdd/plans/agent-plan-{agent-id}.md`
-- Second deliverable (after plan approval): implementation changes in `tools/cc-sdd/...`
+- First deliverable: `docs/open-sdd/plans/agent-plan-{agent-id}.md`
+- Second deliverable (after plan approval): implementation changes in `tools/open-sdd/...`
 
 Do not skip the plan document unless the user explicitly requests direct implementation.
 
@@ -32,7 +32,7 @@ If any item is unclear, resolve it during Phase 1 research before creating imple
 
 ### 1) Run Phase 1 Research
 
-Read `docs/cc-sdd/sop-new-agent.md` and extract all required spec details from official docs:
+Read `docs/open-sdd/sop-new-agent.md` and extract all required spec details from official docs:
 - commands directory
 - agent directory (if supported)
 - documentation filename
@@ -45,7 +45,7 @@ Record exact values (not assumptions) in the plan document.
 ### 2) Create Plan Document
 
 Copy and fill:
-- `docs/cc-sdd/templates/agent-plan-template.md`
+- `docs/open-sdd/templates/agent-plan-template.md`
 
 Include:
 - Phase 1 research summary table
@@ -55,7 +55,7 @@ Include:
 - verification plan
 
 Write the completed plan to:
-- `docs/cc-sdd/plans/agent-plan-{agent-id}.md`
+- `docs/open-sdd/plans/agent-plan-{agent-id}.md`
 
 Before implementation, ensure the plan explicitly states:
 - integration scope (`commands-only`, `commands+agents`, `skills`)
@@ -65,18 +65,18 @@ Before implementation, ensure the plan explicitly states:
 ### 3) Choose Base Pattern and Implement
 
 Pick the nearest existing implementation and copy from it:
-- `commands-only`: start from `tools/cc-sdd/templates/agents/codex` or another commands-only agent
-- `commands+agents`: start from `tools/cc-sdd/templates/agents/claude-code-agent` or `tools/cc-sdd/templates/agents/opencode-agent`
-- `skills`: start from `tools/cc-sdd/templates/agents/claude-code-skills`
+- `commands-only`: start from `tools/open-sdd/templates/agents/codex` or another commands-only agent
+- `commands+agents`: start from `tools/open-sdd/templates/agents/claude-code-agent` or `tools/open-sdd/templates/agents/opencode-agent`
+- `skills`: start from `tools/open-sdd/templates/agents/claude-code-skills`
 
 Start implementation only after the plan file exists and the user has confirmed to proceed.
 
 Apply the standard 5 implementation steps from SOP:
-1. Update `tools/cc-sdd/src/agents/registry.ts`
-2. Add `tools/cc-sdd/templates/manifests/{agent-id}.json`
-3. Add `tools/cc-sdd/templates/agents/{agent-id}/...`
+1. Update `tools/open-sdd/src/agents/registry.ts`
+2. Add `tools/open-sdd/templates/manifests/{agent-id}.json`
+3. Add `tools/open-sdd/templates/agents/{agent-id}/...`
 4. Convert YAML frontmatter to target-agent format (keep body unless incompatibility is confirmed)
-5. Add `tools/cc-sdd/test/realManifest{AgentName}.test.ts`
+5. Add `tools/open-sdd/test/realManifest{AgentName}.test.ts`
 
 For `skills` integration, generate `SKILL.md`-based command packages under `templates/agents/{agent-id}/skills/`.
 
@@ -90,7 +90,7 @@ Always document compatibility impact and CLI flag impact in the plan.
 
 ### 5) Verify Before Reporting
 
-Run verification in `tools/cc-sdd`:
+Run verification in `tools/open-sdd`:
 - `npm test`
 - `npm run build && node dist/index.js --agent {agent-id} --dry-run`
 - local temp-directory apply test with `--overwrite=force`
@@ -101,7 +101,7 @@ If tests cannot run, explicitly report which step is blocked and why.
 
 ## Completion Criteria
 
-- Plan file exists at `docs/cc-sdd/plans/agent-plan-{agent-id}.md`
+- Plan file exists at `docs/open-sdd/plans/agent-plan-{agent-id}.md`
 - Registry entry exists and routes to the new manifest id
 - Manifest artifacts match target integration scope
 - Templates render to expected target directories
@@ -111,7 +111,7 @@ If tests cannot run, explicitly report which step is blocked and why.
 
 ## References
 
-- SOP: `docs/cc-sdd/sop-new-agent.md`
-- Plan template: `docs/cc-sdd/templates/agent-plan-template.md`
+- SOP: `docs/open-sdd/sop-new-agent.md`
+- Plan template: `docs/open-sdd/templates/agent-plan-template.md`
 - Migration guide: `references/skills-migration.md`
 - Plan checklist: `references/plan-output-checklist.md`

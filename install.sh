@@ -11,7 +11,7 @@
 #
 # The previous version of this script copied TypeScript files into `$REPO/src/cli/`. That layout
 # never existed in this repository in any commit, so the script could not work. This one drives
-# the real CLI that ships in `tools/cc-sdd/dist`, which is also what the npm package exposes.
+# the real CLI that ships in `tools/open-sdd/dist`, which is also what the npm package exposes.
 
 set -euo pipefail
 
@@ -31,7 +31,7 @@ if [ ! -d "$REPO" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLI="$SCRIPT_DIR/tools/cc-sdd/dist/cli.js"
+CLI="$SCRIPT_DIR/tools/open-sdd/dist/cli.js"
 
 if [ ! -f "$CLI" ]; then
   echo "Building the CLI (first run)..."

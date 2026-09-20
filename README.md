@@ -31,12 +31,12 @@ Zero-Trust gate chain, reports declared-vs-executed honestly, and never invents 
 ```bash
 git clone https://github.com/Brujo2020/open-sdd
 cd open-sdd
-npm --prefix tools/cc-sdd install    # installs the CLI's dev dependencies
-npm --prefix tools/cc-sdd run build  # compiles to tools/cc-sdd/dist/
-node tools/cc-sdd/dist/cli.js --help
+npm --prefix tools/open-sdd install    # installs the CLI's dev dependencies
+npm --prefix tools/open-sdd run build  # compiles to tools/open-sdd/dist/
+node tools/open-sdd/dist/cli.js --help
 ```
 
-`tools/cc-sdd/dist/` is present and tracked, so a checkout can also run the CLI without building
+`tools/open-sdd/dist/` is present and tracked, so a checkout can also run the CLI without building
 first.
 
 ### Install the skills into a project
@@ -46,7 +46,7 @@ as its first argument:
 
 ```bash
 # In the target repo (Claude Code skills, no prompts):
-node /path/to/open-sdd/tools/cc-sdd/dist/cli.js --claude-skills -y
+node /path/to/open-sdd/tools/open-sdd/dist/cli.js --claude-skills -y
 
 # Or from the open-sdd checkout:
 bash install.sh /path/to/your/repo --cursor-skills -y
@@ -59,7 +59,7 @@ agent's skill directory.
 
 ```bash
 npm run install:global          # builds, then installs this checkout globally
-open-sdd gates chain            # one of: open-sdd, sdd-open, sdd, cc-sdd
+open-sdd gates chain            # one of: open-sdd, sdd-open, sdd, open-sdd
 ```
 
 ### Published package
@@ -147,7 +147,7 @@ cinco capas: Especificación, Generación, Tareas, Artefactos, Validación):
 | 5. Entregar | `open-sdd status` | la evidencia en las tareas, los gates del nivel declarado y un único panel |
 
 El detalle está en el skill **`/sdd-brownfield`**
-(`tools/cc-sdd/templates/agents/*/skills/sdd-brownfield/SKILL.md`) y en la guía de 10 minutos
+(`tools/open-sdd/templates/agents/*/skills/sdd-brownfield/SKILL.md`) y en la guía de 10 minutos
 [docs/guides/brownfield-quickstart.md](docs/guides/brownfield-quickstart.md). La constitución es el
 **pivote**: cada spec se valida contra ella con `open-sdd status --check`.
 
@@ -229,7 +229,7 @@ code lived in a nested workspace.
 
 ## Supported host agents
 
-The authoritative list is `tools/cc-sdd/src/agents/registry.ts` (`agentDefinitions`). Eight variants
+The authoritative list is `tools/open-sdd/src/agents/registry.ts` (`agentDefinitions`). Eight variants
 are skills-based and carry the full 20-skill suite.
 
 | Agent | `--agent` id | Alias flags | Installs into |
@@ -254,7 +254,7 @@ are skills-based and carry the full 20-skill suite.
 | Codex CLI (prompts) | `codex` | `--codex`, `--codex-cli` | **deprecated** — the CLI refuses and points to `--codex-skills` |
 
 The install path above is where the CLI writes **in your project**. The templates this repository
-ships live under `tools/cc-sdd/templates/agents/<agent>/`.
+ships live under `tools/open-sdd/templates/agents/<agent>/`.
 
 ---
 
@@ -264,7 +264,7 @@ There are **two different profile axes**, and they are not interchangeable.
 
 ### 1. What blocks — `.sdd/settings/governance.json`
 
-Verified in `tools/cc-sdd/src/core/governance.ts` (`governanceProfiles`). Default is `solo`.
+Verified in `tools/open-sdd/src/core/governance.ts` (`governanceProfiles`). Default is `solo`.
 
 | `profile` | What blocks | Intended use |
 |---|---|---|
@@ -279,7 +279,7 @@ profile ignores still reports. See [docs/guides/governance-profiles.md](docs/gui
 
 ### 2. Which Zero-Trust controls are declared — `gates chain --profile`
 
-Verified in `tools/cc-sdd/src/core/gateCatalog.ts` (`ChainProfile`, `PROFILE_MANDATED`). The core
+Verified in `tools/open-sdd/src/core/gateCatalog.ts` (`ChainProfile`, `PROFILE_MANDATED`). The core
 C1–C7 is constant; the activable layer is a function of the profile and of repository signals.
 
 | `--profile` | Declared | Executed | Vacuous | Adds |
@@ -427,7 +427,7 @@ is activation without measurement.
 
 ```
 open-sdd/
-├── tools/cc-sdd/            CLI source, templates, manifests
+├── tools/open-sdd/            CLI source, templates, manifests
 │   ├── src/core/            governance models (see the map above)
 │   ├── src/agents/          agent registry (18 definitions)
 │   ├── src/cli/commands/    status, init, getspecs, gap, impl, verify, audit, paper
@@ -441,7 +441,7 @@ open-sdd/
 │   └── guides/              workflow, governance, brownfield, git, skills
 ├── .sdd/                    settings + templates (project memory lives here)
 ├── install.sh               install the CLI artifacts into a target repo
-└── package.json             bin: open-sdd, sdd-open, sdd, cc-sdd
+└── package.json             bin: open-sdd, sdd-open, sdd, open-sdd
 ```
 
 ---

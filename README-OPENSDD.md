@@ -152,7 +152,7 @@ Done. ✅
 ## 🤝 Credits
 
 **Built by:** Mario Alejandro — Principal Innovation Advisor, NTT DATA  
-**Foundation:** cc-sdd (Spec-Driven Development methodology)  
+**Foundation:** open-sdd (Spec-Driven Development methodology)  
 **Partnership:** GotaLab  
 
 ---

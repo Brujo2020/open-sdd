@@ -2,10 +2,10 @@
 /**
  * Root postinstall.
  *
- * The previous implementation was `cd tools/cc-sdd && npm install … || npm install …`, which had
+ * The previous implementation was `cd tools/open-sdd && npm install … || npm install …`, which had
  * two defects worth naming because both are silent:
  *
- *   1. If `tools/cc-sdd` is missing, the shell fallback runs `npm install` in the repository root,
+ *   1. If `tools/open-sdd` is missing, the shell fallback runs `npm install` in the repository root,
  *      which re-triggers this same script — an unbounded recursive process spawn (measured: 81
  *      concurrent `npm install` processes eight seconds in).
  *   2. The fallback masked real failures: it exited 0 having installed nothing.
@@ -20,7 +20,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const workspace = path.resolve(here, '..', 'tools', 'cc-sdd');
+const workspace = path.resolve(here, '..', 'tools', 'open-sdd');
 
 // Only a source checkout has anything to install. The published package ships the compiled dist
 // and the templates, so a consumer install has no workspace to build and needs no message about it.
@@ -45,7 +45,7 @@ if (result.error) {
 if (result.status !== 0) {
   // Fail loudly. A silent success here is how a repository ends up "installed" and unbuildable.
   console.error(
-    `[open-sdd] workspace install failed with exit ${result.status ?? 'unknown'}. Run \`npm --prefix tools/cc-sdd install\` to see the full output.`,
+    `[open-sdd] workspace install failed with exit ${result.status ?? 'unknown'}. Run \`npm --prefix tools/open-sdd install\` to see the full output.`,
   );
   process.exit(result.status ?? 1);
 }

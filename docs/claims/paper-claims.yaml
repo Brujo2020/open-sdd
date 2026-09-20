@@ -20,196 +20,196 @@
 #   absent + non-zero -> not-measured    absent + exit 0  -> outdated-text
 #
 # IMPORTANT: the product CLI reads and executes this file —
-# `node tools/cc-sdd/dist/cli.js assure claims --verify` (CLM-030). It is the only runner: no second
+# `node tools/open-sdd/dist/cli.js assure claims --verify` (CLM-030). It is the only runner: no second
 # copy exists to drift against it. The counts it prints are recorded in docs/PAPER-ALIGNMENT.md.
 
 - id: CLM-001
   section: "§9.3 / Appendix A, Table 33"
   statement_es: 'El catálogo lógico define exactamente 21 puertas Zero-Trust (G1–G21) previas a la reducción.'
   statement_en: 'The logical catalog defines exactly 21 Zero-Trust gates (G1–G21) prior to reduction.'
-  verifier: 'test "$(node tools/cc-sdd/dist/cli.js gates list | grep -cE "^  G[0-9]+ ")" = 21'
+  verifier: 'test "$(node tools/open-sdd/dist/cli.js gates list | grep -cE "^  G[0-9]+ ")" = 21'
   expectation: pass
 
 - id: CLM-002
   section: "§9.5 / Appendix A, Table 34"
   statement_es: 'La cadena ejecutable enumerada tiene 14 comprobaciones: C1–C7 (núcleo) y O1–O7 (activables).'
   statement_en: 'The enumerated executable chain has 14 checks: C1–C7 (core) and O1–O7 (activables).'
-  verifier: 'node --input-type=module -e "import {EXECUTABLE_CHAIN} from \"./tools/cc-sdd/dist/core/gateCatalog.js\"; process.exit(EXECUTABLE_CHAIN.length===14?0:1)"'
+  verifier: 'node --input-type=module -e "import {EXECUTABLE_CHAIN} from \"./tools/open-sdd/dist/core/gateCatalog.js\"; process.exit(EXECUTABLE_CHAIN.length===14?0:1)"'
   expectation: pass
 
 - id: CLM-003
   section: "§9.5"
   statement_es: 'El núcleo es constante y universal: C1–C7 en todo perfil; la parte activable se resuelve por perfil y por señales.'
   statement_en: 'The core is constant and universal: C1–C7 in every profile; the activable part is resolved from profile and repository signals.'
-  verifier: 'test "$(node --input-type=module -e "import {resolveGateChain} from \"./tools/cc-sdd/dist/core/gateCatalog.js\"; console.log(resolveGateChain(\"regulated\").core.join(\" \"))")" = "C1 C2 C3 C4 C5 C6 C7"'
+  verifier: 'test "$(node --input-type=module -e "import {resolveGateChain} from \"./tools/open-sdd/dist/core/gateCatalog.js\"; console.log(resolveGateChain(\"regulated\").core.join(\" \"))")" = "C1 C2 C3 C4 C5 C6 C7"'
   expectation: pass
 
 - id: CLM-004
   section: "§9.5 / Appendix A, Table 36"
   statement_es: 'El residuo se calcula por sustracción, nunca se cura a mano: G7, G8, G10, G11 y G17 no tienen contraparte ejecutable.'
   statement_en: 'The residue is computed by subtraction, never curated by hand: G7, G8, G10, G11 and G17 have no executable counterpart.'
-  verifier: 'test "$(node --input-type=module -e "import {computeResidue} from \"./tools/cc-sdd/dist/core/gateCatalog.js\"; console.log(computeResidue().map(r=>r.id).join(\",\"))")" = "G7,G8,G10,G11,G17"'
+  verifier: 'test "$(node --input-type=module -e "import {computeResidue} from \"./tools/open-sdd/dist/core/gateCatalog.js\"; console.log(computeResidue().map(r=>r.id).join(\",\"))")" = "G7,G8,G10,G11,G17"'
   expectation: pass
 
 - id: CLM-005
   section: "§9.5"
   statement_es: 'El perfil regulado declara 12 controles, ejecuta 11 y reporta 1 vacío (C7, activación sin medición).'
   statement_en: 'The regulated profile declares 12 controls, executes 11 and reports 1 vacuous (C7, activation without measurement).'
-  verifier: 'node tools/cc-sdd/dist/cli.js gates chain --profile regulated | grep -q "Declarados: 12" && node tools/cc-sdd/dist/cli.js gates chain --profile regulated | grep -q "Ejecutables: 11" && node tools/cc-sdd/dist/cli.js gates chain --profile regulated | grep -q "Vacíos: 1"'
+  verifier: 'node tools/open-sdd/dist/cli.js gates chain --profile regulated | grep -q "Declarados: 12" && node tools/open-sdd/dist/cli.js gates chain --profile regulated | grep -q "Ejecutables: 11" && node tools/open-sdd/dist/cli.js gates chain --profile regulated | grep -q "Vacíos: 1"'
   expectation: pass
 
 - id: CLM-006
   section: "§9.5"
   statement_es: 'El perfil de equipo declara 9 controles (7 núcleo + O1 + O5).'
   statement_en: 'The team profile declares 9 controls (7 core + O1 + O5).'
-  verifier: 'node tools/cc-sdd/dist/cli.js gates chain --profile team | grep -q "Declarados: 9"'
+  verifier: 'node tools/open-sdd/dist/cli.js gates chain --profile team | grep -q "Declarados: 9"'
   expectation: pass
 
 - id: CLM-007
   section: "§9.2 / Appendix A, Table 34"
   statement_es: 'Solo C2 (Línea Base de Seguridad) tiene postura bloqueante; el resto es advisory u opt-in.'
   statement_en: 'Only C2 (Security Baseline) has blocking posture; the rest are advisory or opt-in.'
-  verifier: 'node --input-type=module -e "import {EXECUTABLE_CHAIN} from \"./tools/cc-sdd/dist/core/gateCatalog.js\"; process.exit(EXECUTABLE_CHAIN.filter(g=>g.posture===\"blocking\").map(g=>g.id).join(\",\")===\"C2\"?0:1)"'
+  verifier: 'node --input-type=module -e "import {EXECUTABLE_CHAIN} from \"./tools/open-sdd/dist/core/gateCatalog.js\"; process.exit(EXECUTABLE_CHAIN.filter(g=>g.posture===\"blocking\").map(g=>g.id).join(\",\")===\"C2\"?0:1)"'
   expectation: pass
 
 - id: CLM-008
   section: "§9.7 / Table 33 (G21)"
   statement_es: 'C7/Karpathy se declara pero es vacío: corre sin inspeccionar nada (inspects=false), y el catálogo lo distingue de un control medido.'
   statement_en: 'C7/Karpathy is declared but vacuous: it runs without inspecting anything (inspects=false), and the catalog keeps that distinct from a measured control.'
-  verifier: 'node --input-type=module -e "import {EXECUTABLE_CHAIN} from \"./tools/cc-sdd/dist/core/gateCatalog.js\"; process.exit(EXECUTABLE_CHAIN.find(g=>g.id===\"C7\").inspects===false?0:1)"'
+  verifier: 'node --input-type=module -e "import {EXECUTABLE_CHAIN} from \"./tools/open-sdd/dist/core/gateCatalog.js\"; process.exit(EXECUTABLE_CHAIN.find(g=>g.id===\"C7\").inspects===false?0:1)"'
   expectation: pass
 
 - id: CLM-009
   section: "§9.7 / §8.4"
   statement_es: 'Las tres propiedades decidibles de §9.7 (presupuesto de diff, contención de alcance, incertidumbre declarada) están implementadas como función pero ningún gate las ejecuta: la disciplina del implementador sigue sin bloqueo.'
   statement_en: 'The three decidable properties of §9.7 (diff budget, scope containment, declared uncertainty) are implemented as a function but no gate executes them: implementer discipline still blocks nothing.'
-  verifier: 'grep -q "checkDecidableDiscipline" tools/cc-sdd/src/core/triad.ts && ! grep -rq "checkDecidableDiscipline" tools/cc-sdd/src/core/gateRunner.ts'
+  verifier: 'grep -q "checkDecidableDiscipline" tools/open-sdd/src/core/triad.ts && ! grep -rq "checkDecidableDiscipline" tools/open-sdd/src/core/gateRunner.ts'
   expectation: pass
 
 - id: CLM-010
   section: "§6.3 / Table 19 / §9.2"
   statement_es: 'La consola de enforcement publica el techo por herramienta y advierte que exit 1 deja el nivel A nominal (fail-open), no bloqueado.'
   statement_en: 'The enforcement console publishes the per-tool ceiling and warns that exit 1 leaves level A nominal (fail-open), not blocked.'
-  verifier: 'node tools/cc-sdd/dist/cli.js gates enforcement | grep -q "A — escritura" && node tools/cc-sdd/dist/cli.js gates enforcement | grep -q "nivel A nominal, ausente en ejecución"'
+  verifier: 'node tools/open-sdd/dist/cli.js gates enforcement | grep -q "A — escritura" && node tools/open-sdd/dist/cli.js gates enforcement | grep -q "nivel A nominal, ausente en ejecución"'
   expectation: pass
 
 - id: CLM-011
   section: "§6.3 / §5.1 (I3)"
   statement_es: 'Sin centinela conductual verificado, el suelo garantizado se resuelve solo a B y C, las fronteras que la organización posee; el nivel A es techo, no garantía.'
   statement_en: 'Without a verified behavioural sentinel the guaranteed floor resolves only to B and C, the boundaries the organization owns; level A is a ceiling, not a guarantee.'
-  verifier: 'node --input-type=module -e "import {resolveFloor} from \"./tools/cc-sdd/dist/core/enforcement.js\"; process.exit(resolveFloor(\"claude-code\").floor.map(l=>l.id).join(\"\")===\"BC\"?0:1)"'
+  verifier: 'node --input-type=module -e "import {resolveFloor} from \"./tools/open-sdd/dist/core/enforcement.js\"; process.exit(resolveFloor(\"claude-code\").floor.map(l=>l.id).join(\"\")===\"BC\"?0:1)"'
   expectation: pass
 
 - id: CLM-012
   section: "§9.2"
   statement_es: 'El subconjunto duro (secretos, comandos destructivos, bloqueo por evidencia, umbral de cobertura) no admite auto-autorización en ningún régimen: un sensor ausente ahí falla.'
   statement_en: 'The hard subset (secrets, destructive commands, evidence lock, coverage threshold) admits no self-authorization in any regime: an unavailable sensor there fails.'
-  verifier: 'node --input-type=module -e "import {applyDefaultFail} from \"./tools/cc-sdd/dist/core/enforcement.js\"; process.exit(applyDefaultFail({gateId:\"C2\",hardControl:\"secretos\",posture:\"blocking\",sensorAvailable:false,fired:false},\"flexible\").outcome===\"fail\"?0:1)"'
+  verifier: 'node --input-type=module -e "import {applyDefaultFail} from \"./tools/open-sdd/dist/core/enforcement.js\"; process.exit(applyDefaultFail({gateId:\"C2\",hardControl:\"secretos\",posture:\"blocking\",sensorAvailable:false,fired:false},\"flexible\").outcome===\"fail\"?0:1)"'
   expectation: pass
 
 - id: CLM-013
   section: "§9.2 / §5.1 (I6)"
   statement_es: 'En el régimen flexible por defecto, un gate de proceso con sensor no disponible se auto-autoriza y exige recibo; no se lee como verificación aprobada.'
   statement_en: 'In the default flexible regime a process gate with an unavailable sensor self-authorizes and requires a receipt; it is not read as a passed verification.'
-  verifier: 'node --input-type=module -e "import {applyDefaultFail} from \"./tools/cc-sdd/dist/core/enforcement.js\"; const v=applyDefaultFail({gateId:\"C5\",posture:\"advisory\",sensorAvailable:false,fired:false},\"flexible\"); process.exit(v.outcome===\"self-authorized\"&&v.requiresReceipt===true?0:1)"'
+  verifier: 'node --input-type=module -e "import {applyDefaultFail} from \"./tools/open-sdd/dist/core/enforcement.js\"; const v=applyDefaultFail({gateId:\"C5\",posture:\"advisory\",sensorAvailable:false,fired:false},\"flexible\"); process.exit(v.outcome===\"self-authorized\"&&v.requiresReceipt===true?0:1)"'
   expectation: pass
 
 - id: CLM-014
   section: "§5.1 / Table 17"
   statement_es: 'El framework enuncia seis invariantes (I1–I6) y los expone con la inspección que los decide.'
   statement_en: 'The framework states six invariants (I1–I6) and exposes each with the inspection that decides it.'
-  verifier: 'test "$(node tools/cc-sdd/dist/cli.js govern invariants | grep -cE "^  I[1-6] ")" = 6'
+  verifier: 'test "$(node tools/open-sdd/dist/cli.js govern invariants | grep -cE "^  I[1-6] ")" = 6'
   expectation: pass
 
 - id: CLM-015
   section: "§5.2 / Table 18"
   statement_es: 'El nivel de conformidad declarado es C1 (Con suelo); I4 e I5 no se cumplen y C3 queda bloqueado por exigir una tasa medida de falsos positivos.'
   statement_en: 'The declared conformity level is C1 (With a floor); I4 and I5 are not satisfied, and C3 is blocked because it requires a measured false-positive rate.'
-  verifier: 'node tools/cc-sdd/dist/cli.js govern conformance | grep -q "Nivel declarado: C1" && node tools/cc-sdd/dist/cli.js govern conformance | grep -q "I4  no cumple"'
+  verifier: 'node tools/open-sdd/dist/cli.js govern conformance | grep -q "Nivel declarado: C1" && node tools/open-sdd/dist/cli.js govern conformance | grep -q "I4  no cumple"'
   expectation: pass
 
 - id: CLM-016
   section: "§9.9 / Table 25"
   statement_es: 'Los umbrales HIL publicados están expuestos: 3 intentos fallidos consecutivos, complejidad ≥ 0,7 (modo-pareja), < 0,3 (Lite), κ < 0,6, 20 % de escalados inútiles, 70 % de ocupación y 30 % de techo de gobierno.'
   statement_en: 'The published HIL thresholds are exposed: 3 consecutive failed attempts, complexity ≥ 0.7 (pair mode), < 0.3 (Lite), κ < 0.6, 20% useless escalations, 70% occupancy and 30% governance ceiling.'
-  verifier: 'node --input-type=module -e "import {HITL_DEFAULTS as h} from \"./tools/cc-sdd/dist/core/hitl.js\"; process.exit(h.maxConsecutiveRepairAttempts===3&&h.pairModeComplexity===0.7&&h.liteModeComplexity===0.3&&h.minJudgeAgreementKappa===0.6&&h.maxUselessEscalationRate===0.2&&h.contextCompactionOccupancy===0.7&&h.governanceTokenCeiling===0.3?0:1)"'
+  verifier: 'node --input-type=module -e "import {HITL_DEFAULTS as h} from \"./tools/open-sdd/dist/core/hitl.js\"; process.exit(h.maxConsecutiveRepairAttempts===3&&h.pairModeComplexity===0.7&&h.liteModeComplexity===0.3&&h.minJudgeAgreementKappa===0.6&&h.maxUselessEscalationRate===0.2&&h.contextCompactionOccupancy===0.7&&h.governanceTokenCeiling===0.3?0:1)"'
   expectation: pass
 
 - id: CLM-017
   section: "§9.10"
   statement_es: 'Una tasa de anulación ≥ 20 % sostenida mueve el gate a revisión de diseño en vez de mantenerlo bloqueando.'
   statement_en: 'A sustained override rate ≥ 20% moves the gate to design review instead of keeping it blocking.'
-  verifier: 'node --input-type=module -e "import {recalibrate} from \"./tools/cc-sdd/dist/core/receipts.js\"; process.exit(recalibrate([{gate:\"C2\",overrides:1,blocks:4}])[0].state===\"design-review\"?0:1)"'
+  verifier: 'node --input-type=module -e "import {recalibrate} from \"./tools/open-sdd/dist/core/receipts.js\"; process.exit(recalibrate([{gate:\"C2\",overrides:1,blocks:4}])[0].state===\"design-review\"?0:1)"'
   expectation: pass
 
 - id: CLM-018
   section: "§5.1 (I6) / §9.10"
   statement_es: 'Una relajación sin motivo (ni actor ni hash) no es un evento registrado: el recibo se rechaza.'
   statement_en: 'A relaxation without a reason (nor actor nor hash) is not a recorded event: the receipt is rejected.'
-  verifier: 'node --input-type=module -e "import {makeReceipt} from \"./tools/cc-sdd/dist/core/receipts.js\"; try{makeReceipt({gate:\"C2\",targetHash:\"h\",actor:\"a\",reason:\"\"});process.exit(1)}catch{process.exit(0)}"'
+  verifier: 'node --input-type=module -e "import {makeReceipt} from \"./tools/open-sdd/dist/core/receipts.js\"; try{makeReceipt({gate:\"C2\",targetHash:\"h\",actor:\"a\",reason:\"\"});process.exit(1)}catch{process.exit(0)}"'
   expectation: pass
 
 - id: CLM-019
   section: "§7.4 / §14.2 / Table 31"
   statement_es: 'El módulo META-EVAL reproduce la cifra piloto κ = 0,86 con n = 15 y la marca explícitamente como demasiado pequeña para concluir (tooSmallToConclude), no como validación.'
   statement_en: 'The META-EVAL module reproduces the pilot figure κ = 0.86 with n = 15 and explicitly flags it as too small to conclude (tooSmallToConclude), not as validation.'
-  verifier: 'node --input-type=module -e "import {cohensKappa} from \"./tools/cc-sdd/dist/core/metaEval.js\"; const k=cohensKappa({truePositive:5,falseNegative:1,falsePositive:0,trueNegative:9}); process.exit(k.kappa===0.86&&k.n===15&&k.tooSmallToConclude===true?0:1)"'
+  verifier: 'node --input-type=module -e "import {cohensKappa} from \"./tools/open-sdd/dist/core/metaEval.js\"; const k=cohensKappa({truePositive:5,falseNegative:1,falsePositive:0,trueNegative:9}); process.exit(k.kappa===0.86&&k.n===15&&k.tooSmallToConclude===true?0:1)"'
   expectation: pass
 
 - id: CLM-020
   section: "§9.5 / Table 34 (C5)"
   statement_es: 'Sin backend de modelo alcanzable, C5 no finge un veredicto: reporta mode=degraded y advierte que no cuenta como evidencia de alineamiento de intención.'
   statement_en: 'Without a reachable model backend, C5 does not fake a verdict: it reports mode=degraded and warns that it does not count as intent-alignment evidence.'
-  verifier: 'node tools/cc-sdd/dist/cli.js gates run | grep -q "mode=degraded"'
+  verifier: 'node tools/open-sdd/dist/cli.js gates run | grep -q "mode=degraded"'
   expectation: pass
 
 - id: CLM-021
   section: "§11 / Figure 8"
   statement_es: 'La captura de memoria está en cuarentena y no es inyectable: una nota en la etapa capture nunca se promueve directamente.'
   statement_en: 'Memory capture is quarantined and not injectable: a note in the capture stage is never promoted directly.'
-  verifier: 'node --input-type=module -e "import {decidePromotion} from \"./tools/cc-sdd/dist/core/memory.js\"; const d=decidePromotion({item:{id:\"n\",stage:\"capture\",text:\"t\",provenance:{source:\"s\",author:\"a\",hash:\"h\",at:\"2026\"},lastConfirmedAt:\"2026\",usageCount:0},securityScreeningPassed:true}); process.exit(d.allowed===false&&d.reason===\"quarantine-not-injectable\"?0:1)"'
+  verifier: 'node --input-type=module -e "import {decidePromotion} from \"./tools/open-sdd/dist/core/memory.js\"; const d=decidePromotion({item:{id:\"n\",stage:\"capture\",text:\"t\",provenance:{source:\"s\",author:\"a\",hash:\"h\",at:\"2026\"},lastConfirmedAt:\"2026\",usageCount:0},securityScreeningPassed:true}); process.exit(d.allowed===false&&d.reason===\"quarantine-not-injectable\"?0:1)"'
   expectation: pass
 
 - id: CLM-022
   section: "§11.1 / §6.4 (hard rule)"
   statement_es: 'Ninguna skill fabricada puede declarar servidores MCP: un candidato que los declare se rechaza.'
   statement_en: 'No fabricated skill may declare MCP servers: a candidate that declares them is rejected.'
-  verifier: 'node --input-type=module -e "import {evaluateCandidate} from \"./tools/cc-sdd/dist/core/skills.js\"; const c=evaluateCandidate({id:\"x\",pattern:\"p\",observations:2,klass:\"normativa\",declaresMcpServers:[\"s\"],provenance:{blocks:[\"b\"],humanCorrections:[],files:[]},generatedBy:\"g\",evaluatedBy:\"e\",generatingModelFamily:\"A\",evaluatingModelFamily:\"B\",reviewDate:\"2026\",activationCycles:0}); process.exit(c.mountable===false?0:1)"'
+  verifier: 'node --input-type=module -e "import {evaluateCandidate} from \"./tools/open-sdd/dist/core/skills.js\"; const c=evaluateCandidate({id:\"x\",pattern:\"p\",observations:2,klass:\"normativa\",declaresMcpServers:[\"s\"],provenance:{blocks:[\"b\"],humanCorrections:[],files:[]},generatedBy:\"g\",evaluatedBy:\"e\",generatingModelFamily:\"A\",evaluatingModelFamily:\"B\",reviewDate:\"2026\",activationCycles:0}); process.exit(c.mountable===false?0:1)"'
   expectation: pass
 
 - id: CLM-023
   section: "§14.3"
   statement_es: 'El protocolo de laboratorio enumera cinco bancos (centinelas, inyección indirecta, calibración, deriva del evaluador, economía del bucle).'
   statement_en: 'The lab protocol enumerates five banks (enforcement sentinels, indirect injection, gate calibration, evaluator drift, loop economy).'
-  verifier: 'test "$(node tools/cc-sdd/dist/cli.js assure lab | grep -cE "^  bank-[1-5] ")" = 5'
+  verifier: 'test "$(node tools/open-sdd/dist/cli.js assure lab | grep -cE "^  bank-[1-5] ")" = 5'
   expectation: pass
 
 - id: CLM-024
   section: "§9.8 / Table 24"
   statement_es: 'El mapa OWASP Agentic → MITRE ATLAS asigna la inyección de prompts (directa/indirecta) a AML.T0051.'
   statement_en: 'The OWASP Agentic → MITRE ATLAS map assigns prompt injection (direct/indirect) to AML.T0051.'
-  verifier: 'node tools/cc-sdd/dist/cli.js assure threats | grep -q "AML.T0051"'
+  verifier: 'node tools/open-sdd/dist/cli.js assure threats | grep -q "AML.T0051"'
   expectation: pass
 
 - id: CLM-025
   section: "Appendix D / Table 39"
   statement_es: 'El mapeo regulatorio ancla los criterios HIL en el Art. 14 (supervisión humana) del Reglamento Europeo de IA.'
   statement_en: 'The regulatory map anchors the HIL criteria in Art. 14 (human oversight) of the EU AI Act.'
-  verifier: 'node tools/cc-sdd/dist/cli.js assure threats | grep -q "Art. 14 supervisión humana"'
+  verifier: 'node tools/open-sdd/dist/cli.js assure threats | grep -q "Art. 14 supervisión humana"'
   expectation: pass
 
 - id: CLM-026
   section: "§2.3"
   statement_es: 'El inventario de estado sostiene que ningún componente propuesto participa en las garantías de seguridad de hoy.'
   statement_en: 'The status inventory holds that no proposed component participates in today''s security guarantees.'
-  verifier: 'node tools/cc-sdd/dist/cli.js assure claims | grep -q "NINGÚN componente propuesto participa"'
+  verifier: 'node tools/open-sdd/dist/cli.js assure claims | grep -q "NINGÚN componente propuesto participa"'
   expectation: pass
 
 - id: CLM-027
   section: "§6.4"
-  statement_es: 'El repositorio envía 168 ficheros SKILL.md (8 variantes de agente × 21 skills) bajo tools/cc-sdd/templates/agents/.'
-  statement_en: 'The repository ships 168 SKILL.md files (8 agent variants × 21 skills) under tools/cc-sdd/templates/agents/.'
-  verifier: 'test "$(find tools/cc-sdd/templates/agents -name SKILL.md | wc -l | tr -d " ")" = 168'
+  statement_es: 'El repositorio envía 168 ficheros SKILL.md (8 variantes de agente × 21 skills) bajo tools/open-sdd/templates/agents/.'
+  statement_en: 'The repository ships 168 SKILL.md files (8 agent variants × 21 skills) under tools/open-sdd/templates/agents/.'
+  verifier: 'test "$(find tools/open-sdd/templates/agents -name SKILL.md | wc -l | tr -d " ")" = 168'
   expectation: pass
 
 - id: CLM-028
@@ -230,7 +230,7 @@
   section: "§9.6"
   statement_es: 'El CLI ejecuta el registro: `assure claims --verify` parsea docs/claims/paper-claims.yaml y decide cada afirmación por código de salida, reportando los cinco estados. Es el único runner: no hay una segunda copia que pueda desviarse.'
   statement_en: 'The CLI executes the registry: `assure claims --verify` parses docs/claims/paper-claims.yaml and decides each claim by exit code, reporting the five states. It is the only runner: there is no second copy to drift against it.'
-  verifier: 'grep -q "runClaimsRegistry" tools/cc-sdd/src/cli/commands/paper.ts'
+  verifier: 'grep -q "runClaimsRegistry" tools/open-sdd/src/cli/commands/paper.ts'
   expectation: pass
 
 - id: CLM-031
@@ -244,35 +244,35 @@
   section: "§4.5 / §9.7 (I2)"
   statement_es: 'El bloqueo por evidencia rechaza una tarea marcada como completa sin la línea _Evidence: que captura la salida de la comprobación.'
   statement_en: 'The evidence lock rejects a task marked complete without the _Evidence: line capturing the check''s output.'
-  verifier: 'node --input-type=module -e "import {checkEvidenceLock} from \"./tools/cc-sdd/dist/core/triad.js\"; process.exit(checkEvidenceLock(\"- [x] T1 do thing\").satisfied===false?0:1)"'
+  verifier: 'node --input-type=module -e "import {checkEvidenceLock} from \"./tools/open-sdd/dist/core/triad.js\"; process.exit(checkEvidenceLock(\"- [x] T1 do thing\").satisfied===false?0:1)"'
   expectation: pass
 
 - id: CLM-033
   section: "§4.6 / Table 12"
   statement_es: 'El validador EARS rechaza como no conforme un requisito que no encaja en ninguna de las cinco plantillas.'
   statement_en: 'The EARS validator rejects as non-conforming a requirement that fits none of the five templates.'
-  verifier: 'node --input-type=module -e "import {validateEarsRequirement} from \"./tools/cc-sdd/dist/core/ears.js\"; process.exit(validateEarsRequirement(\"The system should be fast.\").conforms===false?0:1)"'
+  verifier: 'node --input-type=module -e "import {validateEarsRequirement} from \"./tools/open-sdd/dist/core/ears.js\"; process.exit(validateEarsRequirement(\"The system should be fast.\").conforms===false?0:1)"'
   expectation: pass
 
 - id: CLM-034
   section: "§8.4 / §9.5 (O3 / G19)"
   statement_es: 'La frescura del índice estructural se mide contra HEAD y no contra el árbol de trabajo, para que el modo degradado no se convierta en el modo normal.'
   statement_en: 'Structural index freshness is measured against HEAD and not against the working tree, so the degraded mode does not become the normal mode.'
-  verifier: 'grep -q "no contra el árbol de trabajo" tools/cc-sdd/src/core/gateRunner.ts'
+  verifier: 'grep -q "no contra el árbol de trabajo" tools/open-sdd/src/core/gateRunner.ts'
   expectation: pass
 
 - id: CLM-035
   section: "§4.7"
   statement_es: 'El daño irreversible y sin límite no se responde con un gate más estricto sino con una mano humana: hay una escalada HIL dedicada.'
   statement_en: 'Irreversible, unbounded damage is not answered with a stricter gate but with a human hand: there is a dedicated HIL escalation.'
-  verifier: 'node --input-type=module -e "import {evaluateEscalations} from \"./tools/cc-sdd/dist/core/hitl.js\"; process.exit(evaluateEscalations({irreversibleDamage:true}).some(d=>d.trigger===\"irreversible-damage\")?0:1)"'
+  verifier: 'node --input-type=module -e "import {evaluateEscalations} from \"./tools/open-sdd/dist/core/hitl.js\"; process.exit(evaluateEscalations({irreversibleDamage:true}).some(d=>d.trigger===\"irreversible-damage\")?0:1)"'
   expectation: pass
 
 - id: CLM-036
   section: "§6.3 / Table 19 (level B — commit)"
   statement_es: 'El repositorio incluye un gate de commit ejecutable que juzga el ÍNDICE (staged) y falla cerrado si falta el CLI.'
   statement_en: 'The repository ships an executable commit gate that judges the staged index and fails closed when the CLI is missing.'
-  verifier: "test -x tools/cc-sdd/templates/hooks/pre-commit && grep -q -- '--staged' tools/cc-sdd/templates/hooks/pre-commit && grep -q 'COMMIT BLOQUEADO' tools/cc-sdd/templates/hooks/pre-commit"
+  verifier: "test -x tools/open-sdd/templates/hooks/pre-commit && grep -q -- '--staged' tools/open-sdd/templates/hooks/pre-commit && grep -q 'COMMIT BLOQUEADO' tools/open-sdd/templates/hooks/pre-commit"
   expectation: pass
 
 - id: CLM-037
@@ -293,21 +293,21 @@
   section: "I6 / §9.2 (default-FAIL y relajaciones registradas)"
   statement_es: 'Toda excepción de la lista de seguridad declara motivo y actor, de modo que una supresión nunca es anónima ni silenciosa.'
   statement_en: 'Every security allow-list exception declares a reason and an actor, so a suppression is never anonymous or silent.'
-  verifier: "node --input-type=module -e \"import {readFileSync} from 'node:fs'; import {parseSecurityAllowlist} from './tools/cc-sdd/dist/core/securityAllowlist.js'; const r=parseSecurityAllowlist(readFileSync('.sdd/settings/security-allowlist.json','utf8')); process.exit(r.rejected.length===0 && r.entries.length>0 && r.entries.every(e=>e.reason.trim() && e.ids.length && (e.actor||'').trim()) ? 0 : 1)\""
+  verifier: "node --input-type=module -e \"import {readFileSync} from 'node:fs'; import {parseSecurityAllowlist} from './tools/open-sdd/dist/core/securityAllowlist.js'; const r=parseSecurityAllowlist(readFileSync('.sdd/settings/security-allowlist.json','utf8')); process.exit(r.rejected.length===0 && r.entries.length>0 && r.entries.every(e=>e.reason.trim() && e.ids.length && (e.actor||'').trim()) ? 0 : 1)\""
   expectation: pass
 
 - id: CLM-040
   section: "§6.3 / Table 19 caption (techo frente a suelo)"
   statement_es: 'La comprobación del suelo puede fallar: en un directorio sin hook ni CI informa de que el suelo no está instalado.'
   statement_en: 'The floor check can fail: in a directory with neither hook nor CI it reports that the floor is not installed.'
-  verifier: "node --input-type=module -e \"import {mkdtempSync} from 'node:fs'; import {tmpdir} from 'node:os'; import {detectInstalledFloor} from './tools/cc-sdd/dist/core/floorInstallation.js'; const r=await detectInstalledFloor(mkdtempSync(tmpdir()+'/floor-')); process.exit(r.floorInstalled===false && r.detail.includes('NO instalado') ? 0 : 1)\""
+  verifier: "node --input-type=module -e \"import {mkdtempSync} from 'node:fs'; import {tmpdir} from 'node:os'; import {detectInstalledFloor} from './tools/open-sdd/dist/core/floorInstallation.js'; const r=await detectInstalledFloor(mkdtempSync(tmpdir()+'/floor-')); process.exit(r.floorInstalled===false && r.detail.includes('NO instalado') ? 0 : 1)\""
   expectation: pass
 
 - id: CLM-041
   section: "§2.3 / release identity"
   statement_es: 'Solo hay un paquete publicable: el de la raíz, con scope y acceso público; el workspace de construcción está marcado como privado.'
   statement_en: 'There is exactly one publishable package: the root one, scoped and public; the build workspace is marked private.'
-  verifier: "node -e \"const r=require('./package.json'),w=require('./tools/cc-sdd/package.json');process.exit(r.name==='@brujo2020/open-sdd' && r.publishConfig && r.publishConfig.access==='public' && w.private===true ? 0 : 1)\""
+  verifier: "node -e \"const r=require('./package.json'),w=require('./tools/open-sdd/package.json');process.exit(r.name==='@brujo2020/open-sdd' && r.publishConfig && r.publishConfig.access==='public' && w.private===true ? 0 : 1)\""
   expectation: pass
 
 - id: CLM-042
@@ -321,138 +321,138 @@
   section: "§2.3 / documentation truth"
   statement_es: 'Ningún bloque de código de la documentación anuncia el nombre sin scope, que no existe en el registro.'
   statement_en: 'No documentation code block advertises the unscoped name, which does not exist on the registry.'
-  verifier: "node -e \"const fs=require('fs');const files=['README.md','docs/INSTALLATION.md','docs/QUICK-START.md','tools/cc-sdd/README.md','docs/guides/brownfield-getspecs.md','docs/guides/universal-brownfield-sdd.md'].filter(f=>fs.existsSync(f));let bad=0;const fence=String.fromCharCode(96,96,96);for(const f of files){const parts=fs.readFileSync(f,'utf8').split(fence);for(let i=1;i<parts.length;i+=2){const bare=parts[i].split('@brujo2020/open-sdd@latest').join('');if(bare.includes('open-sdd@latest'))bad++;}}process.exit(bad===0?0:1)\""
+  verifier: "node -e \"const fs=require('fs');const files=['README.md','docs/INSTALLATION.md','docs/QUICK-START.md','tools/open-sdd/README.md','docs/guides/brownfield-getspecs.md','docs/guides/universal-brownfield-sdd.md'].filter(f=>fs.existsSync(f));let bad=0;const fence=String.fromCharCode(96,96,96);for(const f of files){const parts=fs.readFileSync(f,'utf8').split(fence);for(let i=1;i<parts.length;i+=2){const bare=parts[i].split('@brujo2020/open-sdd@latest').join('');if(bare.includes('open-sdd@latest'))bad++;}}process.exit(bad===0?0:1)\""
   expectation: pass
 
 - id: CLM-044
   section: "§2.3 / release identity"
   statement_es: 'El CLI informa la versión real del paquete publicado, no "vdev", porque resuelve el manifiesto que sí viaja en el artefacto.'
   statement_en: 'The CLI reports the real version of the published package, not "vdev", because it resolves the manifest that ships in the artifact.'
-  verifier: "node -e \"const {execSync}=require('child_process');const v=require('./package.json').version;const out=execSync('node tools/cc-sdd/dist/cli.js --version').toString();process.exit(out.includes('v'+v) && !out.includes('vdev') ? 0 : 1)\""
+  verifier: "node -e \"const {execSync}=require('child_process');const v=require('./package.json').version;const out=execSync('node tools/open-sdd/dist/cli.js --version').toString();process.exit(out.includes('v'+v) && !out.includes('vdev') ? 0 : 1)\""
   expectation: pass
 
 - id: CLM-045
   section: "§12 / Figure 9 (delta specs: ADSR and two-way traceability)"
   statement_es: 'La delta de este repositorio valida sin errores y su trazabilidad se comprueba en las dos direcciones: el informe nombra cada requisito de delta sin tarea y cuenta los requisitos con tarea trazable.'
   statement_en: 'This repository''s delta validates without errors and its traceability is checked in both directions: the report names every delta requirement without a task and counts the requirements with a traced task.'
-  verifier: 'node tools/cc-sdd/dist/cli.js delta validate brownfield-support | grep -q "0 error(es)" && node tools/cc-sdd/dist/cli.js delta validate brownfield-support | grep -q "Trazabilidad: " && node tools/cc-sdd/dist/cli.js delta validate brownfield-support | grep -qE "requisito\(s\) de la delta con tarea \([0-9]+%\)"'
+  verifier: 'node tools/open-sdd/dist/cli.js delta validate brownfield-support | grep -q "0 error(es)" && node tools/open-sdd/dist/cli.js delta validate brownfield-support | grep -q "Trazabilidad: " && node tools/open-sdd/dist/cli.js delta validate brownfield-support | grep -qE "requisito\(s\) de la delta con tarea \([0-9]+%\)"'
   expectation: pass
 
 - id: CLM-046
   section: "§12 (ADSR: a MODIFIED entry must name what it replaces)"
   statement_es: 'Una entrada MODIFIED sin previous es un error de validación: una modificación que no sabe decir qué sustituye es una reescritura.'
   statement_en: 'A MODIFIED entry without previous is a validation error: a modification that cannot say what it replaces is a rewrite.'
-  verifier: 'node --input-type=module -e "import {validateDeltaSpec} from ''./tools/cc-sdd/dist/core/deltaSpec.js''; const d={feature:''f'',title:''t'',status:''proposed'',entries:[{id:''REQ-A-001'',kind:''MODIFIED'',title:''t'',statement:''When x, the system shall y.'',targets:[''src/a.ts'']}]}; process.exit(validateDeltaSpec(d).some(i=>i.code===''MISSING_PREVIOUS''&&i.severity===''error'')?0:1)"'
+  verifier: 'node --input-type=module -e "import {validateDeltaSpec} from ''./tools/open-sdd/dist/core/deltaSpec.js''; const d={feature:''f'',title:''t'',status:''proposed'',entries:[{id:''REQ-A-001'',kind:''MODIFIED'',title:''t'',statement:''When x, the system shall y.'',targets:[''src/a.ts'']}]}; process.exit(validateDeltaSpec(d).some(i=>i.code===''MISSING_PREVIOUS''&&i.severity===''error'')?0:1)"'
   expectation: pass
 
 - id: CLM-047
   section: "§12 / CSDD §3.2 (a descriptive principle must cite evidence)"
   statement_es: 'Un principio descriptivo sin evidencia es un error de validación: un deseo registrado como hecho no entra en la constitución.'
   statement_en: 'A descriptive principle without evidence is a validation error: a wish recorded as a fact does not enter the constitution.'
-  verifier: 'node --input-type=module -e "import {validateConstitution} from ''./tools/cc-sdd/dist/core/constitution.js''; const c={project:''p'',provenance:''descriptive'',establishedFacts:[],principles:[{id:''C-X'',title:''t'',level:''SHOULD'',restriction:''r'',pattern:''p'',justification:''j'',provenance:''descriptive''}],amendments:[]}; process.exit(validateConstitution(c).some(i=>i.code===''EVIDENCE-MISSING''&&i.severity===''error'')?0:1)"'
+  verifier: 'node --input-type=module -e "import {validateConstitution} from ''./tools/open-sdd/dist/core/constitution.js''; const c={project:''p'',provenance:''descriptive'',establishedFacts:[],principles:[{id:''C-X'',title:''t'',level:''SHOULD'',restriction:''r'',pattern:''p'',justification:''j'',provenance:''descriptive''}],amendments:[]}; process.exit(validateConstitution(c).some(i=>i.code===''EVIDENCE-MISSING''&&i.severity===''error'')?0:1)"'
   expectation: pass
 
 - id: CLM-048
   section: "Manual Maestro §2.4 (three rigor levels; CSDD §3.4 apex; invariant I1)"
   statement_es: 'La constitución es el suelo de la escalera: se exige y bloquea en los tres niveles —spec-first incluido— porque todo veredicto bloqueante debe citar autoridad, y los niveles superiores solo añaden exigencias.'
   statement_en: 'The constitution is the floor of the ladder: it is required and blocking at all three levels — spec-first included — because every blocking verdict must cite an authority, and the higher levels only add demands.'
-  verifier: 'node --input-type=module -e "import {constitutionRequired} from ''./tools/cc-sdd/dist/core/rigor.js''; const levels=[''spec-first'',''spec-anchored'',''spec-as-source'']; const ok=levels.every(l=>constitutionRequired(l,false).required===true&&constitutionRequired(l,false).severity===''blocking''&&constitutionRequired(l,true).required===true&&constitutionRequired(l,true).severity===''blocking''&&constitutionRequired(l,false).reason.trim().length>0); process.exit(ok?0:1)"'
+  verifier: 'node --input-type=module -e "import {constitutionRequired} from ''./tools/open-sdd/dist/core/rigor.js''; const levels=[''spec-first'',''spec-anchored'',''spec-as-source'']; const ok=levels.every(l=>constitutionRequired(l,false).required===true&&constitutionRequired(l,false).severity===''blocking''&&constitutionRequired(l,true).required===true&&constitutionRequired(l,true).severity===''blocking''&&constitutionRequired(l,false).reason.trim().length>0); process.exit(ok?0:1)"'
   expectation: pass
 
 - id: CLM-049
   section: "§12 (reverse constitution: absent practices travel as amendments)"
   statement_es: 'Una práctica deseada pero ausente se emite como enmienda propuesta, nunca como hecho: sin tests detectados, el oráculo de regresión es AMD-REGRESSION-ORACLE y no un principio descriptivo.'
   statement_en: 'A desired-but-absent practice is emitted as a proposed amendment, never as a fact: with no tests detected, the regression oracle is AMD-REGRESSION-ORACLE and not a descriptive principle.'
-  verifier: 'node --input-type=module -e "import {buildDescriptiveConstitution} from ''./tools/cc-sdd/dist/core/reverseConstitution.js''; const project={name:''p'',language:''TypeScript'',frameworks:[],packageManager:''npm'',buildTool:''tsc'',sourceDirs:[''src''],testDirs:[],modules:[''core'']}; const facts={project,migrationDirs:[],rollbackMigrations:[],ciWorkflows:[],publicApiFiles:[],configFiles:[]}; const r=buildDescriptiveConstitution(facts); process.exit(r.constitution.amendments.every(a=>a.status===''proposed'')&&r.constitution.amendments.some(a=>a.id===''AMD-REGRESSION-ORACLE'')&&!r.constitution.principles.some(p=>p.id===''C-REGRESSION-ORACLE'')?0:1)"'
+  verifier: 'node --input-type=module -e "import {buildDescriptiveConstitution} from ''./tools/open-sdd/dist/core/reverseConstitution.js''; const project={name:''p'',language:''TypeScript'',frameworks:[],packageManager:''npm'',buildTool:''tsc'',sourceDirs:[''src''],testDirs:[],modules:[''core'']}; const facts={project,migrationDirs:[],rollbackMigrations:[],ciWorkflows:[],publicApiFiles:[],configFiles:[]}; const r=buildDescriptiveConstitution(facts); process.exit(r.constitution.amendments.every(a=>a.status===''proposed'')&&r.constitution.amendments.some(a=>a.id===''AMD-REGRESSION-ORACLE'')&&!r.constitution.principles.some(p=>p.id===''C-REGRESSION-ORACLE'')?0:1)"'
   expectation: pass
 
 - id: CLM-050
   section: "§12 (reconnaissance is workspace- and configuration-aware)"
   statement_es: 'El reconocimiento es consciente del workspace y de la configuración: en este repositorio reporta TypeScript, npm, tsc y Vitest, no el JavaScript sin tests que reportaba al leer solo la raíz.'
   statement_en: 'Reconnaissance is workspace- and configuration-aware: on this repository it reports TypeScript, npm, tsc and Vitest, not the JavaScript-with-no-tests it reported when reading only the root.'
-  verifier: 'node tools/cc-sdd/dist/cli.js brownfield survey . | grep -q "lenguaje: TypeScript" && node tools/cc-sdd/dist/cli.js brownfield survey . | grep -q "tests: Vitest" && node tools/cc-sdd/dist/cli.js brownfield survey . | grep -qE "módulos \([0-9]+\)"'
+  verifier: 'node tools/open-sdd/dist/cli.js brownfield survey . | grep -q "lenguaje: TypeScript" && node tools/open-sdd/dist/cli.js brownfield survey . | grep -q "tests: Vitest" && node tools/open-sdd/dist/cli.js brownfield survey . | grep -qE "módulos \([0-9]+\)"'
   expectation: pass
 
 - id: CLM-051
   section: "§12 / CSDD §3.3 (the regression oracle as data)"
   statement_es: 'La extracción de contratos empareja el fichero cambiado con las pruebas que lo cubren y deriva el comando de test del framework detectado, declarándolo derivado y no verificado.'
   statement_en: 'Contract extraction binds the changed file to the tests that cover it and derives the test command from the detected framework, declaring it derived and not verified.'
-  verifier: 'node --input-type=module -e "import {extractContracts} from ''./tools/cc-sdd/dist/core/executionContract.js''; const s=await extractContracts({cwd:process.cwd(),feature:''x'',changedFiles:[''tools/cc-sdd/src/core/deltaSpec.ts''],testDirs:[''tools/cc-sdd/test''],testFramework:''Vitest''}); process.exit(s.contracts.some(c=>c.test.includes(''coreDeltaSpec''))&&s.testCommand===''npx vitest run''?0:1)"'
+  verifier: 'node --input-type=module -e "import {extractContracts} from ''./tools/open-sdd/dist/core/executionContract.js''; const s=await extractContracts({cwd:process.cwd(),feature:''x'',changedFiles:[''tools/open-sdd/src/core/deltaSpec.ts''],testDirs:[''tools/open-sdd/test''],testFramework:''Vitest''}); process.exit(s.contracts.some(c=>c.test.includes(''coreDeltaSpec''))&&s.testCommand===''npx vitest run''?0:1)"'
   expectation: pass
 
 - id: CLM-052
   section: "§12 (a green run does not launder a missing declared contract)"
   statement_es: 'Un código de salida 0 con un contrato declarado que no existe en el conjunto NO es un aprobado: satisfied exige ambas cosas.'
   statement_en: 'Exit code 0 with a declared contract absent from the set is NOT a pass: satisfied requires both.'
-  verifier: 'node --input-type=module -e "import {verifyContracts} from ''./tools/cc-sdd/dist/core/executionContract.js''; const set={feature:''f'',testCommand:''npm test'',contracts:[{id:''DC-a'',description:''d'',test:''test/a.test.ts'',protects:[''src/a.ts''],source:''delta''}],uncoveredChanges:[],complete:true,detail:''''}; const v=verifyContracts(set,{exitCode:0,stdout:''''}); process.exit(v.satisfied===false&&v.missing.length===1?0:1)"'
+  verifier: 'node --input-type=module -e "import {verifyContracts} from ''./tools/open-sdd/dist/core/executionContract.js''; const set={feature:''f'',testCommand:''npm test'',contracts:[{id:''DC-a'',description:''d'',test:''test/a.test.ts'',protects:[''src/a.ts''],source:''delta''}],uncoveredChanges:[],complete:true,detail:''''}; const v=verifyContracts(set,{exitCode:0,stdout:''''}); process.exit(v.satisfied===false&&v.missing.length===1?0:1)"'
   expectation: pass
 
 - id: CLM-053
   section: "§12 (the analysis of a change before it is written)"
   statement_es: 'La consola expone el oráculo de regresión como informe del cambio pendiente: `brownfield contracts <feature>` publica el conjunto de contratos con el comando derivado.'
   statement_en: 'The console exposes the regression oracle as a report over the pending change: `brownfield contracts <feature>` publishes the contract set with the derived command.'
-  verifier: 'node tools/cc-sdd/dist/cli.js brownfield contracts brownfield-support | grep -q "Contratos de ejecución" && node tools/cc-sdd/dist/cli.js brownfield contracts brownfield-support | grep -q "contrato(s)"'
+  verifier: 'node tools/open-sdd/dist/cli.js brownfield contracts brownfield-support | grep -q "Contratos de ejecución" && node tools/open-sdd/dist/cli.js brownfield contracts brownfield-support | grep -q "contrato(s)"'
   expectation: pass
 
 - id: CLM-054
   section: "Manual Maestro §2.4 / CSDD §3.4 (the floor of the rigor ladder)"
   statement_es: 'El nivel por defecto exige la constitución y los requisitos en forma comprobable, y nada de los niveles superiores: spec-first activa C1 y C2 y no exige evidencia, drift, contratos ni regeneración.'
   statement_en: 'The default level demands the constitution and checkable requirements, and nothing from the higher levels: spec-first activates C1 and C2 and requires no evidence, drift, contracts or regeneration.'
-  verifier: 'node --input-type=module -e "import {RIGOR_LEVELS,constitutionRequired,effectiveGates} from ''./tools/cc-sdd/dist/core/rigor.js''; const f=RIGOR_LEVELS.find(l=>l.level===''spec-first''); const ok=f.requires.constitution===''required''&&f.requires.triad===''required''&&f.requires.evidence===''not-required''&&f.requires.drift===''not-required''&&f.requires.contracts===''not-required''&&f.requires.regeneration===''not-required''&&effectiveGates(''spec-first'').join('','')===''C1,C2''&&constitutionRequired(''spec-first'',false).severity===''blocking''; process.exit(ok?0:1)"'
+  verifier: 'node --input-type=module -e "import {RIGOR_LEVELS,constitutionRequired,effectiveGates} from ''./tools/open-sdd/dist/core/rigor.js''; const f=RIGOR_LEVELS.find(l=>l.level===''spec-first''); const ok=f.requires.constitution===''required''&&f.requires.triad===''required''&&f.requires.evidence===''not-required''&&f.requires.drift===''not-required''&&f.requires.contracts===''not-required''&&f.requires.regeneration===''not-required''&&effectiveGates(''spec-first'').join('','')===''C1,C2''&&constitutionRequired(''spec-first'',false).severity===''blocking''; process.exit(ok?0:1)"'
   expectation: pass
 
 - id: CLM-055
   section: "Manual Maestro §2.4 (the rigor levels are a cumulative ladder)"
   statement_es: 'La escalera solo añade: cada nivel conserva las exigencias obligatorias y los gates del anterior, ninguna exigencia baja, y el recuento de gates crece 2, 4, 6.'
   statement_en: 'The ladder only adds: each level keeps the previous level''s required aspects and gates, no demand is downgraded, and the gate count grows 2, 4, 6.'
-  verifier: 'node --input-type=module -e "import {RIGOR_LEVELS} from ''./tools/cc-sdd/dist/core/rigor.js''; const rank={''not-required'':0,recommended:1,required:2}; let ok=RIGOR_LEVELS.map(l=>l.gatesActive.length).join('','')===''2,4,6''; for(let i=1;i<RIGOR_LEVELS.length;i++){const p=RIGOR_LEVELS[i-1]; const c=RIGOR_LEVELS[i]; for(const a of Object.keys(p.requires)){if(rank[c.requires[a]]<rank[p.requires[a]])ok=false;} for(const g of p.gatesActive){if(!c.gatesActive.includes(g))ok=false;}} process.exit(ok?0:1)"'
+  verifier: 'node --input-type=module -e "import {RIGOR_LEVELS} from ''./tools/open-sdd/dist/core/rigor.js''; const rank={''not-required'':0,recommended:1,required:2}; let ok=RIGOR_LEVELS.map(l=>l.gatesActive.length).join('','')===''2,4,6''; for(let i=1;i<RIGOR_LEVELS.length;i++){const p=RIGOR_LEVELS[i-1]; const c=RIGOR_LEVELS[i]; for(const a of Object.keys(p.requires)){if(rank[c.requires[a]]<rank[p.requires[a]])ok=false;} for(const g of p.gatesActive){if(!c.gatesActive.includes(g))ok=false;}} process.exit(ok?0:1)"'
   expectation: pass
 
 - id: CLM-056
   section: "Manual Maestro §2.4 / reference architecture §4.8 (configurable gate set, validated)"
   statement_es: 'El conjunto de gates del nivel es configurable y un id desconocido se rechaza nombrandolo en lugar de ignorarse, de modo que un error de escritura no puede reducir la vigilancia en silencio.'
   statement_en: 'The level''s gate set is configurable and an unknown id is rejected by name rather than ignored, so a typo cannot silently reduce the checks.'
-  verifier: 'node --input-type=module -e "import {validateGateOverride} from ''./tools/cc-sdd/dist/core/rigor.js''; const copy=validateGateOverride([''C3'']); let threw=false; try{validateGateOverride([''C9'']);}catch(e){threw=String(e.message).includes(''C9'');} process.exit(copy.join('','')===''C3''&&threw?0:1)"'
+  verifier: 'node --input-type=module -e "import {validateGateOverride} from ''./tools/open-sdd/dist/core/rigor.js''; const copy=validateGateOverride([''C3'']); let threw=false; try{validateGateOverride([''C9'']);}catch(e){threw=String(e.message).includes(''C9'');} process.exit(copy.join('','')===''C3''&&threw?0:1)"'
   expectation: pass
 
 - id: CLM-057
   section: "§9.5 / reference architecture level B (the commit gate stays fluid)"
   statement_es: 'El hook de pre-commit ejecuta govern rigor con --quiet y --no-drift: el veredicto viaja en el codigo de salida y un commit no se lee como una auditoria.'
   statement_en: 'The pre-commit hook runs govern rigor with --quiet and --no-drift: the verdict travels in the exit code and a commit does not read like an audit.'
-  verifier: 'node -e "const fs=require(''fs'');const t=fs.readFileSync(''tools/cc-sdd/templates/hooks/pre-commit'',''utf8'');const nl=String.fromCharCode(10);const line=t.split(nl).map(l=>l.trim()).find(l=>l.startsWith(''node'')&&l.includes(''govern rigor''));process.exit(line&&line.includes(''--quiet'')&&line.includes(''--no-drift'')?0:1)"'
+  verifier: 'node -e "const fs=require(''fs'');const t=fs.readFileSync(''tools/open-sdd/templates/hooks/pre-commit'',''utf8'');const nl=String.fromCharCode(10);const line=t.split(nl).map(l=>l.trim()).find(l=>l.startsWith(''node'')&&l.includes(''govern rigor''));process.exit(line&&line.includes(''--quiet'')&&line.includes(''--no-drift'')?0:1)"'
   expectation: pass
 
 - id: CLM-058
   section: "§12 / spec-kit issue #1436 (one entry point for an existing repository; concept adopted on our own engine)"
   statement_es: 'La consola ofrece un unico punto de entrada para un repositorio existente: brownfield bootstrap imprime el plan con el mapa de modulos observado, los artefactos y los pasos ordenados, y sale 0.'
   statement_en: 'The console offers one entry point for an existing repository: brownfield bootstrap prints the plan with the observed module map, the artifacts and the ordered steps, and exits 0.'
-  verifier: 'node tools/cc-sdd/dist/cli.js brownfield bootstrap . >/dev/null && node tools/cc-sdd/dist/cli.js brownfield bootstrap . | grep -q "Mapa de módulos" && node tools/cc-sdd/dist/cli.js brownfield bootstrap . | grep -q "Plan de bootstrap" && node tools/cc-sdd/dist/cli.js brownfield bootstrap . | grep -q "Pasos"'
+  verifier: 'node tools/open-sdd/dist/cli.js brownfield bootstrap . >/dev/null && node tools/open-sdd/dist/cli.js brownfield bootstrap . | grep -q "Mapa de módulos" && node tools/open-sdd/dist/cli.js brownfield bootstrap . | grep -q "Plan de bootstrap" && node tools/open-sdd/dist/cli.js brownfield bootstrap . | grep -q "Pasos"'
   expectation: pass
 
 - id: CLM-059
   section: "§6.4 / Manual Maestro v3.0 (the workflow is taught where the agents read it)"
   statement_es: 'El flujo brownfield se ensena donde los agentes lo leen: el skill sdd-brownfield existe para los 8 agentes basados en skills y las 8 copias son identicas byte a byte.'
   statement_en: 'The brownfield workflow is taught where the agents read it: the sdd-brownfield skill exists for all 8 skills-based agents and the 8 copies are byte-identical.'
-  verifier: 'node -e "const fs=require(''fs''),cp=require(''crypto'');const base=''tools/cc-sdd/templates/agents'';const dirs=fs.readdirSync(base).filter(d=>fs.existsSync(base+''/''+d+''/skills/sdd-brownfield/SKILL.md''));const hashes=dirs.map(d=>cp.createHash(''md5'').update(fs.readFileSync(base+''/''+d+''/skills/sdd-brownfield/SKILL.md'')).digest(''hex''));process.exit(dirs.length===8&&new Set(hashes).size===1?0:1)"'
+  verifier: 'node -e "const fs=require(''fs''),cp=require(''crypto'');const base=''tools/open-sdd/templates/agents'';const dirs=fs.readdirSync(base).filter(d=>fs.existsSync(base+''/''+d+''/skills/sdd-brownfield/SKILL.md''));const hashes=dirs.map(d=>cp.createHash(''md5'').update(fs.readFileSync(base+''/''+d+''/skills/sdd-brownfield/SKILL.md'')).digest(''hex''));process.exit(dirs.length===8&&new Set(hashes).size===1?0:1)"'
   expectation: pass
 
 - id: CLM-060
   section: "§12 / Manual Maestro v3.0 EGTAV (one dashboard)"
   statement_es: 'El panel unico de estado informa de la constitucion, las specs, la delta, los contratos, la alineacion constitucional y el rigor, e imprime el nivel declarado, saliendo 0 en un repositorio sano.'
   statement_en: 'The single status dashboard reports the constitution, the specs, the delta, the contracts, the constitutional alignment and the rigor, prints the declared level, and exits 0 on a healthy repository.'
-  verifier: 'node tools/cc-sdd/dist/cli.js status >/dev/null && node tools/cc-sdd/dist/cli.js status | grep -q "Rigor — spec-first"'
+  verifier: 'node tools/open-sdd/dist/cli.js status >/dev/null && node tools/open-sdd/dist/cli.js status | grep -q "Rigor — spec-first"'
   expectation: pass
 
 - id: CLM-061
   section: "§9.5 / Manual Maestro v3.0 (the panel does not become a wall)"
   statement_es: 'status --quiet imprime una sola linea con el nivel y el veredicto, para que el panel no se convierta en un muro en cada commit.'
   statement_en: 'status --quiet prints a single line with the level and the verdict, so the dashboard does not become a wall on every commit.'
-  verifier: 'test "$(node tools/cc-sdd/dist/cli.js status --quiet | wc -l | tr -d " ")" = 1 && node tools/cc-sdd/dist/cli.js status --quiet | grep -q "^spec-first"'
+  verifier: 'test "$(node tools/open-sdd/dist/cli.js status --quiet | wc -l | tr -d " ")" = 1 && node tools/open-sdd/dist/cli.js status --quiet | grep -q "^spec-first"'
   expectation: pass
 
 - id: CLM-062
   section: "CSDD §3.4 / Manual Maestro v3.0 (the constitution is the pivot of every spec)"
   statement_es: 'Una spec que declara un principio que no esta en vigor es una autoridad fantasma: status --check la reporta como error UNKNOWN_PRINCIPLE y sale con codigo 1.'
   statement_en: 'A spec that declares a principle not in force is a phantom authority: status --check reports it as an UNKNOWN_PRINCIPLE error and exits 1.'
-  verifier: 'node -e "const fs=require(''fs''),os=require(''os''),p=require(''path''),cp=require(''child_process'');const cli=p.resolve(''tools/cc-sdd/dist/cli.js'');const d=fs.mkdtempSync(p.join(os.tmpdir(),''sdd-phantom-''));const s=p.join(d,''.sdd'');fs.mkdirSync(p.join(s,''specs'',''x''),{recursive:true});fs.mkdirSync(p.join(s,''steering''),{recursive:true});fs.copyFileSync(''.sdd/steering/constitution.md'',p.join(s,''steering'',''constitution.md''));fs.writeFileSync(p.join(s,''specs'',''x'',''requirements.md''),''# R''+String.fromCharCode(10)+''_Constitution: C-FANTASMA_''+String.fromCharCode(10));const r=cp.spawnSync(process.execPath,[cli,''status'',''x'',''--check''],{cwd:d,encoding:''utf8''});process.exit(r.status===1&&String(r.stdout).includes(''UNKNOWN_PRINCIPLE'')?0:1)"'
+  verifier: 'node -e "const fs=require(''fs''),os=require(''os''),p=require(''path''),cp=require(''child_process'');const cli=p.resolve(''tools/open-sdd/dist/cli.js'');const d=fs.mkdtempSync(p.join(os.tmpdir(),''sdd-phantom-''));const s=p.join(d,''.sdd'');fs.mkdirSync(p.join(s,''specs'',''x''),{recursive:true});fs.mkdirSync(p.join(s,''steering''),{recursive:true});fs.copyFileSync(''.sdd/steering/constitution.md'',p.join(s,''steering'',''constitution.md''));fs.writeFileSync(p.join(s,''specs'',''x'',''requirements.md''),''# R''+String.fromCharCode(10)+''_Constitution: C-FANTASMA_''+String.fromCharCode(10));const r=cp.spawnSync(process.execPath,[cli,''status'',''x'',''--check''],{cwd:d,encoding:''utf8''});process.exit(r.status===1&&String(r.stdout).includes(''UNKNOWN_PRINCIPLE'')?0:1)"'
   expectation: pass

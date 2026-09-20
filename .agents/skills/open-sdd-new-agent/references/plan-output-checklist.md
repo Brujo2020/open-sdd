@@ -4,8 +4,8 @@ Use this checklist before completing the planning phase.
 
 ## Required Output File
 
-- `docs/cc-sdd/plans/agent-plan-{agent-id}.md` exists
-- File is based on `docs/cc-sdd/templates/agent-plan-template.md`
+- `docs/open-sdd/plans/agent-plan-{agent-id}.md` exists
+- File is based on `docs/open-sdd/templates/agent-plan-template.md`
 
 ## Required Sections
 

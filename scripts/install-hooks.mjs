@@ -7,7 +7,7 @@
  * replaces a hook it does not recognise, and it never claims to have installed something it did not
  * write.
  *
- * The gate it installs is `tools/cc-sdd/templates/hooks/pre-commit.mjs` — the portable Node gate.
+ * The gate it installs is `tools/open-sdd/templates/hooks/pre-commit.mjs` — the portable Node gate.
  * The POSIX `pre-commit` template next to it is a documented manual fallback (`open-sdd floor
  * install` still copies it) and is never copied here: a shell script is exactly the Windows blocker
  * this gate removes. Nothing stale is left behind, because both templates install to the same
@@ -48,7 +48,7 @@ const root = path.resolve(scriptDir, '..');
 
 const HOOK_NAME = 'pre-commit';
 const DEFAULT_HOOKS_PATH = '.githooks';
-const GATE_TEMPLATE = ['tools', 'cc-sdd', 'templates', 'hooks', 'pre-commit.mjs'];
+const GATE_TEMPLATE = ['tools', 'open-sdd', 'templates', 'hooks', 'pre-commit.mjs'];
 
 const finish = (message, code = 0) => {
   console.log(`[open-sdd] ${message}`);

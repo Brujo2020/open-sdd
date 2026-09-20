@@ -1,6 +1,6 @@
-# cc-sdd Documentation Index
+# open-sdd Documentation Index
 
-Quick pointers to the most relevant guides, workflows, and historical notes for cc-sdd.
+Quick pointers to the most relevant guides, workflows, and historical notes for open-sdd.
 
 ## Current Guides
 
@@ -16,7 +16,7 @@ Quick pointers to the most relevant guides, workflows, and historical notes for 
 - [Universal Brownfield Reverse-Engineering](guides/brownfield-getspecs.md) — bootstrapping steering & spec seeds from existing codebases
 - [Command Reference](guides/command-reference.md) — CLI engine and skill command reference
 - [Customization Guide](guides/customization-guide.md) — templates and rules customization
-- [Why Open-SDD?](guides/why-cc-sdd.md) — design rationale, trade-offs, and when to use (or not use) the tool
+- [Why Open-SDD?](guides/why-open-sdd.md) — design rationale, trade-offs, and when to use (or not use) the tool
 - [Migration Guide](guides/migration-guide.md) — v1.x → v2 → v3 upgrade paths
 
 ## Legacy Reference (Archived)

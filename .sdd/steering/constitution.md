@@ -9,7 +9,7 @@ Generated: 2026-09-19T21:32:42.247Z
 - Gestor de paquetes: npm
 - Build: tsc
 - Tests: Vitest
-- Dependencias fijadas por tools/cc-sdd/package-lock.json
+- Dependencias fijadas por tools/open-sdd/package-lock.json
 
 ## Principles
 
@@ -20,7 +20,7 @@ Generated: 2026-09-19T21:32:42.247Z
 - Pattern: Construir sobre el stack declarado; toda dependencia nueva se declara en el manifiesto y se justifica en la delta.
 - Justification: Impide que el agente modernice por su cuenta código que nadie pidió modernizar, que es el modo de fallo dominante al adoptar SDD sobre un sistema en producción.
 - Provenance: descriptive
-- Evidence: package manager: npm; lockfile: tools/cc-sdd/package-lock.json; build tool: tsc
+- Evidence: package manager: npm; lockfile: tools/open-sdd/package-lock.json; build tool: tsc
 
 ### C-API-COMPAT — Preservar la compatibilidad de la API pública
 - Level: MUST
@@ -29,7 +29,7 @@ Generated: 2026-09-19T21:32:42.247Z
 - Pattern: Preferir cambios aditivos; marcar como obsoleto antes de retirar; toda retirada viaja con su ruta de migración y sus contratos.
 - Justification: Los consumidores externos e internos del sistema no están en este repositorio y no se pueden actualizar en el mismo cambio.
 - Provenance: descriptive
-- Evidence: tools/cc-sdd/src/core/index.ts; tools/cc-sdd/src/index.ts
+- Evidence: tools/open-sdd/src/core/index.ts; tools/open-sdd/src/index.ts
 
 ### C-BOUNDARIES — Seguir los límites de servicio existentes
 - Level: SHOULD
@@ -46,7 +46,7 @@ Generated: 2026-09-19T21:32:42.247Z
 - Pattern: Toda entrada MODIFIED o REMOVED declara los contratos que cubren el comportamiento afectado; el pipeline los ejecuta.
 - Justification: En brownfield el primer uso de la especificación extraída no es documentar sino proteger lo que no debe cambiar.
 - Provenance: descriptive
-- Evidence: Vitest; tools/cc-sdd/test
+- Evidence: Vitest; tools/open-sdd/test
 
 ## Amendments
 

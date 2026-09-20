@@ -12,7 +12,7 @@ set -euo pipefail
 INSTALL_DIR="${OPEN_SDD_HOME:-$HOME/.open-sdd}"
 REPO_URL="${OPEN_SDD_REPO:-https://github.com/Brujo2020/open-sdd.git}"
 BRANCH="${OPEN_SDD_BRANCH:-main}"
-CLI="$INSTALL_DIR/tools/cc-sdd/dist/cli.js"
+CLI="$INSTALL_DIR/tools/open-sdd/dist/cli.js"
 
 echo "Installing open-sdd into $INSTALL_DIR ..."
 
@@ -28,7 +28,7 @@ fi
 
 cd "$INSTALL_DIR"
 # Install the workspace explicitly rather than relying on the root lifecycle script.
-npm --prefix tools/cc-sdd install --no-audit --no-fund
+npm --prefix tools/open-sdd install --no-audit --no-fund
 npm run build
 
 if [ ! -f "$CLI" ]; then

@@ -4,7 +4,7 @@ Practical guide to governing an existing codebase with open-sdd: the delta as th
 specification, the reverse-engineered descriptive constitution, and the three SDD rigor levels.
 
 > Commands below are shown as `open-sdd …` for an installed CLI. In this repository, replace
-> `open-sdd` with `node tools/cc-sdd/dist/cli.js`.
+> `open-sdd` with `node tools/open-sdd/dist/cli.js`.
 
 ## When to use it
 
@@ -206,7 +206,7 @@ level is not satisfied.
 A worked example from this repository, run on its own delta:
 
 ```
-$ node tools/cc-sdd/dist/cli.js delta validate brownfield-support
+$ node tools/open-sdd/dist/cli.js delta validate brownfield-support
   aviso              brownfield-support EMPTY_SECTION
       La sección REMOVED está vacía. …
 

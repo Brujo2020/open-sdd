@@ -21,8 +21,8 @@ what lives here from what the install creates in a target project.
 | Settings, rules, templates | `.sdd/settings/` | `.sdd/settings/` |
 | Steering (project memory) | templates only: `.sdd/settings/templates/steering/` | `.sdd/steering/` (`product.md`, `tech.md`, `structure.md`) |
 | Feature specs | `.sdd/specs/` | `.sdd/specs/<feature>/` |
-| Antigravity skills | `tools/cc-sdd/templates/agents/antigravity-skills/skills/sdd-*/SKILL.md` | `.agent/skills/sdd-*/SKILL.md` |
-| CLI source + compiled CLI | `tools/cc-sdd/src/`, `tools/cc-sdd/dist/cli.js` | — |
+| Antigravity skills | `tools/open-sdd/templates/agents/antigravity-skills/skills/sdd-*/SKILL.md` | `.agent/skills/sdd-*/SKILL.md` |
+| CLI source + compiled CLI | `tools/open-sdd/src/`, `tools/open-sdd/dist/cli.js` | — |
 
 ### Steering vs Specification
 
@@ -67,10 +67,10 @@ what lives here from what the install creates in a target project.
 The Antigravity skills shipped by this repository are templates; the install copies them into a
 target project:
 
-- Templates here: `tools/cc-sdd/templates/agents/antigravity-skills/skills/sdd-*/SKILL.md`
+- Templates here: `tools/open-sdd/templates/agents/antigravity-skills/skills/sdd-*/SKILL.md`
 - Installed target: `.agent/skills/sdd-*/SKILL.md` (21 skills; the prefix is `sdd-`, not `kiro-`)
 - Each skill is a directory with a `SKILL.md` file
-- The agent registry defining every layout and alias flag is `tools/cc-sdd/src/agents/registry.ts`
+- The agent registry defining every layout and alias flag is `tools/open-sdd/src/agents/registry.ts`
 - Use `/skills` to inspect currently available skills
 - Invoke a skill directly with `/sdd-<skill-name>`
 - **If there is even a 1% chance a skill applies to the current task, invoke it.** Do not skip skills because the task seems simple.
@@ -87,13 +87,13 @@ Enterprise* (rev. 3, Sept 2026). The traceability report — every paper section
 symbol, and every declared gap — is **[docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md)**.
 
 ```bash
-node tools/cc-sdd/dist/cli.js gates chain --profile regulated   # resolve the gate chain
-node tools/cc-sdd/dist/cli.js gates crosswalk                   # G1–G21 → C1–C7/O1–O7 + residue
-node tools/cc-sdd/dist/cli.js gates enforcement                 # levels A–D, ceiling vs floor
-node tools/cc-sdd/dist/cli.js gates run                         # run the chain (exit 1 if it fails)
-node tools/cc-sdd/dist/cli.js govern conformance                # C0–C3 with per-invariant evidence
-node tools/cc-sdd/dist/cli.js assure threats                    # OWASP/ATLAS + regulatory crosswalk
-node tools/cc-sdd/dist/cli.js waves <feature>                   # wave plan + git commands
+node tools/open-sdd/dist/cli.js gates chain --profile regulated   # resolve the gate chain
+node tools/open-sdd/dist/cli.js gates crosswalk                   # G1–G21 → C1–C7/O1–O7 + residue
+node tools/open-sdd/dist/cli.js gates enforcement                 # levels A–D, ceiling vs floor
+node tools/open-sdd/dist/cli.js gates run                         # run the chain (exit 1 if it fails)
+node tools/open-sdd/dist/cli.js govern conformance                # C0–C3 with per-invariant evidence
+node tools/open-sdd/dist/cli.js assure threats                    # OWASP/ATLAS + regulatory crosswalk
+node tools/open-sdd/dist/cli.js waves <feature>                   # wave plan + git commands
 ```
 
 The paper's prototype measurements (κ = 0.86 n=15, C4 FPR 20.0 %, the 2.1–2.2 s sweep) are **not**
@@ -105,7 +105,7 @@ control. Details in gaps G-01/G-02 and G-06 of the report.
 - Human review required each phase; use `-y` only for intentional fast-track
 - Keep steering current and verify alignment with `/sdd-spec-status`
 - Specs are mandatory under the `team` and `enterprise` governance profiles; the default `solo`
-  profile runs its checks and reports without blocking (`tools/cc-sdd/src/core/governance.ts`)
+  profile runs its checks and reports without blocking (`tools/open-sdd/src/core/governance.ts`)
 - The enforcement floor is installed: a pre-commit hook runs C1/C2/C3 over the staged index and a
   pull-request workflow runs the full chain. Declare false positives in
   `.sdd/settings/security-allowlist.json` with a reason instead of using `--no-verify`.

@@ -4,7 +4,7 @@ This guide explains how to customize Open-SDD templates and rules to adapt to yo
 
 ## Introduction
 
-cc-sdd provides two customization points:
+open-sdd provides two customization points:
 
 - **templates/** - Define the **structure and format** of AI-generated documents
 - **rules/** - Define the **judgment criteria and generation principles** for AI
@@ -55,7 +55,7 @@ Both are located under `{{SDD_DIR}}/settings/` and are shared across the entire 
 
 ## 🚨 Structure That Must Be Maintained
 
-cc-sdd commands read and understand documents through AI agents. The following elements **must be maintained**:
+open-sdd commands read and understand documents through AI agents. The following elements **must be maintained**:
 
 | File | Required Elements | Reason |
 |------|-------------------|--------|

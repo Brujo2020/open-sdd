@@ -110,7 +110,7 @@ open-sdd-features.tar.gz
 - Router wiring code included
 
 ✅ **Full Attribution**
-- Credits cc-sdd foundation
+- Credits open-sdd foundation
 - Acknowledges Mario Alejandro & NTT DATA
 - References GotaLab partnership
 

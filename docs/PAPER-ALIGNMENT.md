@@ -5,7 +5,7 @@ Referencia Zero-Trust para Gobernar la Ingeniería de Software Agéntica a Escal
 Ramos (NTT DATA), rev. 3, September 2026, 87 pp. (henceforth "the paper").
 
 **Scope of this report:** how the paper's architecture maps onto the code that now lives in
-`tools/cc-sdd/src/core/`, what is implemented, what is a declared gap, and what the paper measured
+`tools/open-sdd/src/core/`, what is implemented, what is a declared gap, and what the paper measured
 that this repository does **not** measure. Every row names the file and the symbol that implements
 it, so a reader can check the row instead of trusting it.
 
@@ -16,7 +16,7 @@ control plane whose gates blocked nothing. Self-audit is accounting; only an ind
 running the §14.3 benches would be evidence.
 
 - Reproduce the claim counts with the product CLI:
-  `node tools/cc-sdd/dist/cli.js assure claims --verify`.
+  `node tools/open-sdd/dist/cli.js assure claims --verify`.
 - Registry: [`docs/claims/paper-claims.yaml`](claims/paper-claims.yaml).
 - Implementation status taxonomy: [§2.3 of the paper](https://doi.org/10.13140/RG.2.2.29185.42087).
 
@@ -53,7 +53,7 @@ labelled as the paper's, never restated as a measurement of this repository.
 Command run from the repository root, 2026-09-19:
 
 ```
-$ node tools/cc-sdd/dist/cli.js assure claims --verify
+$ node tools/open-sdd/dist/cli.js assure claims --verify
 62 afirmaciones | 59 verificadas | 0 declaradas | 3 no medidas | 0 rotas | 0 desactualizadas
 [exit=0]
 ```
@@ -93,8 +93,8 @@ the registry text, never the code, exactly as §9.6 prescribes.
 
 ### 3.1 The 21 logical gates (Table 33) → the executable chain (Table 34) → the crosswalk (Table 35)
 
-The catalog is data in `tools/cc-sdd/src/core/gateCatalog.ts` (`LOGICAL_GATES`, `EXECUTABLE_CHAIN`).
-Inspect with `node tools/cc-sdd/dist/cli.js gates list` and `... gates crosswalk`.
+The catalog is data in `tools/open-sdd/src/core/gateCatalog.ts` (`LOGICAL_GATES`, `EXECUTABLE_CHAIN`).
+Inspect with `node tools/open-sdd/dist/cli.js gates list` and `... gates crosswalk`.
 
 | Logical gate (Table 33) | Tier | Imposed by | Executable? | Note |
 |---|---|---|---|---|
@@ -131,7 +131,7 @@ const covered = new Set(EXECUTABLE_CHAIN.flatMap((c) => c.imposes));
 return LOGICAL_GATES.filter((g) => !covered.has(g.id) && g.state !== 'vacuous');
 ```
 
-`node tools/cc-sdd/dist/cli.js gates crosswalk` reports:
+`node tools/open-sdd/dist/cli.js gates crosswalk` reports:
 
 > `21 controles lógicos · 13 ejecutables · 1 vacíos · 16 cubiertos · 5 en el residuo`
 
@@ -200,7 +200,7 @@ where coverage overstates).
 | Risk lab and refutation thresholds (§14.3, Table 31) | Five banks with purpose, artifact and standard mapping; preregistered refutation thresholds with status `measured`/`preregistered`; fixed artifact format; adversarial-validator steps; three exit questions. | `assurance.ts` · `RISK_LAB_BANKS`, `REFUTATION_THRESHOLDS`, `LAB_ARTIFACT_FIELDS`, `LAB_EXIT_QUESTIONS`, `ADVERSARIAL_VALIDATOR`; CLI `assure lab` | `construido` (protocol data) · `propuesto` (the benches are not run here) |
 | Overhead budget and telemetry (Appendix B.4–B.6, §10.3) | Three cost lines (only the human one does not fall with model prices); 30 % ceiling with expensive-first degradation; 70 % compaction trigger with its four steps; operational metric definitions; ON/OFF comparison function; T0–T3 routing and escalation; harness self-failure asymmetry. | `telemetry.ts` · `COST_LINES`, `evaluateGovernanceBudget`, `CONTEXT_COMPACTION_TRIGGER`, `evaluateCompaction`, `METRIC_DEFINITIONS`, `compareLoopEconomy`, `COMPLEXITY_TIERS`, `routeModel`, `escalateTier`, `HARNESS_SELF_FAILURE`; CLI `govern budget` | `construido` (policy) · **brecha declarada** (no telemetry recorded here) |
 | Manuscript as executable contract (§9.6) | Five claim states with the rule that only `broken` halts publication; `evaluateClaim`, `assessClaims`, the generator limit; implementation-status inventory `measured/built/proposed` with the defensive rule that no proposed component participates in today's guarantees; the registry is executed by the CLI, not only printed. | `claims.ts` · `CLAIM_STATUSES`, `evaluateClaim`, `assessClaims`, `renderClaimsSummary`, `CLAIMS_REGISTRY_LIMIT`, `IMPLEMENTATION_STATUSES`, `auditInventory`; `claimsRegistry.ts` · `parseClaimsRegistry`, `runClaimsRegistry`; `cli/commands/paper.ts` · `assure claims --verify`; `docs/claims/paper-claims.yaml` | `construido` |
-| Brownfield inversion (§12, Figure 9, Tables 40/41) | Workspace- and configuration-aware reconnaissance: the scan walks declared workspace roots (`tools/cc-sdd`, `packages/*`, …) and reads both manifests and config files, so this repository reports TypeScript / npm / tsc / Vitest and 9 modules instead of "JavaScript, no tests detected". It still writes descriptive steering and up to five spec seeds. | `reverseEngineering.ts` · `scanProject`, `bootstrapSteering`, `bootstrapSpecSeeds`; CLI `getspecs` | `construido` — the inversion itself is completed by the rows below; see G-12 |
+| Brownfield inversion (§12, Figure 9, Tables 40/41) | Workspace- and configuration-aware reconnaissance: the scan walks declared workspace roots (`tools/open-sdd`, `packages/*`, …) and reads both manifests and config files, so this repository reports TypeScript / npm / tsc / Vitest and 9 modules instead of "JavaScript, no tests detected". It still writes descriptive steering and up to five spec seeds. | `reverseEngineering.ts` · `scanProject`, `bootstrapSteering`, `bootstrapSpecSeeds`; CLI `getspecs` | `construido` — the inversion itself is completed by the rows below; see G-12 |
 | Delta specs — the contract of change (§12, Figure 9, Tables 40/41) | ADSR sections, delta-scoped `REQ-<AREA>-<NNN>` ids, mandatory `previous` on MODIFIED/REMOVED/RENAMED, mandatory rationale + contracts on REMOVED (warning on MODIFIED), a 25-entry size warning, per-entry strangulation `legacy → both → new`, and two-way traceability (requirement → task; tasks citing unknown ids reported as phantoms). | `deltaSpec.ts` · `validateDeltaSpec`, `traceDelta`, `strangulationReport`, `renderDeltaSpec`, `parseDeltaSpec`, `deltaCounts`; `cli/commands/brownfield.ts` · `handleDeltaCommand`; CLI `delta init\|validate\|status\|render` | `construido` · **brecha declarada** (contracts declared, not executed — G-15; no merge-back — G-17) |
 | The Constitution: one model, two provenances (CSDD §3.2 six-field anatomy, §3.3 compliance matrix, §3.4 apex; §6.1 injection) | `descriptive` principles must carry evidence; `normative` ones enter only through an amendment with a migration plan. Six-field anatomy, `MUST`/`SHOULD`/`MAY`, citable authority (`resolveAuthority`), indirect-injection scan, markdown round-trip, compliance matrix and amendment promotion. | `constitution.ts` · `validateConstitution`, `principlesInForce`, `resolveAuthority`, `renderConstitution`, `parseConstitution`, `buildComplianceMatrix`, `impactedPrinciples`, `promoteAmendment`, `detectInjection`; CLI `brownfield constitution` | `construido` (model + validation) · **brecha declarada** (matrix and amendment promotion unsurfaced — G-16) |
 | Reverse-engineered descriptive constitution (§12) | Reads the repo's facts (lockfile, migration dirs and rollbacks, CI workflows, public API entry points, config files), emits a principle only when compliance is evidenced in the code, declares the stack an established fact, and emits desired-but-absent practices as PROPOSED AMENDMENTS — never as facts. | `reverseConstitution.ts` · `collectRepoFacts`, `buildDescriptiveConstitution`; CLI `brownfield survey`, `brownfield constitution --write` | `construido` (evidence is artifact presence, not extracted behaviour — G-12) |
@@ -208,7 +208,7 @@ where coverage overstates).
 | Brownfield console (§12; *Manual Maestro* §2.4) | One deterministic surface for the brownfield path: reconnaissance of the existing project, the reverse constitution (printed, or written to `.sdd/steering/constitution.md` with a round-trip check), the delta lifecycle, and three analysis reports over the change — impact (dependents, blast radius, API surface, breaking changes), contracts (the regression oracle, with `--verify` running the test command) and reuse (`REUSE_FIRST_RULE` candidates). | `cli/commands/brownfield.ts` · `handleBrownfieldCommand`, `handleDeltaCommand`; `index.ts` dispatch; CLI `brownfield survey\|constitution\|impact\|contracts\|reuse`, `delta init\|validate\|status\|render` | `construido` · **brecha declarada** (contract verification is not in CI — G-15) |
 | Execution contracts, change impact, reuse-first (§12; CSDD §3.3) | The regression oracle as data: which tests protect the changed files, which changed files no contract covers, and whether a run satisfied the declared contracts (`satisfied` requires exit 0 **and** no declared contract missing); the change's reachable set, breaking changes and integration points; the symbols a reuse-first search would have found first. | `executionContract.ts` · `extractContracts`, `verifyContracts`, `testCommandFor`, `contractsFileName`; `changeImpact.ts` · `analyzeChangeImpact`; `reuseFirst.ts` · `findReuseCandidates`, `scanDeclarations`, `REUSE_FIRST_RULE`; CLI `brownfield impact\|contracts\|reuse` | `construido` (commands) · **brecha declarada** (advisory, not gate-wired) — see G-15/G-18 |
 | One entry point for an existing repository — `brownfield bootstrap` (spec-kit issue #1436: the **concept is adopted and reimplemented on our own engine**, not a port of their extension; *Manual Maestro* v3.0 EGTAV) | Composes the scanners that already existed — `scanProject`, `collectRepoFacts` + `buildDescriptiveConstitution`, `findReuseCandidates` — into one plan, plus two artifacts that did not exist: the **module responsibility map**, with a decidable answer to "where does new code go?" (`answerCodePlacement`), and `.sdd/steering/codebase-intelligence.md` for agents, carrying a provenance marker and never overwriting a hand-authored file. This is our reading of the spec-kit issue's knowledge-document idea, rebuilt on our engine: it re-scans nothing and re-implements no symbol search. `--focus` names the first change; `--write` writes the intelligence document and generates the constitution if absent; `--json` emits the plan. | `bootstrap.ts` · `planBootstrap`, `buildModuleMap`, `answerCodePlacement`, `writeCodeIntelligence`, `CODE_INTELLIGENCE_MARKER`; `cli/commands/brownfield.ts` · `handleBrownfieldCommand`; CLI `brownfield bootstrap [target] [--focus "<texto>"] [--write] [--json]` | `construido` · **brecha declarada** (the plan lists the focus delta seed as `create`, but `--write` writes only the intelligence document and the constitution; the seed comes from `delta init` — G-20) |
-| Agent-agnostic installation (§6.4 progressive disclosure; Table 4) | 15 agent definitions; 8 skills-based variants × 21 skills = 168 `SKILL.md` templates; per-agent layout, alias flags and completion guides. `sdd-brownfield` is the 21st skill and its eight copies are byte-identical (the `sdd-help` precedent). | `agents/registry.ts` · `agentDefinitions`, `agentList`; `tools/cc-sdd/templates/agents/**` | `construido` |
+| Agent-agnostic installation (§6.4 progressive disclosure; Table 4) | 15 agent definitions; 8 skills-based variants × 21 skills = 168 `SKILL.md` templates; per-agent layout, alias flags and completion guides. `sdd-brownfield` is the 21st skill and its eight copies are byte-identical (the `sdd-help` precedent). | `agents/registry.ts` · `agentDefinitions`, `agentList`; `tools/open-sdd/templates/agents/**` | `construido` |
 | One dashboard for the whole state — `status [feature] [--check] [--quiet] [--json]` (*Manual Maestro* v3.0 EGTAV — the validation layer is where a brownfield workflow is read) | A single panel over the repository: the constitution (present/valid, principles in force, pending amendments), every spec (phase, triad, traceability, evidence), the delta counts and strangulation, the contract set with its uncovered changes, the constitutional alignment, the rigor level with its active gates, and the **next command to run**. `--check` appends the per-spec constitutional validation; `--quiet` collapses the panel to one line with the verdict in the exit code, which is the commit-time form; `--json` emits the aggregate for tooling. | `core/status.ts` · `buildRepositoryStatus`, `renderStatusPanel`, `renderStatusLine`, `nextAction`; `cli/commands/status.ts` · `handleStatusCommand`; CLI `status [feature] [--check] [--quiet] [--json]` | `construido` · **brecha declarada** (the alignment is a report: nothing blocks because a spec ignores a principle — G-16) |
 | The constitution as the pivot of every spec (*Manual Maestro* v3.0; CSDD §3.4 apex, invariant I1) | Given a spec's requirements/plan/tasks and its brownfield delta, answers three questions a reviewer cannot answer consistently: whether the principles the spec **cites** exist and are in force (`UNKNOWN_PRINCIPLE`, error — a phantom authority), whether the spec **contradicts** a `MUST` (`MUST_CONTRADICTED`, `TECH_LOCK_VIOLATION`), and whether the artifacts it produces respect the imposed boundary, API-compatibility and regression-oracle rules (`BOUNDARY_VIOLATION`, `API_COMPAT_MISSING`, `ORACLE_MISSING`). A spec that cites nothing is `NO_PRINCIPLES_DECLARED` (warning) and scores alignment 0, so the pivot cannot be silently unused. When a rule cannot decide, it says so in `detail` instead of emitting a finding: an `ok` over something not inspected is refused. `status --check` exits 1 only on error-severity findings. | `specConstitution.ts` · `alignSpecWithConstitution`, `declaredPrinciples`, `SPEC_PRINCIPLES_MARKER`, `ConstitutionalAlignmentFinding`, `SpecAlignment`; `constitution.ts` · `principlesInForce`; CLI `status --check` | `construido` · verified on this repository (alignment 100 %, 0 errors, 1 `BOUNDARY_VIOLATION` warning; a synthetic phantom principle makes `status --check` exit 1 — CLM-062) |
 | Governance profiles (repo-level) and chain profiles (§9.5) | Two distinct axes: `governance.json` ships `solo|team|enterprise` (what blocks); the Zero-Trust chain resolver accepts `solo|team|regulated` (which controls are declared). | `governance.ts` · `governanceProfiles`, `resolveGovernanceSettings`; `gateCatalog.ts` · `ChainProfile`, `PROFILE_MANDATED` | `construido` — but see G-08 (naming divergence) |
@@ -235,9 +235,9 @@ two-way traceability; `delta status` prints the counts and the strangulation pro
 contains the brownfield work as ADSR entries. `REQ-BF-003` is a `MODIFIED` entry whose `Previous:`
 line names the defect it replaces ("the scan read only the repository root, so a workspace layout was
 reported as JavaScript with no tests detected — including on this repository"), and whose
-`Contracts:` line names `tools/cc-sdd/test/coreBrownfield.test.ts` and
+`Contracts:` line names `tools/open-sdd/test/coreBrownfield.test.ts` and
 `coreReverseEngineering.test.ts`. Running
-`node tools/cc-sdd/dist/cli.js delta validate brownfield-support` reports **0 errors** and, at the
+`node tools/open-sdd/dist/cli.js delta validate brownfield-support` reports **0 errors** and, at the
 time of writing, **9/10 requirements with a traced task (90%), naming `REQ-BF-010` as the one
 without** — the two-way check stated in a single line. The single warning is the empty `REMOVED`
 section: a decision recorded rather than an omission. What that line does *not* prove is the
@@ -377,7 +377,7 @@ Paper: §6.3, §16.1, Table 19 caption — the floor is B (commit) and C (merge)
 belong to the organization. `resolveFloor` returns `floor: B, C` for every known tool **by ownership
 reasoning**; installation is a separate question, and this repository now answers it too.
 
-**Installed (level B — commit).** `tools/cc-sdd/templates/hooks/pre-commit` is the single source,
+**Installed (level B — commit).** `tools/open-sdd/templates/hooks/pre-commit` is the single source,
 copied into `.git/hooks/pre-commit` by `npm run hooks:install` (wired to `npm run prepare`), or into
 any target repository with `open-sdd floor install <target> --ci`. It runs `gates run C1 C2 C3
 --staged --strict`: C1 is advisory, C2 blocks on secrets and destructive commands **in the staged
@@ -391,7 +391,7 @@ is missing the hook **fails closed** and prints the three ways to fix it.
 `main`: workspace install, build, the full test suite, the resolved chain, `gates run --base
 <base-sha>` **against the pull-request diff** (a run that inspects nothing is activation without
 measurement), `govern discipline`, `assure claims --verify`, and `floor status`. The CI template
-shipped for target projects is `tools/cc-sdd/templates/hooks/open-sdd-gates.yml`.
+shipped for target projects is `tools/open-sdd/templates/hooks/open-sdd-gates.yml`.
 
 **What is still not verified, stated plainly.** (1) `resolveFloor` remains an ownership argument: the
 *ceiling* a host allows and the *guarantee* an installation achieves are different claims, and only a
@@ -443,7 +443,7 @@ remains (`reverseEngineering.ts` · `scanProject`, `bootstrapSteering`, `bootstr
 
 Reconnaissance is now workspace-aware and configuration-aware: on this repository `brownfield
 survey .` reports **TypeScript / npm / tsc / Vitest and 9 modules**. Before the fix it reported
-"JavaScript, no tests detected" because the code lives in `tools/cc-sdd` and the scan read only the
+"JavaScript, no tests detected" because the code lives in `tools/open-sdd` and the scan read only the
 repository root.
 
 What is still **not** built — verified in the code, not assumed:
@@ -547,7 +547,7 @@ code and none of them fixed:
 | Untracked directories as changed files | `git status --porcelain` lists an untracked directory as one entry, so a directory path reached the file readers (`EISDIR`) and counted as a changed file | Fixed at the CLI layer (`--untracked-files=all` + filter to real files); the module still assumes its caller passes files |
 | A public-API entry point changed but declared ADDED | The API-surface warning fires for any changed entry file regardless of whether the delta declares it as new — the same family as the fixed defect, in a different block | `changeImpact.ts`, API-surface block |
 | An ADDED target that legitimately does not exist yet | `.sdd/steering/constitution.md` is generated by a command, so "declares a target this change does not touch" is arguably premature rather than a violation | `changeImpact.ts`, not-touched block |
-| Build artifacts under `tools/cc-sdd/dist/**` | Counted as undeclared scope changes even though they are compiled from declared sources | `changeImpact.ts`, scope block |
+| Build artifacts under `tools/open-sdd/dist/**` | Counted as undeclared scope changes even though they are compiled from declared sources | `changeImpact.ts`, scope block |
 
 **A corrected measurement.** An earlier commit message in this repository reported the fix as
 "87 → 35 warnings". That was **not a controlled comparison**: the two runs were taken on a live working
@@ -596,7 +596,7 @@ Paper: §12 / CSDD §3.3 (boundary evidence). The bootstrap module map uses "roo
 (`bootstrap.ts` · `buildModuleMap`), while `reverseConstitution.ts` still derives `C-BOUNDARIES` evidence
 from `project.modules` — the subdirectories of the detected source directories, falling back to the
 source dirs themselves (`reverseConstitution.ts:242-243`). On the same repository the two therefore
-describe different things: on this checkout the module map reports 2 modules (root + `tools/cc-sdd`),
+describe different things: on this checkout the module map reports 2 modules (root + `tools/open-sdd`),
 while the constitution lists the 9 source subdirectories (`agents`, `cli`, `constants`, `core`, …) as the
 boundaries. Neither is wrong for its purpose; they are **not reconciled**, so a reader must not assume
 the map and the constitution's boundary evidence agree.

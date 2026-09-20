@@ -3,16 +3,16 @@
 > Canonical name for this document is `plan.md` (the paper's Documentary Triad: `requirements.md`,
 > `plan.md`, `tasks.md`). This repository's older tooling reads `design.md`; `design.md` is kept as
 > a declared alias of this file rather than a second source of truth. Both names are accepted by
-> the triad evaluator in `tools/cc-sdd/src/core/triad.ts`.
+> the triad evaluator in `tools/open-sdd/src/core/triad.ts`.
 
 ## Problem
 
-At the starting HEAD (`a262362`, "cleanup: remove legacy cc-sdd and docs") the product had been
+At the starting HEAD (`a262362`, "cleanup: remove legacy open-sdd and docs") the product had been
 deleted: 668 files removed, leaving six tracked files. Every manifest pointed at something that no
 longer existed, and one install path was actively harmful:
 
-- `package.json` `postinstall` was `cd tools/cc-sdd && npm install … || npm install …`. With
-  `tools/cc-sdd` absent, the shell fallback ran `npm install` in the repository root, re-triggering
+- `package.json` `postinstall` was `cd tools/open-sdd && npm install … || npm install …`. With
+  `tools/open-sdd` absent, the shell fallback ran `npm install` in the repository root, re-triggering
   the same script. Measured: 81 concurrent `npm install` processes eight seconds into a run.
 - `npm pack --dry-run` produced a 2-file, 2.5 kB tarball (LICENSE + package.json): the `bin`
   entries and `files` globs matched nothing.
@@ -44,7 +44,7 @@ registry.
 
 ## Architecture
 
-New modules under `tools/cc-sdd/src/core/`, all pure or filesystem-local and unit tested:
+New modules under `tools/open-sdd/src/core/`, all pure or filesystem-local and unit tested:
 
 | Module | Paper | Responsibility |
 |---|---|---|
@@ -64,16 +64,16 @@ New modules under `tools/cc-sdd/src/core/`, all pure or filesystem-local and uni
 | `assurance.ts` | Table 24/39, §14.3, §9.1 | Threat/ATLAS mapping, regulatory crosswalk, five lab banks, pre-registered refutation thresholds, Zero-Trust borrowing boundary |
 | `gateRunner.ts` | §9.5, §9.6 | Deterministic execution of the declared controls with honest sensor reporting |
 
-CLI surface added in `tools/cc-sdd/src/cli/commands/paper.ts` and dispatched from
-`tools/cc-sdd/src/index.ts`: `gates [chain|crosswalk|list|enforcement|run]`,
+CLI surface added in `tools/open-sdd/src/cli/commands/paper.ts` and dispatched from
+`tools/open-sdd/src/index.ts`: `gates [chain|crosswalk|list|enforcement|run]`,
 `govern [invariants|conformance|hitl|rigor|appeal|meta-eval|budget]`,
 `assure [threats|lab|claims|skills|memory]`, `waves <feature>`.
 
 ## Impacted surfaces
 
-- `tools/cc-sdd/src/core/**` — new modules plus barrel exports; existing modules untouched.
-- `tools/cc-sdd/src/cli/commands/paper.ts` (new), `tools/cc-sdd/src/index.ts` (dispatch + help).
-- `tools/cc-sdd/test/**` — new test files; existing suite must stay green.
+- `tools/open-sdd/src/core/**` — new modules plus barrel exports; existing modules untouched.
+- `tools/open-sdd/src/cli/commands/paper.ts` (new), `tools/open-sdd/src/index.ts` (dispatch + help).
+- `tools/open-sdd/test/**` — new test files; existing suite must stay green.
 - Root `package.json` (postinstall, `files`, verification scripts), `scripts/postinstall.mjs` (new),
   `install.sh`, `install-global.sh`, `.gitignore` (stop ignoring `.claude/` wholesale).
 - `.sdd/specs/paper-alignment/**` — this spec.
@@ -90,10 +90,10 @@ CLI surface added in `tools/cc-sdd/src/cli/commands/paper.ts` and dispatched fro
 
 ## Verification plan
 
-1. `npm --prefix tools/cc-sdd run build` — TypeScript strict build succeeds.
-2. `npm --prefix tools/cc-sdd test` — full suite green (existing + new tests).
-3. `node tools/cc-sdd/dist/cli.js gates chain --profile solo|team|regulated` — resolves 7 / 9 / 12 declared controls.
-4. `node tools/cc-sdd/dist/cli.js gates crosswalk` — residue shows exactly G7, G8, G10, G11, G17; 16 of 21 covered.
+1. `npm --prefix tools/open-sdd run build` — TypeScript strict build succeeds.
+2. `npm --prefix tools/open-sdd test` — full suite green (existing + new tests).
+3. `node tools/open-sdd/dist/cli.js gates chain --profile solo|team|regulated` — resolves 7 / 9 / 12 declared controls.
+4. `node tools/open-sdd/dist/cli.js gates crosswalk` — residue shows exactly G7, G8, G10, G11, G17; 16 of 21 covered.
 5. `npm pack --dry-run` — tarball contains the CLI and templates.
 6. Postinstall guard: absent workspace exits 0 with a message and spawns no nested install.
 7. Claims registry verifiers executed from the repository root, results recorded in `docs/PAPER-ALIGNMENT.md`.

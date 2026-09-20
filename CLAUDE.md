@@ -17,15 +17,15 @@ exist yet.
 | Steering (project memory) | templates only: `.sdd/settings/templates/steering/` | `.sdd/steering/` (`product.md`, `tech.md`, `structure.md`) |
 | Feature specs | `.sdd/specs/` | `.sdd/specs/<feature>/` |
 | Memory (session ledgers) | not present | `.sdd/memory/` |
-| CLI source + templates | `tools/cc-sdd/src/`, `tools/cc-sdd/templates/` | — |
-| Compiled CLI | `tools/cc-sdd/dist/cli.js` | — |
+| CLI source + templates | `tools/open-sdd/src/`, `tools/open-sdd/templates/` | — |
+| Compiled CLI | `tools/open-sdd/dist/cli.js` | — |
 
 Do not look for steering or memory under `.sdd/` in this checkout until a skill has created them.
 
 ### Steering vs Specification
 
 **Steering** (`.sdd/steering/`) - Guides AI with project-wide rules, architecture, and technology standards.
-**Specs** (`.sdd/specs/`) - Formalizes the development lifecycle for individual features into an auditable Documentary Triad (`requirements.md`, `plan.md`, `tasks.md`; `design.md` is an accepted alias of `plan.md` — see `tools/cc-sdd/src/core/triad.ts`).
+**Specs** (`.sdd/specs/`) - Formalizes the development lifecycle for individual features into an auditable Documentary Triad (`requirements.md`, `plan.md`, `tasks.md`; `design.md` is an accepted alias of `plan.md` — see `tools/open-sdd/src/core/triad.ts`).
 
 ### Active Specifications
 - Check `.sdd/specs/` for active specifications
@@ -66,12 +66,12 @@ Do not look for steering or memory under `.sdd/` in this checkout until a skill 
 The skills **shipped by this repository** are source templates; the CLI copies the selected agent's
 set into a target project.
 
-- Templates (this repository): `tools/cc-sdd/templates/agents/<agent>/skills/sdd-*/SKILL.md`
+- Templates (this repository): `tools/open-sdd/templates/agents/<agent>/skills/sdd-*/SKILL.md`
   — 168 `SKILL.md` files across 8 skills-based agents (21 skills each).
 - Installed in a target project: the agent's layout directory, e.g. `.claude/skills/sdd-*/SKILL.md`
   (Claude Code Skills), `.agent/skills/` (Antigravity), `.cursor/skills/` (Cursor).
 - The agent registry that defines every layout and alias flag is
-  `tools/cc-sdd/src/agents/registry.ts`.
+  `tools/open-sdd/src/agents/registry.ts`.
 
 Skills in this checkout:
 - Each skill is a directory with a `SKILL.md` file.
@@ -91,16 +91,16 @@ implementing symbol, and every declared gap — is
 something the paper describes.
 
 ```bash
-node tools/cc-sdd/dist/cli.js gates chain --profile regulated   # resolve the chain
-node tools/cc-sdd/dist/cli.js gates crosswalk                   # G1–G21 → C1–C7/O1–O7 + residue
-node tools/cc-sdd/dist/cli.js gates enforcement                 # levels A–D, ceiling vs floor
-node tools/cc-sdd/dist/cli.js gates run                         # run the chain (exit 1 if it fails)
-node tools/cc-sdd/dist/cli.js govern conformance                # C0–C3 with per-invariant evidence
-node tools/cc-sdd/dist/cli.js govern hitl                       # quantified HIL thresholds
-node tools/cc-sdd/dist/cli.js govern discipline                 # §9.7 decidable properties over the diff
-node tools/cc-sdd/dist/cli.js assure threats                    # OWASP/ATLAS + regulatory crosswalk
-node tools/cc-sdd/dist/cli.js waves <feature>                   # wave plan + git commands
-node tools/cc-sdd/dist/cli.js floor status                    # is the commit/merge floor installed?
+node tools/open-sdd/dist/cli.js gates chain --profile regulated   # resolve the chain
+node tools/open-sdd/dist/cli.js gates crosswalk                   # G1–G21 → C1–C7/O1–O7 + residue
+node tools/open-sdd/dist/cli.js gates enforcement                 # levels A–D, ceiling vs floor
+node tools/open-sdd/dist/cli.js gates run                         # run the chain (exit 1 if it fails)
+node tools/open-sdd/dist/cli.js govern conformance                # C0–C3 with per-invariant evidence
+node tools/open-sdd/dist/cli.js govern hitl                       # quantified HIL thresholds
+node tools/open-sdd/dist/cli.js govern discipline                 # §9.7 decidable properties over the diff
+node tools/open-sdd/dist/cli.js assure threats                    # OWASP/ATLAS + regulatory crosswalk
+node tools/open-sdd/dist/cli.js waves <feature>                   # wave plan + git commands
+node tools/open-sdd/dist/cli.js floor status                    # is the commit/merge floor installed?
 ```
 
 Non-negotiables when using that model:
@@ -110,7 +110,7 @@ Non-negotiables when using that model:
 - **C7/Karpathy is vacuous** (`inspects: false`): activation without measurement, reported as such.
 - **No model backend ships**, so C5 intent alignment reports `mode=degraded` and is not evidence.
 - The claims registry (`docs/claims/paper-claims.yaml`) is executed by the product CLI:
-  `node tools/cc-sdd/dist/cli.js assure claims --verify`. It exits `1` only on a `broken` claim, and
+  `node tools/open-sdd/dist/cli.js assure claims --verify`. It exits `1` only on a `broken` claim, and
   it must stay at `0 broken`.
 
 ## Development Rules
@@ -120,9 +120,9 @@ Non-negotiables when using that model:
 - Autonomous Quality Engineering: Agentic QE (`agentic-qe.dev`, PACTS framework) enabled for boundary-scoped metamorphic invariant testing.
 - Strict Git Mode: specs are mandatory and implementation without an approved specification is
   blocked **under the `team` and `enterprise` governance profiles**; the default `solo` profile runs
-  its checks and reports without blocking (`tools/cc-sdd/src/core/governance.ts`).
+  its checks and reports without blocking (`tools/open-sdd/src/core/governance.ts`).
 - **The enforcement floor is installed, not merely declared.** `npm install` wires a pre-commit hook
-  (`tools/cc-sdd/templates/hooks/pre-commit`) that runs C1/C2/C3 against the **staged index** and
+  (`tools/open-sdd/templates/hooks/pre-commit`) that runs C1/C2/C3 against the **staged index** and
   fails closed if the CLI is missing; `.github/workflows/gates.yml` runs the full chain on every pull
   request. Never bypass with `--no-verify` — declare a genuine false positive in
   `.sdd/settings/security-allowlist.json` with a reason, which is the channel an audit can read.

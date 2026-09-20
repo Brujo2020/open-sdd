@@ -37,7 +37,7 @@ Keep EARS trigger keywords and fixed phrases in English (`When`, `If`, `While`, 
 ## One template per requirement
 
 A functional requirement carries **exactly one** trigger template. The check is automated in
-`tools/cc-sdd/src/core/ears.ts` (gate `C1`, and the `G1` clarity control) and it looks at the
+`tools/open-sdd/src/core/ears.ts` (gate `C1`, and the `G1` clarity control) and it looks at the
 trigger clause *before* `shall`:
 
 - Allowed — a single trigger with a compound condition. This is one template:

@@ -8,14 +8,14 @@ commands shown.
 ```bash
 git clone https://github.com/Brujo2020/open-sdd
 cd open-sdd
-npm --prefix tools/cc-sdd install     # installs the CLI's dev dependencies
-npm --prefix tools/cc-sdd run build   # compiles to tools/cc-sdd/dist/
-node tools/cc-sdd/dist/cli.js --help
+npm --prefix tools/open-sdd install     # installs the CLI's dev dependencies
+npm --prefix tools/open-sdd run build   # compiles to tools/open-sdd/dist/
+node tools/open-sdd/dist/cli.js --help
 ```
 
-The compiled CLI is present and tracked under `tools/cc-sdd/dist/`, so
-`node tools/cc-sdd/dist/cli.js --help` works even before a build.
-`npm --prefix tools/cc-sdd run build` recompiles it from `tools/cc-sdd/src/`.
+The compiled CLI is present and tracked under `tools/open-sdd/dist/`, so
+`node tools/open-sdd/dist/cli.js --help` works even before a build.
+`npm --prefix tools/open-sdd run build` recompiles it from `tools/open-sdd/src/`.
 
 ## 2. Install into your project
 
@@ -24,9 +24,9 @@ default recommendation:
 
 ```bash
 cd /path/to/your-project
-node /path/to/open-sdd/tools/cc-sdd/dist/cli.js --claude-skills -y   # Claude Code
-node /path/to/open-sdd/tools/cc-sdd/dist/cli.js --cursor-skills -y   # Cursor
-node /path/to/open-sdd/tools/cc-sdd/dist/cli.js --antigravity -y     # Google Antigravity
+node /path/to/open-sdd/tools/open-sdd/dist/cli.js --claude-skills -y   # Claude Code
+node /path/to/open-sdd/tools/open-sdd/dist/cli.js --cursor-skills -y   # Cursor
+node /path/to/open-sdd/tools/open-sdd/dist/cli.js --antigravity -y     # Google Antigravity
 ```
 
 Or use the helper script, which takes the target repository as its first argument:
@@ -64,11 +64,11 @@ The same CLI carries the Zero-Trust console from the reference architecture. Run
 checkout or the installed location:
 
 ```bash
-node tools/cc-sdd/dist/cli.js gates chain --profile regulated
-node tools/cc-sdd/dist/cli.js gates crosswalk
-node tools/cc-sdd/dist/cli.js gates enforcement
-node tools/cc-sdd/dist/cli.js govern conformance
-node tools/cc-sdd/dist/cli.js assure threats
+node tools/open-sdd/dist/cli.js gates chain --profile regulated
+node tools/open-sdd/dist/cli.js gates crosswalk
+node tools/open-sdd/dist/cli.js gates enforcement
+node tools/open-sdd/dist/cli.js govern conformance
+node tools/open-sdd/dist/cli.js assure threats
 ```
 
 What to expect, and what not to:
@@ -82,7 +82,7 @@ What to expect, and what not to:
 ## 5. Reproduce the paper-alignment counts
 
 ```bash
-node tools/cc-sdd/dist/cli.js assure claims --verify   # §9.6 verifier; exits 1 only on a broken claim
+node tools/open-sdd/dist/cli.js assure claims --verify   # §9.6 verifier; exits 1 only on a broken claim
 ```
 
 Expected from either (the product command prints the Spanish equivalent):

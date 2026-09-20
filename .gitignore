@@ -38,7 +38,7 @@ venv/
 
 # Build outputs
 dist/
-!tools/cc-sdd/dist/
+!tools/open-sdd/dist/
 build/
 *.egg-info/
 
@@ -47,7 +47,7 @@ package-lock.json
 yarn.lock
 
 # Exceptions for CI reproducibility
-!tools/cc-sdd/package-lock.json
+!tools/open-sdd/package-lock.json
 
 # Environment variables
 .env
@@ -75,7 +75,7 @@ coverage/
 
 # Project specific
 BLOG.md
-docs/cc-sdd/
+docs/open-sdd/
 docs/sdd/prompt/
 docs/sdd/
 # .sdd/

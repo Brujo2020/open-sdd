@@ -21,7 +21,7 @@ This guide covers migration paths across Open-SDD releases, detailing architectu
 
 ---
 
-## 1. Staying on cc-sdd 1.1.5 (fallback option)
+## 1. Staying on open-sdd 1.1.5 (fallback option)
 
 1.1.5 is no longer on `@latest`, but you can pin it explicitly:
 

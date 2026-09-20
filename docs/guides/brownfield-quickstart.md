@@ -6,7 +6,7 @@ todas las demás:
 > El código existente es la fuente de verdad de facto: **no reinventes la arquitectura, gobiérnala**.
 
 Todo lo que sigue se ejecuta desde la raíz del repositorio. Los comandos usan `open-sdd`; si no lo
-tienes en el `PATH`, sustituye `open-sdd` por `node tools/cc-sdd/dist/cli.js`.
+tienes en el `PATH`, sustituye `open-sdd` por `node tools/open-sdd/dist/cli.js`.
 
 El manual del agente es el skill `/sdd-brownfield` (se instala con el resto de skills). Esta guía y
 ese skill dicen lo mismo: aquí está la ruta, allí está el protocolo.
@@ -28,10 +28,10 @@ Bootstrap brownfield — @brujo2020/open-sdd
     .  @brujo2020/open-sdd
       posee: package.json
       responsabilidades: expone un ejecutable CLI (declarado en package.json bin)
-    tools/cc-sdd  open-sdd
-      posee: tools/cc-sdd/package.json, tools/cc-sdd/src, tools/cc-sdd/test
+    tools/open-sdd  open-sdd
+      posee: tools/open-sdd/package.json, tools/open-sdd/src, tools/open-sdd/test
       responsabilidades: expone un ejecutable CLI (declarado en package.json bin)
-      tests: tools/cc-sdd/test
+      tests: tools/open-sdd/test
 
   Artefactos
     keep               .sdd/steering/constitution.md
@@ -83,13 +83,13 @@ Constitución reversa — @brujo2020/open-sdd
   principios en vigor: 4 · enmiendas propuestas: 2
 
   C-STACK-FACT (MUST) — El stack actual es un hecho establecido
-      evidencia: package manager: npm; lockfile: tools/cc-sdd/package-lock.json; build tool: tsc
+      evidencia: package manager: npm; lockfile: tools/open-sdd/package-lock.json; build tool: tsc
   C-API-COMPAT (MUST) — Preservar la compatibilidad de la API pública
-      evidencia: tools/cc-sdd/src/core/index.ts; tools/cc-sdd/src/index.ts
+      evidencia: tools/open-sdd/src/core/index.ts; tools/open-sdd/src/index.ts
   C-BOUNDARIES (SHOULD) — Seguir los límites de servicio existentes
       evidencia: agents; cli; constants; core; manifest; plan; resolvers; template
   C-REGRESSION-ORACLE (MUST) — Los tests existentes son el oráculo de regresión
-      evidencia: Vitest; tools/cc-sdd/test
+      evidencia: Vitest; tools/open-sdd/test
 ```
 
 Un principio descriptivo **sin evidencia es un error de validación**: no se admite como hecho.
@@ -138,7 +138,7 @@ Salidas reales de este repositorio (las cifras se mueven con el cambio pendiente
 ```text
 Impacto del cambio — brownfield-support (35 fichero(s))
   radio de impacto: 0 fichero(s) alcanzable(s) desde el cambio
-  superficie de API tocada: tools/cc-sdd/src/core/index.ts, tools/cc-sdd/src/index.ts
+  superficie de API tocada: tools/open-sdd/src/core/index.ts, tools/open-sdd/src/index.ts
 
 Contratos de ejecución — brownfield-support
   oráculo: 15 contrato(s) · comando npx vitest run (derivado, no verificado)
@@ -196,9 +196,9 @@ contra la que se valida **cada** spec, y `open-sdd govern constitution --matrix`
 cobertura principio → artefacto.
 
 Ejemplo real de este repositorio. `.sdd/steering/constitution.md` define `C-API-COMPAT` (`MUST`,
-evidencia `tools/cc-sdd/src/core/index.ts; tools/cc-sdd/src/index.ts`). La delta de
+evidencia `tools/open-sdd/src/core/index.ts; tools/open-sdd/src/index.ts`). La delta de
 `.sdd/specs/brownfield-support/` tiene una entrada (`REQ-BF-005`) cuyo objetivo es
-`tools/cc-sdd/src/index.ts`, justo el fichero que `C-API-COMPAT` protege. Por eso esa spec debe citar
+`tools/open-sdd/src/index.ts`, justo el fichero que `C-API-COMPAT` protege. Por eso esa spec debe citar
 `C-API-COMPAT`:
 
 - si citara un id que no existe (por ejemplo `C-SOLO-CONSOLA`), `status --check` reporta **autoridad
@@ -272,7 +272,7 @@ Honestidad primero: esto es lo que el código **no** hace hoy, con su brecha dec
   entre la delta y la base no se comprueba.
 - **`brownfield impact` tiene falsos positivos conocidos** (G-19): directorios sin seguimiento, un
   entry point público tocado pero declarado `ADDED`, un objetivo `ADDED` que legítimamente aún no
-  existe, y artefactos de build bajo `tools/cc-sdd/dist/**`. Es un **informe de revisión, no un gate**,
+  existe, y artefactos de build bajo `tools/open-sdd/dist/**`. Es un **informe de revisión, no un gate**,
   y por eso no está en CI.
 - **`brownfield impact` y `reuse` consultan el código, no la constitución** (G-18). `impact` no nombra
   qué principios constitucionales toca el cambio; `reuse` es un aviso porque `AMD-REUSE-FIRST` sigue
