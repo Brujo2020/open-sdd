@@ -183,6 +183,7 @@ Verified by installing into a throwaway git repository with `open-sdd --claude-s
 | `.sdd/settings/git.json` | Git automation, shipped **assisted and never pushing**. |
 | `.sdd/settings/templates/…` | Spec, steering and steering-custom templates. |
 | `.claude/skills/sdd-*/SKILL.md` (+ `rules/`, `references/`, `templates/` for some skills) | The 21 skills, for Claude Code Skills. Other agents write their own directory (`.cursor/skills`, `.agent/skills`, …). |
+| `.claude/commands/sdd-*.md` | The 22 prompt templates, written by `open-sdd init . --write` (the default path). Other hosts write their own commands directory (`.cursor/commands/`, `.github/prompts/`, `.gemini/commands/`, `.opencode/commands/`). |
 | `CLAUDE.md` / `AGENTS.md` | The agent's documentation file, where that agent uses one. |
 
 Not written by that command, on purpose:
