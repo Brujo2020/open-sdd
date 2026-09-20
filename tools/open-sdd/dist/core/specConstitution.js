@@ -114,7 +114,10 @@ const sectionDeclarations = (text) => {
     for (const line of text.split('\n')) {
         const heading = line.match(/^(#{1,6})\s+(.+?)\s*$/);
         if (heading) {
-            inSection = /constitution/i.test(heading[2]);
+            // Only a real declaration heading counts. Matching the word anywhere turned a requirement that
+            // merely mentions "constitutional adhesion" into a declaration section, and everything after it
+            // was scanned for principle ids — which is how the EARS keyword WHEN became a phantom authority.
+            inSection = /^(spec\s+)?constitution$/i.test(heading[2].trim());
             continue;
         }
         if (!inSection)

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "features": {
+    "tool-maturity": {
+      "alignment": 0,
+      "principles": [
+        "C-API-COMPAT",
+        "C-BOUNDARIES",
+        "C-REGRESSION-ORACLE",
+        "C-STACK-FACT"
+      ],
+      "constitutionHash": "a08ee91dda98283709f30b1477e0bf4da94a98869e999d2d8659ba1aef7ec54f",
+      "recordedAt": "2026-09-20T00:17:07.688Z"
+    }
+  },
+  "acceptances": {}
+}
