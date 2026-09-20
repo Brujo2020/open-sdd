@@ -78,7 +78,7 @@ toolchain, installable and usable in minutes, with the constitution as the pivot
 ## Non-functional requirements
 
 - The engine shall keep working with no model backend and no network access.
-- The console shall report a check as passed only when it inspected the artifacts it claims to have checked.
+- IF a check did not inspect the artifacts it claims to have checked, THEN the [console] shall not report it as passed.
 
 ### REQ-MAT-016 — A constitution draft a human ratifies
 

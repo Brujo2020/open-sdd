@@ -80,7 +80,8 @@ Status: draft
 - Strangler: new
 
 ### REQ-MAT-016 — A constitution draft a human ratifies
-- Statement: The [drafter] shall emit a draft marked as not in force, carrying the evidence behind each proposed principle, and the [engine] shall keep draft principles out of blocking verdicts until a human ratifies them.
+- Statement: The [drafter] shall emit a draft marked as not in force, carrying the evidence behind each proposed principle.
+- Statement: The [engine] shall keep draft principles out of blocking verdicts until a human ratifies them.
 - Targets: tools/open-sdd/src/core/constitutionDraft.ts, tools/open-sdd/src/cli/commands/constitution.ts, tools/open-sdd/test/coreConstitutionDraft.test.ts
 - Strangler: new
 
