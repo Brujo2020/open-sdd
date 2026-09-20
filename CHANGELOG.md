@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 **Release Notes**: [English](docs/RELEASE_NOTES/RELEASE_NOTES_en.md)
 
-## [Unreleased]
+## [3.1.0] — 2026-09-20
 
 ### Added — one entry point, one dashboard, and the constitution as the pivot
 
