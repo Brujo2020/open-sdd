@@ -20,6 +20,7 @@ import path from 'node:path';
 import { handleStatusCommand } from '../src/cli/commands/status.js';
 import { callTool } from '../src/mcp/tools.js';
 import { renderConstitution, type Constitution } from '../src/core/constitution.js';
+import { adhesionHistoryPath } from '../src/core/specConstitution.js';
 
 const dirs: string[] = [];
 
@@ -243,7 +244,9 @@ describe('cli/status --check — registro append-only de la medición', () => {
     const first = makeIO();
     expect(await handleStatusCommand(['session', '--check'], first.io, root)).toBe(0);
     expect(first.logs.join('\n')).toContain('tendencia first-run');
-    expect(first.logs.join('\n')).toContain('1 medición(es) en .sdd/state/adhesion-history.json');
+    // The panel names the file it appended to. The path is built with `node:path`, so the
+    // separator is the platform's: comparing against a literal POSIX path only holds on POSIX.
+    expect(first.logs.join('\n')).toContain(`1 medición(es) en ${adhesionHistoryPath('.sdd')}`);
 
     const afterFirst = await readHistory(root);
     expect(afterFirst).toHaveLength(1);
@@ -260,7 +263,7 @@ describe('cli/status --check — registro append-only de la medición', () => {
     expect(afterSecond[1].score).toBe(100);
     // La tendencia del SEGUNDO panel compara contra la primera medición, no contra sí misma.
     expect(second.logs.join('\n')).toMatch(/tendencia flat \(0 puntos vs 100 del /);
-    expect(second.logs.join('\n')).toContain('2 medición(es) en .sdd/state/adhesion-history.json');
+    expect(second.logs.join('\n')).toContain(`2 medición(es) en ${adhesionHistoryPath('.sdd')}`);
   });
 
   it('con historia corrupta avisa, aparta la evidencia y arranca una serie nueva', async () => {

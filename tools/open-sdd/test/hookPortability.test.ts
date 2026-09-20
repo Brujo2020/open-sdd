@@ -195,7 +195,9 @@ describe('templates/hooks/pre-commit.mjs — portable gate source', () => {
   });
 
   it('starts with the Node shebang', () => {
-    expect(readFileSync(hookTemplate, 'utf8').startsWith('#!/usr/bin/env node\n')).toBe(true);
+    // The repository does not pin line endings, so a Windows checkout of the template is CRLF.
+    // The assertion is about the shebang line, not its terminator: compare the first line.
+    expect(readFileSync(hookTemplate, 'utf8').split(/\r?\n/, 1)[0]).toBe('#!/usr/bin/env node');
   });
 
   it('exits 0 on a clean index when the CLI resolves through OPEN_SDD_CLI', async () => {

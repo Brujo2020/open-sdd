@@ -152,6 +152,56 @@ describe('testCommandFor — un framework desconocido produce un comando DERIVAD
     expect(logs.join('\n')).toContain('npm test (derivado, no verificado)');
   });
 
+  it('publica el oráculo aunque el árbol de trabajo esté limpio (un checkout de CI)', async () => {
+    const root = await makeTemp('open-sdd-honesty-clean-');
+    await write(
+      root,
+      'package.json',
+      JSON.stringify({ name: 'clean-fixture', devDependencies: { vitest: '^4.0.0' } }, null, 2),
+    );
+    await write(root, 'src/free.ts', 'export const free = 1;\n');
+    await write(root, 'test/free.test.ts', 'export const placeholder = true;\n');
+    await write(
+      root,
+      path.join('.sdd', 'specs', 'demo', 'delta.md'),
+      [
+        '# Delta: demo',
+        '',
+        '## ADDED',
+        '',
+        '### REQ-DEMO-001 — Una entrada declarada',
+        '- Statement: The [demo] shall declare its contract.',
+        '- Targets: src/free.ts',
+        '- Contracts: test/free.test.ts',
+        '- Strangler: new',
+        '',
+      ].join('\n'),
+    );
+    const init = spawnSync('git', ['init', '-q'], { cwd: root, encoding: 'utf8' });
+    expect(init.status, `git init falló: ${init.stderr}`).toBe(0);
+    // A committed, clean tree is what CI checks out, and it is the case where `changedFilesFor`
+    // legitimately sees no change. The contract set is a property of the repository and the delta,
+    // not of the diff, so the oracle must still be published: CLM-053 greps exactly these two
+    // strings, and returning early made its verdict depend on an unrelated file being dirty.
+    for (const args of [
+      ['add', '-A'],
+      ['-c', 'user.email=fixture@test', '-c', 'user.name=fixture', 'commit', '-qm', 'fixture'],
+    ]) {
+      const step = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+      expect(step.status, `git ${args.join(' ')} falló: ${step.stderr}`).toBe(0);
+    }
+    expect(spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).stdout.trim()).toBe('');
+
+    const { io, logs } = makeIO();
+    const code = await handleBrownfieldCommand(['contracts', 'demo'], io, root);
+
+    expect(code).toBe(0);
+    const text = logs.join('\n');
+    expect(text).toContain('Contratos de ejecución');
+    expect(text).toContain('contrato(s)');
+    expect(text).toContain('Sin cambios pendientes');
+  });
+
   it('el detalle de extractContracts dice que el comando por defecto es una suposición', async () => {
     const root = await makeTemp('open-sdd-honesty-detail-');
     await write(root, 'package.json', JSON.stringify({ name: 'detail-fixture', dependencies: {} }, null, 2));

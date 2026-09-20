@@ -42,6 +42,13 @@ dist/
 build/
 *.egg-info/
 
+# Generated SDD state (never source): the ratchet baseline and the audit bundle
+.sdd/audit/
+.sdd/state/
+
+# Bench output (the harness writes to a temp dir; this covers a kept/exported run)
+bench/out/
+
 # Dependencies
 package-lock.json
 yarn.lock

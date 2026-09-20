@@ -49,6 +49,33 @@ including what it did not.
 
 ---
 
+## Start here
+
+Run the CLI with **no arguments** inside a repository. That is the one door: it inspects the
+repository and prints the composite **SDD score** (0–100 over seven checks that already exist), the
+current **phase** (1 Specify · 2 Implement · 3 Verify) and the **single next action**, with one line
+of why:
+
+```bash
+open-sdd
+# SDD 93% · Fase 2 · Implementar · constitución 100% · EARS 100% · trazabilidad 100% ·
+# evidencia 53% · contratos 100% · gates OK (C1, C2, las del nivel declarado) · alineación 100% ·
+# siguiente: open-sdd impl brownfield-support
+# Por qué: la especificación está sana y quedan tareas sin evidencia capturada.
+```
+
+It is read-only and never prompts. A component the CLI could not inspect is listed under
+`sin medir:` and its weight is **excluded from the score** rather than counted as zero, so the number
+never claims more than was measured. `status` is the same state as a full panel; `status --check`
+adds the constitutional verdict and exits `1` on an error-severity finding; `status --quiet`
+collapses the panel to one line for a commit hook.
+
+The **on-demand assistants** appear where a command already found something: an ambiguous EARS
+requirement, an unfilled `{{…}}` marker or a missing constitution produces a paste-ready proposal or
+an explicit question — never a template with holes — and never changes the command's verdict.
+
+---
+
 ## 60-second demo
 
 A throwaway repository, four real incoherences and the CLI naming them. No network, no `npm install`,
@@ -141,6 +168,31 @@ Kiro's strengths today. This is a qualitative comparison, not a benchmark. If yo
 Kiro, spec-kit or cc-sdd, [Migrating from Kiro, spec-kit and cc-sdd](docs/guides/migrate-from.md)
 maps their artifacts and layouts onto this one, and
 [Integrations](docs/guides/integrations.md) is the per-agent install matrix.
+
+---
+
+## Adopt open-sdd, and migrate from another SDD tool
+
+`integrate` is the machine-checked adoption surface, and `import` absorbs an incumbent's artifacts.
+Both are **plans first**: nothing is written without `--write`, and neither ever overwrites a file.
+
+```bash
+open-sdd integrate --list            # the matrix: 10 hosts, skills layout, invocation, MCP config
+open-sdd integrate cursor            # detect or name a host; print its exact in-chat invocation
+open-sdd integrate cursor --write    # install the skills and register the MCP server (idempotent)
+open-sdd import spec-kit             # plan the mapping of .specify/** into .sdd/**
+open-sdd import kiro --write         # copy steering + the triad; never overwrites an existing file
+```
+
+`integrate` reads `tools/open-sdd/src/core/integrations.ts`: one row per host with the exact
+invocation syntax (`/sdd-brownfield`, `$sdd-brownfield`, `@sdd-brownfield`, …), the MCP config path
+per OS and the snippet that registers the stdio server. `verified` is an **evidence** field — an
+unconfirmed row is printed as **NO VERIFICADA** and `--write` refuses to touch it, so you paste and
+check the snippet yourself. `import` is a **mapping, not a migration**: every
+recognized-but-unmappable artifact is reported as a `skip` with its reason, imported requirements are
+not EARS-validated, and a file that already exists is never overwritten. Per-host guide:
+[docs/guides/integrations.md](docs/guides/integrations.md); artifact-by-artifact mapping:
+[docs/guides/migrate-from.md](docs/guides/migrate-from.md).
 
 ---
 
@@ -448,7 +500,7 @@ unless stated otherwise.
 | `govern hitl` | The quantified Human-in-the-Loop thresholds |
 | `govern discipline` | §9.7 decidable properties (diff budget, scope containment) over the working diff |
 | `floor status` / `floor install` | Whether the owned enforcement floor (commit hook + PR gate matrix) is installed, and installing it into a target project |
-| `govern rigor` | Rigor mode for a change (`none`/`lite`/`spec-first`/`spec-anchored`/`spec-as-source`) |
+| `govern rigor` | The declared rigor level and its active gates; `--select` recommends a level, `--gates` prints the ladder, `--verbose` adds every finding |
 | `govern appeal` | Relaxation receipts and override-rate recalibration |
 | `govern meta-eval` | Cohen's κ pilot, the Landis–Koch floor and the preregistered `n` |
 | `govern budget` | Governance overhead lines, the 30 % ceiling, metric definitions, T0–T3 routing |
@@ -460,8 +512,19 @@ unless stated otherwise.
 | `waves <feature>` | Transactional wave plan with the git commands that would materialise it (needs `.sdd/specs/<feature>/tasks.md`) |
 | `brownfield survey [target]` | What the existing project is: stack, tooling, module boundaries and the evidence for each |
 | `brownfield constitution [target] [--write]` | The descriptive constitution (principles the code obeys + proposed amendments); `--write` stores it in `.sdd/steering/constitution.md` |
-| `delta init\|validate\|status\|render <feature>` | The contract of change: scaffold ADSR, validate ids/EARS/contracts/traceability, report counts and strangulation |
+| `delta init\|validate\|status\|render\|merge [--write] <feature>` | The contract of change: scaffold ADSR, validate ids/EARS/contracts/traceability, report counts and strangulation, and merge the delta back into the base `requirements.md` (all-or-nothing) |
 | `brownfield impact\|contracts\|reuse <feature>` | Analysis over the pending change: reachable set and breaking changes, the regression oracle (`--verify` runs the test command), reuse-first candidates |
+| `brownfield bootstrap [target] [--focus "…"] [--write]` | One entry point for an existing repository: the module map, where new code goes and the ordered plan; `--write` writes the intelligence document, the constitution and the focus delta seed |
+| `brownfield templates [--write]` | Templates adapted to the observed stack, each substitution naming the file that proves it; the red-green TDD cycle appears only when a test runner is observed |
+| `brownfield analyze [--base <ref>]` | One-pass cross-artifact consistency (requirements↔tasks, delta↔diff, pivot, contracts, boundaries); `notChecked` names what it could not inspect |
+| `integrate [host] [--list\|--write\|--dry-run\|--json]` | The integration matrix: skills layout, exact in-chat invocation, MCP config path and snippet per host; unverified rows are printed and never written |
+| `import [kiro\|spec-kit\|cc-sdd] [--write\|--dry-run\|--json]` | Plan (and optionally apply) the mapping of an incumbent's artifacts into `.sdd/`; skips are named and existing files are never overwritten |
+| `audit bundle [--out <dir>] [--sarif <path>] [--profile <p>]` | The audit evidence bundle — constitution, specs, gates, claims, alignment and rigor — with one sha256 per artifact; exits `1` on a blocking finding, `2` when it could not run |
+| `audit sarif [--out <path>]` | The same verdict as SARIF 2.1.0, shape-validated before it is written |
+| `context [feature] [--json]` | The terminal face of the MCP context pack: constitution, applicable spec, module map and declared rigor in one object |
+| `tour [--write]` | The guided first run: runs the real commands and stops at the human decision (ratifying a constitution is never automated) |
+| `doctor` | Self-diagnosis — Node, CLI, commit hook and its portability, rigor, constitution, specs, offline posture — each with the fixing command |
+| `mcp` | The stdio MCP server (11 tools + read-only resources) any MCP host can call |
 
 Environment variables accepted by the console include `SDD_FEATURE`, `SDD_COMPLEXITY`,
 `SDD_RELAXATIONS`, `SDD_CYCLE_TOKENS`, `SDD_META_TOKENS`, `SDD_AUDIT_TOKENS`, `SDD_DISTILL_TOKENS`,
@@ -471,13 +534,13 @@ Environment variables accepted by the console include `SDD_FEATURE`, `SDD_COMPLE
 
 | Command | What it does |
 |---|---|
-| `status [feature]` | Spec/implementation progress |
+| `status [feature] [--check] [--quiet] [--json]` | The one dashboard: constitution, specs, delta, contracts, alignment, rigor and the next command; `--check` adds the constitutional verdict |
 | `init <feature>` | Scaffold a spec directory |
 | `getspecs [focus]` | Brownfield scan → steering + spec seeds |
 | `gap <feature>` | Gap / blast-radius analysis |
 | `impl <feature>` | Implementation runner |
 | `verify <feature>` | Feature-level verification |
-| `audit <feature>` | Drift + traceability report |
+| `audit <feature>` | Drift + traceability report; `audit bundle`/`audit sarif` produce the evidence bundle and the SARIF report |
 | `help [topic]` | In-chat help |
 
 ---
@@ -508,6 +571,13 @@ is the complete traceability report, including every declared gap.
 | Threat model, regulatory crosswalk, risk lab (§9.8, Appendix D, §14.3, Tables 24/31/39) | `src/core/assurance.ts` | `OWASP_AGENTIC_MAP`, `REGULATORY_MAP`, `RISK_LAB_BANKS`, `REFUTATION_THRESHOLDS` |
 | Overhead budget and telemetry (Appendix B.4–B.6, §10.3) | `src/core/telemetry.ts` | `COST_LINES`, `evaluateGovernanceBudget`, `COMPLEXITY_TIERS`, `HARNESS_SELF_FAILURE` |
 | Brownfield inversion (§12, Figure 9) | `src/core/reverseEngineering.ts` | `scanProject`, `bootstrapSteering`, `bootstrapSpecSeeds` |
+| Tool-agnostic surface — the MCP server (§6.4, Table 4; §9.5 G16/O2) | `src/mcp/server.ts`, `src/mcp/tools.ts`, `src/core/contextPack.ts` | `runMcpServer`, `listToolDescriptors`, `callTool`, `listResources`, `readResource`, `buildContextPack` |
+| Adoption surface as machine-checked data (spec-kit issue #1436) | `src/core/integrations.ts`, `src/core/importers.ts` | `HOST_INTEGRATIONS`, `detectIntegration`, `mcpRegistration`, `planImport`, `applyImport` |
+| One number, one phase, one action (*Manual Maestro* EGTAV; §9.6) | `src/core/sddScore.ts`, `src/core/assistants.ts` | `computeSddScore`, `renderScoreFooter`, `assist`, `renderAssist` |
+| The EARS assistant and stack-adapted templates (§4.6; spec-kit issue #1436) | `src/core/earsAssistant.ts`, `src/core/templateAdaptation.ts`, `src/core/consistency.ts` | `analyseEars`, `earsEvidencePack`, `adaptTemplates`, `checkConsistency` |
+| The constitutional ratchet and expiring waivers (CSDD §3.4; invariants I1/I6) | `src/core/ratchet.ts`, `src/core/securityAllowlist.ts` | `runAdhesionRatchet`, `expiredWaivers`, `applySecurityAllowlist` |
+| Audit evidence bundle + SARIF (§9.6; CSDD §3.3) | `src/cli/commands/audit.ts`, `action.yml` | `collectEvidence`, `writeBundle`, `buildSarifLog`, `validateSarifShape`, `AUDIT_EXIT_CODES` |
+| The demo, the synthetic bench and the measurements (§14.3 discipline) | `scripts/demo-60s.sh`, `bench/harness.mjs`, `docs/MEASUREMENTS.md` | reproducible command; per-class injected/caught/missed |
 
 ### What this port does **not** do
 
@@ -528,8 +598,24 @@ Stated here so the reference section is not read as a claim of completeness:
   remains an ownership argument, and no behavioural sentinel has verified write-time blocking in any
   host, so level A is a ceiling and not a guarantee. `git commit --no-verify` bypasses level B and
   that bypass is not recorded.
+- **Four of the ten MCP registrations are unverified.** Copilot, OpenCode, Zed and Antigravity ship
+  as `verified: false`: `integrate` prints the snippet as **NO VERIFICADA** and `--write` refuses to
+  touch that host's config (G-24).
+- **`import` is a mapping, not a migration.** Kiro/cc-sdd `spec.json`, cc-sdd skills, spec-kit
+  templates/scripts and unparseable settings are skipped with a reason, and imported requirements are
+  copied verbatim — not EARS-validated (G-25).
+- **The Windows job is red, and the commit hook never runs there.** The `windows` CI job executes the
+  full suite and fails at it — the workflow names three pre-existing POSIX-mode assertions it expects
+  to be the cause — and only the Linux job installs the pre-commit hook, so the portable Node gate has
+  never executed on Windows (G-26).
+- **The container is built for one architecture.** `docker build` produces the builder's
+  architecture; no CI job builds or pushes a multi-arch image (G-27).
+- **Nothing is published to npm yet.** The registry carries only v2.0.0 of `@brujo2020/open-sdd`, so
+  every install path here is clone-based until v3.0.2 ships (G-28).
+- **The measurements are synthetic.** `docs/MEASUREMENTS.md` records 10/10 classes caught on
+  repositories this project wrote — self-consistency, not field recall or precision (G-29).
 
-Each of these is a numbered gap (G-01 … G-23) with its paper citation and code location in
+Each of these is a numbered gap (G-01 … G-29) with its paper citation and code location in
 [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
 
 ---
@@ -566,17 +652,24 @@ activation without measurement.
 open-sdd/
 ├── tools/open-sdd/            CLI source, templates, manifests
 │   ├── src/core/            governance models (see the map above)
+│   ├── src/mcp/             the stdio MCP server (11 tools + resources)
 │   ├── src/agents/          agent registry (18 definitions)
-│   ├── src/cli/commands/    status, init, getspecs, gap, impl, verify, audit, paper
+│   ├── src/cli/commands/    status, init, getspecs, gap, impl, verify, audit, paper, brownfield, tour
 │   ├── templates/agents/    168 SKILL.md templates across 8 skills variants
+│   ├── templates/hooks/     the portable commit gate and the CI gate matrix
 │   └── dist/                compiled CLI (committed)
 ├── docs/
 │   ├── PAPER-ALIGNMENT.md   traceability report (paper → code → gaps)
 │   ├── INSTALL.md           every install path, verified
 │   ├── QUICK-START.md       5-minute path
 │   ├── INSTALLATION.md      legacy installation reference
+│   ├── MEASUREMENTS.md      the synthetic bench numbers, with their commands
 │   ├── claims/              paper-claims.yaml (§9.6 registry)
-│   └── guides/              workflow, governance, brownfield, upgrade, git, skills
+│   └── guides/              workflow, governance, brownfield, integrations, upgrade, git, skills
+├── bench/                   the synthetic incoherence bench
+├── scripts/                 demo-60s.sh, hook installer, postinstall
+├── action.yml               the merge boundary as a native GitHub Action
+├── Dockerfile               the container image (one architecture)
 ├── .sdd/                    settings + templates (project memory lives here)
 ├── install.sh               install the CLI artifacts into a target repo
 └── package.json             bin: open-sdd, sdd-open, sdd

@@ -167,7 +167,9 @@ describe('assist — constitución ausente: colaboración, no volcado', () => {
     const suggestion = out.suggestions.find((candidate) => candidate.trigger === 'constitution-missing');
     expect(suggestion).toBeDefined();
     expect(suggestion!.severity).toBe('error');
-    expect(suggestion!.headline).toContain('.sdd/steering/constitution.md');
+    // The headline names the path the assistant looked for, built with `node:path`: the separator
+    // is the platform's, so the expectation is built the same way.
+    expect(suggestion!.headline).toContain(path.join('.sdd', 'steering', 'constitution.md'));
 
     // Evidencia que el reconocimiento ya encontró, no prosa genérica.
     expect(suggestion!.proposal).toContain('Evidencia que el reconocimiento YA encontró');

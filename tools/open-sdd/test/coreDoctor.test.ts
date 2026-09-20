@@ -304,7 +304,9 @@ describe('doctor — hook de commit', () => {
     const item = check(await runDoctor(dir), 'hook');
 
     expect(item.status).toBe('ok');
-    expect(item.detail).toContain('.githooks/pre-commit');
+    // The doctor names the hook path it accepted, built with `path.relative`: the separator is the
+    // platform's, so the expectation is built the same way.
+    expect(item.detail).toContain(path.join('.githooks', 'pre-commit'));
     expect(item.detail).toContain('core.hooksPath=');
     // El .git/hooks del repositorio sigue vacío: reportar «no instalado» habría sido un falso fallo.
     expect(await exists(path.join(dir, '.git', 'hooks', 'pre-commit'))).toBe(false);

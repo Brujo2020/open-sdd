@@ -34,6 +34,16 @@ const listDirs = async (cwd, candidates) => {
     }
     return found;
 };
+/**
+ * Walk a directory and return repository-relative paths with POSIX separators.
+ *
+ * Everything downstream of this walker — the public-API filename heuristic, the config-file
+ * pattern, the manifest joins and the evidence citations — compares against `/`. `path.join`
+ * returns `\` on Windows, so every one of those comparisons silently found nothing there: the
+ * public API surface came out empty and a change touching `src/core/routes.ts` reported no API
+ * impact at all. This walker is the boundary, so it normalises once here instead of asking every
+ * consumer to normalise its own input.
+ */
 const listFiles = async (cwd, dir, limit = 200) => {
     const out = [];
     const walk = async (current, depth) => {
@@ -45,15 +55,17 @@ const listFiles = async (cwd, dir, limit = 200) => {
                 return;
             if (entry.name === 'node_modules' || entry.name === '.git')
                 continue;
-            const rel = path.join(current, entry.name);
+            // `path.posix.normalize` drops the leading `./` that `path.join` used to absorb.
+            const rel = path.posix.normalize(`${current}/${entry.name}`);
             if (entry.isDirectory())
                 await walk(rel, depth + 1);
             else
                 out.push(rel);
         }
     };
-    if (await exists(path.join(cwd, dir)))
-        await walk(dir, 0);
+    const start = path.posix.normalize(dir.split(path.sep).join('/'));
+    if (await exists(path.join(cwd, start)))
+        await walk(start, 0);
     return out;
 };
 /**

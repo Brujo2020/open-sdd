@@ -270,7 +270,8 @@ describe('core/floorInstallation — the hook directory is the one git resolves'
     expect(floor.commitHookInstalled).toBe(false);
     expect(floor.floorInstalled).toBe(false);
     // The path that was inspected is named, so the report is checkable rather than a bare verdict.
-    expect(floor.detail).toContain('.githooks/pre-commit');
+    // `path.relative` produces the platform's separator, so the expectation is built the same way.
+    expect(floor.detail).toContain(path.join('.githooks', 'pre-commit'));
     expect(floor.detail).toContain('core.hooksPath=.githooks');
   });
 

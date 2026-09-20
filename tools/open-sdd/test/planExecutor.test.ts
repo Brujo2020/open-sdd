@@ -172,7 +172,8 @@ describe('plan executor', () => {
       };
 
       const res = await executeProcessedArtifacts(items, resolved, { cwd, templatesRoot, onConflict });
-      expect(conflictPath).toBe('out/file.txt');
+      // `relTargetPath` is `path.relative(cwd, dest)`: the separator is the platform's.
+      expect(conflictPath).toBe(join('out', 'file.txt'));
       expect(res.written).toBeGreaterThan(0);
       expect(await fileContent(out)).toBe('NEW');
     });

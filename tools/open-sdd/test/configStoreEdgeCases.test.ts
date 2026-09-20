@@ -23,7 +23,9 @@ describe('config store edge cases', () => {
   it('resolveConfigPath returns correct path', () => {
     const cwd = '/some/path';
     const configPath = resolveConfigPath(cwd);
-    expect(configPath).toBe('/some/path/.open-sdd.json');
+    // `resolveConfigPath` is `join(cwd, CONFIG_FILE)`: on Windows the separator is `\`, so the
+    // expectation has to be built the same way instead of hardcoding a POSIX path.
+    expect(configPath).toBe(join(cwd, '.open-sdd.json'));
   });
 
   it('handles null config object in JSON', async () => {

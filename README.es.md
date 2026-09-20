@@ -52,6 +52,33 @@ spec. Es agnóstico de modelo, vive en Git junto a tu código y reporta lo que r
 
 ---
 
+## Empieza aquí
+
+Ejecuta el CLI **sin argumentos** dentro de un repositorio. Esa es la única puerta: inspecciona el
+repositorio y muestra el **score SDD** compuesto (0–100 sobre siete comprobaciones que ya existen), la
+**fase** actual (1 Especificar · 2 Implementar · 3 Verificar) y la **única acción siguiente**, con una
+línea de por qué:
+
+```bash
+open-sdd
+# SDD 93% · Fase 2 · Implementar · constitución 100% · EARS 100% · trazabilidad 100% ·
+# evidencia 53% · contratos 100% · gates OK (C1, C2, las del nivel declarado) · alineación 100% ·
+# siguiente: open-sdd impl brownfield-support
+# Por qué: la especificación está sana y quedan tareas sin evidencia capturada.
+```
+
+Es de solo lectura y nunca pregunta. Un componente que el CLI no pudo inspeccionar se lista bajo
+`sin medir:` y su peso queda **excluido del score** en lugar de contarse como cero, así que el número
+nunca afirma más de lo que se midió. `status` es el mismo estado como panel completo; `status --check`
+añade el veredicto constitucional y sale `1` con un hallazgo de severidad error; `status --quiet`
+colapsa el panel a una línea para un hook de commit.
+
+Los **asistentes bajo demanda** aparecen donde un comando ya encontró algo: un requisito EARS ambiguo,
+un marcador `{{…}}` sin rellenar o una constitución ausente producen una propuesta lista para pegar o
+una pregunta explícita —nunca una plantilla con huecos— y jamás cambian el veredicto del comando.
+
+---
+
 ## Demo de 60 segundos
 
 Un repositorio desechable, cuatro incoherencias reales y el CLI diciéndote cuáles son. Sin red, sin
@@ -148,6 +175,32 @@ de spec-kit y de Kiro. Esto es una comparación cualitativa, no un benchmark. Si
 spec-kit o cc-sdd, [Migrar desde Kiro, spec-kit y cc-sdd](docs/guides/migrate-from.md) mapea sus
 artefactos y layouts sobre este, y [Integraciones](docs/guides/integrations.md) es la matriz de
 instalación por agente.
+
+---
+
+## Adoptar open-sdd y migrar desde otra herramienta SDD
+
+`integrate` es la superficie de adopción comprobada por máquina, e `import` absorbe los artefactos de
+un incumbente. Ambos son **planes primero**: no se escribe nada sin `--write`, y ninguno sobrescribe
+un fichero.
+
+```bash
+open-sdd integrate --list            # la matriz: 10 anfitriones, layout de skills, invocación, MCP
+open-sdd integrate cursor            # detecta o nombra un anfitrión; imprime su invocación exacta
+open-sdd integrate cursor --write    # instala las skills y registra el servidor MCP (idempotente)
+open-sdd import spec-kit             # planifica el mapeo de .specify/** a .sdd/**
+open-sdd import kiro --write         # copia steering + la tríada; nunca sobrescribe un fichero
+```
+
+`integrate` lee `tools/open-sdd/src/core/integrations.ts`: una fila por anfitrión con la sintaxis
+exacta de invocación (`/sdd-brownfield`, `$sdd-brownfield`, `@sdd-brownfield`, …), la ruta del archivo
+MCP por SO y el snippet que registra el servidor stdio. `verified` es un campo de **evidencia** —una
+fila no confirmada se imprime como **NO VERIFICADA** y `--write` se niega a tocarla, así que pegas y
+compruebas el snippet tú—. `import` es un **mapeo, no una migración**: cada artefacto reconocido que
+no se puede mapear se reporta como `skip` con su motivo, los requisitos importados no se validan como
+EARS, y un fichero que ya existe nunca se sobrescribe. Guía por anfitrión:
+[docs/guides/integrations.md](docs/guides/integrations.md); mapeo artefacto a artefacto:
+[docs/guides/migrate-from.md](docs/guides/migrate-from.md).
 
 ---
 
@@ -458,7 +511,7 @@ repositorio. Salen con `0` salvo que se diga lo contrario.
 | `govern hitl` | Los umbrales cuantificados de Human-in-the-Loop |
 | `govern discipline` | Propiedades decidibles del §9.7 (presupuesto de diff, contención de alcance) sobre el diff de trabajo |
 | `floor status` / `floor install` | Si el suelo de enforcement propio (hook de commit + matriz de gates de PR) está instalado, e instalarlo en un proyecto destino |
-| `govern rigor` | Modo de rigor de un cambio (`none`/`lite`/`spec-first`/`spec-anchored`/`spec-as-source`) |
+| `govern rigor` | El nivel de rigor declarado y sus gates activos; `--select` recomienda un nivel, `--gates` imprime la escalera, `--verbose` añade cada hallazgo |
 | `govern appeal` | Recibos de relajación y recalibración de la tasa de override |
 | `govern meta-eval` | Piloto de κ de Cohen, el suelo de Landis–Koch y la `n` preregistrada |
 | `govern budget` | Líneas de sobrecarga de gobernanza, el techo del 30 %, definiciones de métricas, enrutado T0–T3 |
@@ -470,8 +523,19 @@ repositorio. Salen con `0` salvo que se diga lo contrario.
 | `waves <feature>` | Plan de olas transaccionales con los comandos git que lo materializarían (necesita `.sdd/specs/<feature>/tasks.md`) |
 | `brownfield survey [target]` | Qué es el proyecto existente: stack, tooling, fronteras de módulo y la evidencia de cada una |
 | `brownfield constitution [target] [--write]` | La constitución descriptiva (principios que el código cumple + enmiendas propuestas); `--write` la guarda en `.sdd/steering/constitution.md` |
-| `delta init\|validate\|status\|render <feature>` | El contrato del cambio: generar ADSR, validar ids/EARS/contratos/trazabilidad, reportar recuentos y estrangulamiento |
+| `delta init\|validate\|status\|render\|merge [--write] <feature>` | El contrato del cambio: generar ADSR, validar ids/EARS/contratos/trazabilidad, reportar recuentos y estrangulamiento, y fusionar la delta de vuelta en el `requirements.md` base (todo o nada) |
 | `brownfield impact\|contracts\|reuse <feature>` | Análisis del cambio pendiente: conjunto alcanzable y cambios de ruptura, el oráculo de regresión (`--verify` ejecuta el comando de test), candidatos reuse-first |
+| `brownfield bootstrap [target] [--focus "…"] [--write]` | Una sola entrada para un repositorio existente: el mapa de módulos, dónde va el código nuevo y el plan ordenado; `--write` escribe el documento de inteligencia, la constitución y la semilla de delta del foco |
+| `brownfield templates [--write]` | Plantillas adaptadas al stack observado, cada sustitución nombrando el fichero que la demuestra; el ciclo TDD rojo-verde aparece solo si se observa un runner de tests |
+| `brownfield analyze [--base <ref>]` | Consistencia cruzada en una pasada (requisitos↔tareas, delta↔diff, pivote, contratos, fronteras); `notChecked` nombra lo que no pudo inspeccionar |
+| `integrate [host] [--list\|--write\|--dry-run\|--json]` | La matriz de integración: layout de skills, invocación exacta en el chat, ruta y snippet de MCP por anfitrión; las filas no verificadas se imprimen y nunca se escriben |
+| `import [kiro\|spec-kit\|cc-sdd] [--write\|--dry-run\|--json]` | Planifica (y opcionalmente aplica) el mapeo de los artefactos de un incumbente a `.sdd/`; las omisiones se nombran y los ficheros existentes nunca se sobrescriben |
+| `audit bundle [--out <dir>] [--sarif <path>] [--profile <p>]` | El bundle de evidencia de auditoría —constitución, specs, gates, claims, alineación y rigor— con un sha256 por artefacto; sale `1` con un hallazgo bloqueante y `2` si no pudo ejecutarse |
+| `audit sarif [--out <path>]` | El mismo veredicto como SARIF 2.1.0, con la forma validada antes de escribirlo |
+| `context [feature] [--json]` | La cara de terminal del context pack de MCP: constitución, spec aplicable, mapa de módulos y rigor declarado en un solo objeto |
+| `tour [--write]` | El primer recorrido guiado: ejecuta los comandos reales y se detiene en la decisión humana (ratificar una constitución nunca se automatiza) |
+| `doctor` | Autodiagnóstico —Node, CLI, hook de commit y su portabilidad, rigor, constitución, specs, postura offline— cada uno con el comando que lo arregla |
+| `mcp` | El servidor MCP por stdio (11 herramientas + recursos de solo lectura) que cualquier anfitrión MCP puede llamar |
 
 Las variables de entorno que acepta la consola incluyen `SDD_FEATURE`, `SDD_COMPLEXITY`,
 `SDD_RELAXATIONS`, `SDD_CYCLE_TOKENS`, `SDD_META_TOKENS`, `SDD_AUDIT_TOKENS`, `SDD_DISTILL_TOKENS`,
@@ -481,13 +545,13 @@ Las variables de entorno que acepta la consola incluyen `SDD_FEATURE`, `SDD_COMP
 
 | Comando | Qué hace |
 |---|---|
-| `status [feature]` | Progreso de spec/implementación |
+| `status [feature] [--check] [--quiet] [--json]` | El panel único: constitución, specs, delta, contratos, alineación, rigor y el siguiente comando; `--check` añade el veredicto constitucional |
 | `init <feature>` | Genera un directorio de spec |
 | `getspecs [focus]` | Escaneo brownfield → steering + semillas de spec |
 | `gap <feature>` | Análisis de brecha / radio de impacto |
 | `impl <feature>` | Ejecutor de implementación |
 | `verify <feature>` | Verificación de nivel de feature |
-| `audit <feature>` | Informe de drift + trazabilidad |
+| `audit <feature>` | Informe de drift + trazabilidad; `audit bundle`/`audit sarif` producen el bundle de evidencia y el informe SARIF |
 | `help [topic]` | Ayuda en el chat |
 
 ---
@@ -519,6 +583,13 @@ incluidas todas las brechas declaradas.
 | Modelo de amenazas, crosswalk regulatorio, risk lab (§9.8, Apéndice D, §14.3, Tablas 24/31/39) | `src/core/assurance.ts` | `OWASP_AGENTIC_MAP`, `REGULATORY_MAP`, `RISK_LAB_BANKS`, `REFUTATION_THRESHOLDS` |
 | Presupuesto de sobrecarga y telemetría (Apéndice B.4–B.6, §10.3) | `src/core/telemetry.ts` | `COST_LINES`, `evaluateGovernanceBudget`, `COMPLEXITY_TIERS`, `HARNESS_SELF_FAILURE` |
 | Inversión brownfield (§12, Figura 9) | `src/core/reverseEngineering.ts` | `scanProject`, `bootstrapSteering`, `bootstrapSpecSeeds` |
+| Superficie agnóstica — el servidor MCP (§6.4, Tabla 4; §9.5 G16/O2) | `src/mcp/server.ts`, `src/mcp/tools.ts`, `src/core/contextPack.ts` | `runMcpServer`, `listToolDescriptors`, `callTool`, `listResources`, `readResource`, `buildContextPack` |
+| Superficie de adopción como dato comprobado (issue #1436 de spec-kit) | `src/core/integrations.ts`, `src/core/importers.ts` | `HOST_INTEGRATIONS`, `detectIntegration`, `mcpRegistration`, `planImport`, `applyImport` |
+| Un número, una fase, una acción (*Manual Maestro* EGTAV; §9.6) | `src/core/sddScore.ts`, `src/core/assistants.ts` | `computeSddScore`, `renderScoreFooter`, `assist`, `renderAssist` |
+| El asistente EARS y las plantillas adaptadas al stack (§4.6; issue #1436 de spec-kit) | `src/core/earsAssistant.ts`, `src/core/templateAdaptation.ts`, `src/core/consistency.ts` | `analyseEars`, `earsEvidencePack`, `adaptTemplates`, `checkConsistency` |
+| El trinquete constitucional y las excepciones caducables (CSDD §3.4; invariantes I1/I6) | `src/core/ratchet.ts`, `src/core/securityAllowlist.ts` | `runAdhesionRatchet`, `expiredWaivers`, `applySecurityAllowlist` |
+| Bundle de evidencia + SARIF (§9.6; CSDD §3.3) | `src/cli/commands/audit.ts`, `action.yml` | `collectEvidence`, `writeBundle`, `buildSarifLog`, `validateSarifShape`, `AUDIT_EXIT_CODES` |
+| La demo, el bench sintético y las mediciones (disciplina del §14.3) | `scripts/demo-60s.sh`, `bench/harness.mjs`, `docs/MEASUREMENTS.md` | comando reproducible; inyectado/detectado/perdido por clase |
 
 ### Lo que este puerto **no** hace
 
@@ -539,8 +610,24 @@ Se dice aquí para que la sección de referencia no se lea como una afirmación 
   `resolveFloor` sigue siendo un argumento de propiedad, y ningún centinela de comportamiento ha
   verificado el bloqueo en tiempo de escritura en ningún anfitrión, así que el nivel A es un techo y
   no una garantía. `git commit --no-verify` salta el nivel B y ese salto no queda registrado.
+- **Cuatro de las diez integraciones MCP no están verificadas.** Copilot, OpenCode, Zed y Antigravity
+  se publican con `verified: false`: `integrate` imprime el snippet como **NO VERIFICADA** y `--write`
+  se niega a tocar la configuración de ese anfitrión (G-24).
+- **`import` es un mapeo, no una migración.** El `spec.json` de Kiro/cc-sdd, las skills de cc-sdd, las
+  plantillas/scripts de spec-kit y los settings que no parsean se omiten con un motivo, y los
+  requisitos importados se copian tal cual —sin validar como EARS— (G-25).
+- **El job de Windows está en rojo, y el hook de commit nunca corre allí.** El job `windows` de CI
+  ejecuta la suite completa y falla en ella —el workflow nombra tres aserciones preexistentes de modo
+  POSIX que espera como causa— y solo el job de Linux instala el hook de pre-commit, así que la puerta
+  portable de Node nunca se ha ejecutado en Windows (G-26).
+- **El contenedor se construye para una sola arquitectura.** `docker build` produce la arquitectura
+  del builder; ningún job de CI construye ni publica una imagen multi-arquitectura (G-27).
+- **Todavía no hay nada publicado en npm.** El registro solo lleva la v2.0.0 de `@brujo2020/open-sdd`,
+  así que toda ruta de instalación de aquí es desde un clon hasta que salga la v3.0.2 (G-28).
+- **Las mediciones son sintéticas.** `docs/MEASUREMENTS.md` registra 10/10 clases detectadas en
+  repositorios que escribió este proyecto —autoconsistencia, no recall ni precisión de campo— (G-29).
 
-Cada uno de estos es una brecha numerada (G-01 … G-23) con su cita del paper y su ubicación en el
+Cada uno de estos es una brecha numerada (G-01 … G-29) con su cita del paper y su ubicación en el
 código en [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
 
 ---
@@ -577,17 +664,24 @@ que no inspecciona nada es activación sin medición.
 open-sdd/
 ├── tools/open-sdd/            fuente del CLI, plantillas, manifiestos
 │   ├── src/core/            modelos de gobernanza (ver el mapa de arriba)
+│   ├── src/mcp/             el servidor MCP por stdio (11 herramientas + recursos)
 │   ├── src/agents/          registro de agentes (18 definiciones)
-│   ├── src/cli/commands/    status, init, getspecs, gap, impl, verify, audit, paper
+│   ├── src/cli/commands/    status, init, getspecs, gap, impl, verify, audit, paper, brownfield, tour
 │   ├── templates/agents/    168 plantillas SKILL.md en 8 variantes de skills
+│   ├── templates/hooks/     la puerta de commit portable y la matriz de gates de CI
 │   └── dist/                CLI compilado (commiteado)
 ├── docs/
 │   ├── PAPER-ALIGNMENT.md   informe de trazabilidad (paper → código → brechas)
 │   ├── INSTALL.md           todas las rutas de instalación, verificadas
 │   ├── QUICK-START.md       ruta de 5 minutos
 │   ├── INSTALLATION.md      referencia de instalación heredada
+│   ├── MEASUREMENTS.md      los números del bench sintético, con sus comandos
 │   ├── claims/              paper-claims.yaml (registro §9.6)
-│   └── guides/              flujo, gobernanza, brownfield, actualización, git, skills
+│   └── guides/              flujo, gobernanza, brownfield, integraciones, actualización, git, skills
+├── bench/                   el bench sintético de incoherencias
+├── scripts/                 demo-60s.sh, instalador del hook, postinstall
+├── action.yml               la frontera de merge como GitHub Action nativa
+├── Dockerfile               la imagen de contenedor (una arquitectura)
 ├── .sdd/                    settings + plantillas (la memoria de proyecto vive aquí)
 ├── install.sh               instala los artefactos del CLI en un repo destino
 └── package.json             bin: open-sdd, sdd-open, sdd

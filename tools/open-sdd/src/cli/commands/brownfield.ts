@@ -1102,7 +1102,13 @@ export const handleBrownfieldCommand = async (args: string[], io: CliIO, cwd: st
     const { files: changedFiles, source } = changedFilesFor(root, base);
     io.log('');
     io.log(dim(`  origen del cambio: ${source}`));
-    if (changedFiles.length === 0) {
+    // `contracts` publishes the ORACLE, not the diff: the contract set is a property of the
+    // repository and the delta, so it exists even when the working tree is clean. Returning early
+    // there hid the whole report on a fresh checkout — which is exactly where the claims registry
+    // verifies `brownfield contracts <feature>` — and made the command's verdict depend on whether
+    // some unrelated file happened to be dirty. `impact` and `reuse` still need a change to say
+    // anything, so only they keep the early return.
+    if (changedFiles.length === 0 && sub !== 'contracts') {
       io.log('');
       io.log(colors.green('Sin cambios que analizar en este origen.'));
       io.log('');
@@ -1167,6 +1173,9 @@ export const handleBrownfieldCommand = async (args: string[], io: CliIO, cwd: st
         io.log('');
         io.log(`  ${colors.yellow('!')} cambios sin cobertura (${set.uncoveredChanges.length}): ${set.uncoveredChanges.slice(0, 8).join(', ')}`);
         io.log(dim('    Un cambio sin contrato no lo protege nadie: es el hueco que este informe hace visible.'));
+      } else if (changedFiles.length === 0) {
+        io.log('');
+        io.log(dim('    Sin cambios pendientes en este origen: el oráculo se publica igual (el conjunto de contratos es del repositorio, no del diff) y no hay huecos de cobertura que medir.'));
       }
       io.log('');
       io.log(`  ${set.complete ? colors.green(set.detail) : colors.yellow(set.detail)}`);

@@ -96,7 +96,10 @@ describe('real gemini-cli-skills manifest', () => {
     // Gemini-specific: agents directory
     const geminiAgent = join(cwd, '.gemini/agents/spec-reviewer.md');
     expect(await exists(geminiAgent)).toBe(true);
-    const geminiAgentText = await readFile(geminiAgent, 'utf8');
+    // The applied file is a verbatim copy of the shipped template, and the repository does not pin
+    // line endings: a Windows checkout of that template is CRLF. These assertions are about the
+    // frontmatter and its body, not its line terminators, so normalise the read.
+    const geminiAgentText = (await readFile(geminiAgent, 'utf8')).replace(/\r\n/g, '\n');
     expect(geminiAgentText).toMatch(/^---\nname: spec-reviewer\n/);
     expect(geminiAgentText).toContain('tools:\n  - read_file\n  - glob\n');
     expect(geminiAgentText).toContain('Use `glob` to find all spec files');
