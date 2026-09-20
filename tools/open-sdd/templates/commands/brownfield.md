@@ -70,7 +70,7 @@ do not invent a slug.
 
 - **Identified — produces:** the constitution **draft** `.sdd/steering/constitution.draft.md`, the feature's `.sdd/specs/<feature>/` artifacts and `.sdd/settings/`.
 - **Identified — refuses:** it refuses to create, modify or delete application source or tests — recon is read-only — and refuses to act on implementation intent, which becomes a deferred note.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd delta validate <feature> --json` **exits 1** on an invalid delta (BLOCKS the change contract) and `open-sdd status --check --json` **exits 1** when the constitution is absent or violated; `open-sdd brownfield contracts <feature> --json` reports uncovered files as holes, not passes.
 - **Measured — components:** `constitution`, `contracts` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: the descriptive constitution must be ratified by a named human to have authority, the report never presents a draft as ratified, and `open-sdd status --check --json` is the pivot check.

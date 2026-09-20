@@ -24,6 +24,9 @@ commands:
   - "open-sdd brownfield clarify <feature> --answers .sdd/specs/<feature>/clarify/answers.json --write"
   - "open-sdd brownfield requirements <feature> --suggest --json"
   - "open-sdd delta validate <feature> --json"
+  - "open-sdd status --json"
+  - "open-sdd brownfield clarify <feature> --answers <path> --write"
+  - "open-sdd status --check --json"
 scripts:
   - "open-sdd brownfield clarify <feature> --json"
   - "open-sdd brownfield clarify <feature> --questions-file .sdd/specs/<feature>/clarify/questions.json"
@@ -56,8 +59,8 @@ If the input names a feature, use it. If not, read the current state and ask whi
 
 - **Identified — produces:** the rewritten `.sdd/specs/<feature>/requirements.md` plus the question/answer ledger under `.sdd/specs/<feature>/clarify/`.
 - **Identified — refuses:** it refuses to answer its own questions and refuses to edit application source or the constitution.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
-- **Assured — backing check:** `open-sdd brownfield clarify <feature> --answers … --write` re-runs the analysis after applying answers and reports `resolved`/`stillOpen` with `codeBefore`/`codeAfter`; `open-sdd delta validate <feature> --json` **exits 1** on a broken delta (BLOCKS hand-off to `plan`).
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
+- **Assured — backing check:** `open-sdd brownfield clarify <feature> --answers <path> --write` re-runs the analysis after applying answers and reports `resolved`/`stillOpen` with `codeBefore`/`codeAfter`; `open-sdd delta validate <feature> --json` **exits 1** on a broken delta (BLOCKS hand-off to `plan`).
 - **Measured — components:** `ears` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: answers are folded into EARS statements with the pattern named, an unratified draft cannot authorise an answer, and `open-sdd status --check --json` validates the spec against the principles.
 

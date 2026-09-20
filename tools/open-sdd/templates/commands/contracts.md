@@ -24,6 +24,7 @@ commands:
   - "open-sdd brownfield analyze <feature> --json"
   - "open-sdd delta validate <feature> --json"
   - "open-sdd status --check --json"
+  - "open-sdd status --json"
 scripts:
   - "open-sdd brownfield contracts <feature> --json"
   - "open-sdd brownfield contracts <feature> --verify"
@@ -49,7 +50,7 @@ The input names the feature. If it does not, read the current state and ask.
 
 - **Identified — produces:** the regression-oracle report; with `--write` the oracle artifact under `.sdd/specs/<feature>/contracts/`.
 - **Identified — refuses:** it refuses to edit source or tests: it reports which changed files no test covers instead of assuming the suite protects everything.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd brownfield contracts <feature> --json` is the check — it **exits 0 while reporting the uncovered files**, and that report is the finding; `open-sdd brownfield contracts <feature> --verify` re-proves it after the change and `open-sdd delta validate <feature> --json` **exits 1** on a broken delta.
 - **Measured — components:** `contracts` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: a contract that contradicts a ratified principle is reported invalid rather than counted as protection, and `open-sdd status --check --json` is the pivot check.

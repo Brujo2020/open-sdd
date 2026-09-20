@@ -15,6 +15,7 @@ commands:
   - "open-sdd brownfield reuse <feature> --symbols <A,B>"
   - "open-sdd brownfield impact <feature>"
   - "open-sdd status --check --json"
+  - "open-sdd status --json"
 scripts:
   - "open-sdd brownfield reuse <feature>"
   - "open-sdd brownfield reuse <feature> --symbols <A,B>"
@@ -40,7 +41,7 @@ symbols from the delta and say which ones you derived.
 
 - **Identified — produces:** report only — it writes nothing (its `writes` list is empty on purpose).
 - **Identified — refuses:** it refuses to create a symbol or a file, and refuses to claim reuse it did not find: an empty search is reported as "no reuse found".
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd brownfield reuse <feature>` (and `--symbols <A,B>`) is the check; an unreadable or unavailable feature BLOCKS the reuse claim, and `open-sdd status --check --json` **exits 1** when the constitution is violated.
 - **Measured — components:** none — this template is read-only and changes no SDD score component; `open-sdd status --json` is identical before and after by design.
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: extending a symbol behind a boundary the constitution protects is reported as a conflict, and `open-sdd status --check --json` is the pivot check.

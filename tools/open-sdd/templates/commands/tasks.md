@@ -23,6 +23,8 @@ commands:
   - "open-sdd brownfield contracts <feature> --json"
   - "open-sdd delta validate <feature> --json"
   - "open-sdd brownfield templates --json"
+  - "open-sdd status --json"
+  - "open-sdd status --check --json"
 scripts:
   - "open-sdd status <feature> --json"
   - "open-sdd brownfield contracts <feature> --json"
@@ -48,7 +50,7 @@ If no feature is named, read the state and ask which feature to decompose.
 
 - **Identified — produces:** `.sdd/specs/<feature>/tasks.md` — ordered tasks each carrying a requirement id, a real test command and an `_Evidence:_` line.
 - **Identified — refuses:** it refuses to rewrite `requirements.md` or `plan.md`, refuses to edit source, and refuses to mark any task complete.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd brownfield contracts <feature> --json` reports the coverage (exit 0, but the holes it names must be carried as `coverage: unknown`); `open-sdd delta validate <feature> --json` **exits 1** on a broken traceability mapping (BLOCKS hand-off to `implement`).
 - **Measured — components:** `traceability`, `evidence` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: each task encodes the principles in force, a requirement with no design element is a reported gap rather than an invented task, and `open-sdd status --check --json` validates the spec against the principles.

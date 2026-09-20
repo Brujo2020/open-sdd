@@ -49,7 +49,7 @@ The input may name a feature. Without one, report the repository as a whole.
 
 - **Identified — produces:** report only — it writes nothing (its `writes` list is empty on purpose).
 - **Identified — refuses:** it refuses to write anything at all, including the fix it just noticed; it routes instead.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** it reports the component and gate state verbatim; `open-sdd status --check --json` **exits 1** when the constitution is absent or violated and that exit code is reported as the repository's verdict, never softened.
 - **Measured — components:** none — this template is read-only and changes no SDD score component; `open-sdd status --json` is identical before and after by design.
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: an absent or unratified constitution is reported as the next action before anything else, and `open-sdd status --check --json` is the pivot check.

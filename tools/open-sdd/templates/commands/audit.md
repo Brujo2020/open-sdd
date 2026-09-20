@@ -24,6 +24,7 @@ commands:
   - "open-sdd gates crosswalk"
   - "open-sdd govern conformance"
   - "open-sdd status --check --json"
+  - "open-sdd status --json"
 scripts:
   - "open-sdd audit bundle --json"
   - "open-sdd assure claims --verify --json"
@@ -51,7 +52,7 @@ The input may name the feature and the output directory. If the output directory
 
 - **Identified — produces:** the evidence bundle and SARIF under `.sdd/audit/` — a sha256 per artifact plus the compliance crosswalk.
 - **Identified — refuses:** it refuses to fabricate a hash, an artifact, a control mapping or a compliance verdict, and refuses to modify source, specs or the constitution.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd audit bundle --json` **exits 1** when `ok:false`, `open-sdd assure claims --verify --json` **exits 1** on a broken claim, and `open-sdd govern conformance` / `open-sdd gates crosswalk` report the posture; a non-zero exit BLOCKS the attestation.
 - **Measured — components:** `gates` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: the bundle attests the ratified principles, an unratified constitution is reported as unattestable, and `open-sdd status --check --json` is the pivot check.

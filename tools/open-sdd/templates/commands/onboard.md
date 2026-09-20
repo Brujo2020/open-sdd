@@ -63,7 +63,7 @@ state the evidence before installing anything.
 
 - **Identified — produces:** a working install plus a constitution **draft** and a score: `.sdd/settings/`, the host prompt templates in the host's commands directory, and `.sdd/steering/constitution.draft.md`.
 - **Identified — refuses:** it refuses to ratify the constitution for the human and refuses to write application source, tests or manifests; anything else the human asks for becomes a deferred note.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd status --check --json` validates the repository against the constitution and the rigor level and **exits 1** when it is absent, unratified or violated (BLOCKS the hand-off to `specify`); `open-sdd doctor --json` **exits 1** on any failed environment check.
 - **Measured — components:** `constitution`, `gates` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the flow halts at a DRAFT and hands ratification to a human; an unratified draft has no authority, and `open-sdd status --check --json` is the pivot check that turns the draft into a blocking verdict.

@@ -26,6 +26,7 @@ commands:
   - "open-sdd assure threats"
   - "open-sdd audit bundle --json"
   - "open-sdd floor status"
+  - "open-sdd status --json"
 scripts:
   - "open-sdd gates run"
   - "open-sdd assure claims --verify --json"
@@ -52,7 +53,7 @@ from the root manifest and ask before tagging.
 
 - **Identified — produces:** `CHANGELOG.md`, the release note `.sdd/specs/<feature>/release.md`, the git tag and the published artifact.
 - **Identified — refuses:** it refuses to modify application source, tests, the constitution or the settings, and refuses to ship around a failing gate.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd gates run` **exits 1** when the chain fails (BLOCKS the release), `open-sdd assure claims --verify --json` **exits 1** on a broken claim (BLOCKS), `open-sdd audit bundle --json` **exits 1** when the bundle is not `ok`, and `open-sdd floor status` reports the installed floor.
 - **Measured — components:** `gates` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: the release verdict cites the ratified constitution, a draft constitution means the release is not authorised, and `open-sdd status --check --json` is the pivot check.

@@ -28,6 +28,7 @@ commands:
   - "open-sdd brownfield contracts <feature> --json"
   - "open-sdd delta validate <feature> --json"
   - "open-sdd gates run"
+  - "open-sdd status --json"
 scripts:
   - "open-sdd brownfield analyze <feature> --json"
   - "open-sdd delta validate <feature> --json"
@@ -53,7 +54,7 @@ If no feature is named, read the state and ask which feature to analyse.
 
 - **Identified — produces:** `.sdd/specs/<feature>/analysis.md` — the report of measured, inferred and uninspected findings.
 - **Identified — refuses:** it refuses to edit requirements, plan, tasks, source or the constitution: it reports and routes, it never fixes.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd brownfield analyze <feature> --json` **exits 1** on error findings (BLOCKS release), `open-sdd delta validate <feature> --json` **exits 1** on a broken delta, and `open-sdd gates run` **exits 1** when the chain fails; all three exit codes are quoted verbatim.
 - **Measured — components:** `alignment` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: a blocking finding must cite a ratified principle, an unratified draft downgrades findings to advisory, and `open-sdd status --check --json` is the pivot check.

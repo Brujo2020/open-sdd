@@ -49,7 +49,7 @@ If no feature is named, read the state and ask which feature to converge.
 
 - **Identified — produces:** `.sdd/specs/<feature>/convergence.md` and the tasks appended to `.sdd/specs/<feature>/tasks.md`.
 - **Identified — refuses:** it refuses to rewrite existing tasks, requirements or plan, and refuses to mark a feature converged while a drift item is open.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd brownfield analyze <feature> --json` **exits 1** on error findings and `open-sdd status --check --json` **exits 1** when the constitution is violated; a failing check BLOCKS the convergence claim.
 - **Measured — components:** `alignment` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: drift is measured against the ratified constitution, the disagreement is routed to the constitution command rather than settled by preference, and `open-sdd status --check --json` is the pivot check.

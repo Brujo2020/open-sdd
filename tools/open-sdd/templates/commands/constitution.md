@@ -57,7 +57,7 @@ team wants the code to obey. Do not invent principles from enthusiasm.
 
 - **Identified — produces:** the constitution **draft** `.sdd/steering/constitution.draft.md` (and proposal material under `.sdd/settings/constitution/`); only the human's ratify command produces the in-force `.sdd/steering/constitution.md`.
 - **Identified — refuses:** it refuses to touch the in-force `constitution.md`, and refuses to create, modify or delete application source, tests or manifests; it also refuses to ratify itself.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd status --check --json` validates the repository against the constitution and **exits 1** when it is absent, unratified or violated (BLOCKS every downstream verdict); `open-sdd status --json` reports the `constitution` component.
 - **Measured — components:** `constitution` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** this template produces the authority itself: requirements it drafts are in EARS form with the pattern named, unknown data becomes a question, and `open-sdd status --check --json` is the pivot check.

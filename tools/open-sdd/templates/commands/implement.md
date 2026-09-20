@@ -23,6 +23,8 @@ commands:
   - "open-sdd gates chain --profile regulated"
   - "open-sdd brownfield contracts <feature> --json"
   - "open-sdd delta validate <feature> --json"
+  - "open-sdd status --json"
+  - "open-sdd status --check --json"
 scripts:
   - "open-sdd status <feature> --json"
   - "open-sdd gates run"
@@ -48,7 +50,7 @@ dependency order. If no feature is named, read the state and ask.
 
 - **Identified — produces:** application source and tests inside each task's declared paths, plus the filled `_Evidence:_` lines in `tasks.md`.
 - **Identified — refuses:** it refuses to edit `requirements.md`, `plan.md` or the constitution, and refuses to mark a task done without running that task's own test command.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** the task's own test command decides each task; `open-sdd gates run` is the repository's verdict and **exits 1** when the chain fails (BLOCKS completion); `open-sdd delta validate <feature> --json` **exits 1** on a broken delta.
 - **Measured — components:** `evidence` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: a task may not be implemented in violation of a principle in force, and `open-sdd status --check --json` is the pivot check before hand-off to `analyze`.

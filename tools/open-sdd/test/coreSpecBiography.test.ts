@@ -28,6 +28,14 @@ import {
 
 const tempDirs: string[] = [];
 
+/**
+ * Cada caso crea un repositorio git real y mide con `sddScore`, así que bajo la suite completa (122
+ * ficheros en paralelo) 5 s por defecto no alcanzan: se fija un margen explícito.
+ */
+const slowIt = (name: string, run: () => Promise<void>): void => {
+  it(name, run, 60_000);
+};
+
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
@@ -90,7 +98,7 @@ const SPEC_JSON = (phase: string): string => JSON.stringify({ name: 'bio', phase
 // ---------------------------------------------------------------------------------------------
 
 describe('specBiography — el ritmo se deriva de git, nunca se afirma', () => {
-  it('spec escrita una vez y tres commits de código después → stale, y nombra el número', async () => {
+  slowIt('spec escrita una vez y tres commits de código después → stale, y nombra el número', async () => {
     const dir = await makeRepo();
     await write(dir, `${specPath}/requirements.md`, requirements(1));
     commitAll(dir, 'spec: nace');
@@ -109,7 +117,7 @@ describe('specBiography — el ritmo se deriva de git, nunca se afirma', () => {
     expect(bio.lastChange).toBe(bio.born);
   });
 
-  it('el umbral de stale es una frontera comprobable: dos commits de código todavía no lo cruzan', async () => {
+  slowIt('el umbral de stale es una frontera comprobable: dos commits de código todavía no lo cruzan', async () => {
     const dir = await makeRepo();
     await write(dir, `${specPath}/requirements.md`, requirements(1));
     commitAll(dir, 'spec: nace');
@@ -124,7 +132,7 @@ describe('specBiography — el ritmo se deriva de git, nunca se afirma', () => {
     expect(bio.breathing).toBe('orphan');
   });
 
-  it('spec y código moviéndose juntos → alive', async () => {
+  slowIt('spec y código moviéndose juntos → alive', async () => {
     const dir = await makeRepo();
     await write(dir, `${specPath}/requirements.md`, requirements(1));
     commitAll(dir, 'spec: nace');
@@ -142,7 +150,7 @@ describe('specBiography — el ritmo se deriva de git, nunca se afirma', () => {
     expect(bio.activity.specCommits).toBeGreaterThan(1);
   });
 
-  it('spec escrita una vez y ningún commit de código → quiet (y se explica por qué no es orphan)', async () => {
+  slowIt('spec escrita una vez y ningún commit de código → quiet (y se explica por qué no es orphan)', async () => {
     // Decisión: con cero commits de código NO es `orphan`. La definición de orphan exige que el
     // código se haya movido mientras la spec no; aquí no se movió nada, así que la lectura honesta
     // es quietud: la especificación puede seguir siendo correcta y todavía no ha hecho falta
@@ -158,7 +166,7 @@ describe('specBiography — el ritmo se deriva de git, nunca se afirma', () => {
     expect(bio.breathingReason).toContain('ninguno');
   });
 
-  it('un directorio sin git → unknown con la razón, sin reventar', async () => {
+  slowIt('un directorio sin git → unknown con la razón, sin reventar', async () => {
     const dir = await makePlainDir();
     await write(dir, `${specPath}/requirements.md`, requirements(1));
 
@@ -178,7 +186,7 @@ describe('specBiography — el ritmo se deriva de git, nunca se afirma', () => {
 });
 
 describe('specBiography — eventos', () => {
-  it('se acotan por `limit` y van del más reciente al más antiguo', async () => {
+  slowIt('se acotan por `limit` y van del más reciente al más antiguo', async () => {
     const dir = await makeRepo();
     for (let i = 1; i <= 3; i += 1) {
       await write(dir, `${specPath}/requirements.md`, requirements(i));
@@ -197,7 +205,7 @@ describe('specBiography — eventos', () => {
     expect(bounded.events.map((event) => event.subject)).toEqual(['spec: cambio 3', 'spec: cambio 2']);
   });
 
-  it('`added`/`removed` coinciden con lo que se commiteó de verdad', async () => {
+  slowIt('`added`/`removed` coinciden con lo que se commiteó de verdad', async () => {
     const dir = await makeRepo();
     await write(dir, `${specPath}/requirements.md`, 'alpha\nbeta\n');
     commitAll(dir, 'spec: dos líneas');
@@ -214,7 +222,7 @@ describe('specBiography — eventos', () => {
     expect(bio.events[0].commit).toMatch(/^[0-9a-f]{7,}$/);
   });
 
-  it('spec.json deja el historial de fases y la fase declarada hoy', async () => {
+  slowIt('spec.json deja el historial de fases y la fase declarada hoy', async () => {
     const dir = await makeRepo();
     await write(dir, `${specPath}/spec.json`, SPEC_JSON('initialized'));
     commitAll(dir, 'spec: fase inicial');
@@ -229,7 +237,7 @@ describe('specBiography — eventos', () => {
 });
 
 describe('specBiography — el alma de la especificación', () => {
-  it('muestra las entradas de la delta con el comportamiento anterior que reemplazan', async () => {
+  slowIt('muestra las entradas de la delta con el comportamiento anterior que reemplazan', async () => {
     const dir = await makeRepo();
     const delta: DeltaSpec = {
       feature: 'bio',
@@ -264,7 +272,7 @@ describe('specBiography — el alma de la especificación', () => {
     );
   });
 
-  it('una ratificación de la constitución aparece con quién y cuándo', async () => {
+  slowIt('una ratificación de la constitución aparece con quién y cuándo', async () => {
     const dir = await makeRepo();
     await write(dir, `${specPath}/requirements.md`, requirements(1));
     commitAll(dir, 'spec: nace');
@@ -299,7 +307,7 @@ describe('specBiography — el alma de la especificación', () => {
     expect(rendered).toContain('2026-02-03T04:05:06.000Z');
   });
 
-  it('las secciones que no existen se dicen, no se omiten en silencio', async () => {
+  slowIt('las secciones que no existen se dicen, no se omiten en silencio', async () => {
     const dir = await makeRepo();
     await write(dir, `${specPath}/requirements.md`, requirements(1));
     commitAll(dir, 'spec: nace');
@@ -316,7 +324,7 @@ describe('specBiography — el alma de la especificación', () => {
     expect(rendered).toContain('sin delta.md');
   });
 
-  it('la salida renderizada lleva la línea honesta: esto mide ritmo, no calidad', async () => {
+  slowIt('la salida renderizada lleva la línea honesta: esto mide ritmo, no calidad', async () => {
     const dir = await makeRepo();
     await write(dir, `${specPath}/requirements.md`, requirements(1));
     commitAll(dir, 'spec: nace');

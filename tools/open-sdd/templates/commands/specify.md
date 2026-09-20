@@ -26,6 +26,7 @@ commands:
   - "open-sdd brownfield analyze <feature> --json"
   - "open-sdd delta init <feature> \"<title>\""
   - "open-sdd delta validate <feature> --json"
+  - "open-sdd status --check --json"
 scripts:
   - "open-sdd brownfield specify <feature> \"<description>\" --json"
   - "open-sdd brownfield requirements <feature> --suggest --json"
@@ -51,7 +52,7 @@ anything. A requirement invented from silence is the most expensive kind of bug.
 
 - **Identified — produces:** `.sdd/specs/<feature>/requirements.md` (numbered EARS statements, pattern named) and `spec.json`.
 - **Identified — refuses:** it refuses to write the constitution, application source, tests or manifests; implementation, refactor or deploy intent becomes a deferred note, never a requirement.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd brownfield requirements <feature> --suggest --json` re-checks every statement against the real EARS patterns and **exits 1** when the spec cannot be analysed (BLOCKS hand-off to `plan`); `open-sdd delta validate <feature> --json` **exits 1** on an invalid delta.
 - **Measured — components:** `ears` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: requirements are written under the ratified constitution in EARS form with the pattern named (`When … the system shall …`, `If … the system shall …`), an unknowable datum becomes a question instead of a fabricated requirement, and `open-sdd status --check --json` validates the spec against the principles.

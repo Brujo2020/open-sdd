@@ -39,7 +39,7 @@ The input may name a directory to diagnose. Without one, diagnose the current re
 
 - **Identified — produces:** report only — it writes nothing (its `writes` list is empty on purpose).
 - **Identified — refuses:** it refuses to apply any fix, even an obvious one, and refuses to report a check it could not run as a pass.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd doctor --json` **exits 1** on any failed check (BLOCKS a "working install" claim) and each check carries its own state and fix; `open-sdd floor status` reports the enforcement floor's real state.
 - **Measured — components:** none — this template is read-only and changes no SDD score component; `open-sdd status --json` is identical before and after by design.
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: an absent or unratified constitution is a diagnostic finding with the constitution command as its fix, and `open-sdd status --check --json` is the pivot check it points to.

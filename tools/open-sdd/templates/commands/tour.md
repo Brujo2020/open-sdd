@@ -54,7 +54,7 @@ tour ends at the constitution hand-over.
 
 - **Identified — produces:** the guided-run report; with `--write` it writes the constitution **draft** and `.sdd/settings/`.
 - **Identified — refuses:** it refuses to ratify the constitution for the human and refuses to write application source; it hands over at the human decision.
-- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real `open-sdd …` invocations and the steps below RUN them and read their output.
+- **Automated — how:** this template never asks you to "consider" a check: the `commands:` frontmatter names the real engine invocations and the steps below RUN them and read their output.
 - **Assured — backing check:** `open-sdd tour . --json` reports every step; `open-sdd status --check --json` **exits 1** until the constitution is in force, which is the hand-over point, and the tour reports that exit code as the boundary between installed and governed.
 - **Measured — components:** `constitution` — the reader sees the change before/after in `open-sdd status --json` (score and phase).
 - **Pivoted — the constitution is the pivot:** the constitution is the pivot: the tour ends at a DRAFT plus the exact ratify command, an unratified draft has no authority, and `open-sdd status --check --json` is the pivot check.
