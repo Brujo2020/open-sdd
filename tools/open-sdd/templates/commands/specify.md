@@ -25,6 +25,7 @@ commands:
   - "open-sdd brownfield requirements <feature> --suggest --json"
   - "open-sdd brownfield analyze <feature> --json"
   - "open-sdd delta init <feature> \"<title>\""
+  - "open-sdd delta validate <feature> --json"
 scripts:
   - "open-sdd brownfield specify <feature> \"<description>\" --json"
   - "open-sdd brownfield requirements <feature> --suggest --json"

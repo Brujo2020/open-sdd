@@ -35,7 +35,7 @@ scripts:
 
 You are producing the audit evidence for a release or a review: the artifacts, each with a hash, the
 compliance crosswalk, the claims registry and a SARIF report a code-scanning tool can ingest. This is
-possible only because open-sdd produces real artifacts; there is nothing comparable to attest when
+possible only because the engine produces real artifacts; there is nothing comparable to attest when
 the "specification" is a chat log.
 
 ## Input

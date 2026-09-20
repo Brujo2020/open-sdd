@@ -25,6 +25,7 @@ commands:
   - "open-sdd brownfield reuse <feature>"
   - "open-sdd brownfield templates --json"
   - "open-sdd brownfield impact <feature>"
+  - "open-sdd delta validate <feature> --json"
 scripts:
   - "open-sdd status <feature> --json"
   - "open-sdd brownfield analyze <feature> --json"

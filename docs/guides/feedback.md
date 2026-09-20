@@ -93,8 +93,9 @@ decoration.
 
 ## Levels and achievements (derived, never invented)
 
-There are no points and no badges for nothing. Levels come from the score bands the product already
-computes with `sddScore`, plus the phase:
+There are no points and no badges for nothing. The level comes from the score bands the product
+already computes with `sddScore`; the phase the same module reports is shown beside it, and the
+streak comes from the ratchet:
 
 | Score | Level |
 |---|---|

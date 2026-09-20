@@ -50,7 +50,14 @@ export interface StopHookDefinition {
   host: StopHookHost;
   event: string;
   configPaths: StopHookConfigPaths;
-  /** The exact snippet to merge into the host's own config file. */
+  /**
+   * The exact snippet to merge into the host's own config file.
+   *
+   * `feature` is accepted for API symmetry with the MCP registration but deliberately NOT emitted:
+   * neither verified Stop-hook shape carries an environment channel, and inventing an `env` key is
+   * exactly the guess this repository refuses. The gate resolves the feature itself (`SDD_FEATURE`,
+   * or the first spec under `.sdd/specs`).
+   */
   snippet: (opts: { cliPath: string; feature?: string }) => string;
   /** The argv the host runs — never a shell string. */
   argv: (cliPath: string) => string[];

@@ -1,6 +1,6 @@
 ---
 id: constitution
-description: Establish, amend or ratify the project constitution that every other open-sdd command cites as authority.
+description: Establish, amend or ratify the project constitution that every other command in this repository cites as authority.
 writes:
   - ".sdd/steering/constitution.draft.md"
   - ".sdd/settings/constitution/"

@@ -164,3 +164,6 @@ removal never needs to undo a rewrite of unrelated settings.
   because the Windows quoting was not verified. The Claude Code exec form applies on every OS.
 - **`node` comes from `PATH`.** A host config is static, so it cannot carry `process.execPath`; the CLI
   path is recorded as given, and a missing CLI blocks (exit 2) rather than passing.
+- **`feature` is accepted by the snippet API but not emitted.** Neither verified Stop-hook shape
+  carries an environment channel, and inventing an `env` key would be an unverified guess. `gates run`
+  resolves the feature itself (`SDD_FEATURE`, or the first spec under `.sdd/specs`).

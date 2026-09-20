@@ -52,6 +52,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Constitution } from './constitution.js';
@@ -401,8 +402,17 @@ export const specBiography = async (input: {
     return unknown('git está presente pero no se pudo resolver la raíz del repositorio: no hay historia que leer.');
   }
 
-  const specAbs = path.resolve(cwd, specDir);
-  const specRel = toPosix(path.relative(root, specAbs));
+  // Rutas reales en ambos lados: `git rev-parse --show-toplevel` resuelve los enlaces simbólicos
+  // (en macOS `/tmp` es `/private/tmp` y `tmpdir()` es `/var/folders/…`), así que comparar contra
+  // el `cwd` sin resolver reportaba una spec dentro del repositorio como si estuviera fuera de él.
+  let specRel = '';
+  try {
+    const realRoot = realpathSync(root);
+    const realCwd = realpathSync(cwd);
+    specRel = toPosix(path.relative(realRoot, path.resolve(realCwd, sddDir, 'specs', feature)));
+  } catch {
+    return unknown('no se pudo resolver la ruta real del repositorio o del directorio de trabajo: no hay historia que medir.');
+  }
   if (!specRel || specRel.startsWith('..') || path.isAbsolute(specRel)) {
     return unknown(
       'el directorio de la especificación queda fuera del árbol de trabajo de git: no hay historia que medir para esta feature.',
