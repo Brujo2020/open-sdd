@@ -76,6 +76,26 @@ const jsonDoc = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n
 /** TOML basic string: backslashes and quotes escaped, because a Windows path is full of both. */
 const tomlString = (value: string): string => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
+/** Kilo Code and MiMoCode: top-level `mcp`, `type: "local"`, command as an ARRAY (not string+args). */
+const localArraySnippet = (cliPath: string): string =>
+  jsonDoc({ mcp: { [MCP_SERVER_NAME]: { type: 'local', command: ['node', cliPath, 'mcp'] } } });
+
+/** Crush's `.crush.json`: top-level `mcp`, but the entry keeps a STRING command plus a sibling `args`. */
+const mcpKeySnippet = (cliPath: string): string =>
+  jsonDoc({ mcp: { [MCP_SERVER_NAME]: { command: 'node', args: [cliPath, 'mcp'] } } });
+
+/** ZCode's `config.json`: the servers live one level down, under `mcp.servers`. */
+const zcodeSnippet = (cliPath: string): string =>
+  jsonDoc({ mcp: { servers: { [MCP_SERVER_NAME]: { command: 'node', args: [cliPath, 'mcp'] } } } });
+
+/** Amp's `.amp/settings.json`: the key itself is namespaced, `amp.mcpServers`. */
+const ampSnippet = (cliPath: string): string =>
+  jsonDoc({ 'amp.mcpServers': { [MCP_SERVER_NAME]: { command: 'node', args: [cliPath, 'mcp'] } } });
+
+/** CodeBuddy reuses the `mcpServers` family but requires an explicit `type: "stdio"` on the entry. */
+const stdioTypedSnippet = (cliPath: string): string =>
+  jsonDoc({ mcpServers: { [MCP_SERVER_NAME]: { type: 'stdio', command: 'node', args: [cliPath, 'mcp'] } } });
+
 /** `{"mcpServers": {"open-sdd": {"command": "node", "args": ["<cli>", "mcp"]}}}` */
 const mcpServersSnippet = (cliPath: string): string =>
   jsonDoc({ mcpServers: { [MCP_SERVER_NAME]: { command: 'node', args: [cliPath, 'mcp'] } } });
@@ -332,6 +352,347 @@ export const HOST_INTEGRATIONS: HostIntegration[] = [
       VERIFIED_JSON_MCP_SERVERS,
       'Ruta de usuario (extensión de VS Code, id `saoudrizwan.claude-dev`): `cline_mcp_settings.json` dentro de `globalStorage`. Cline admite claves extra por servidor (`disabled`, `autoApprove`); el snippet no las emite porque son opcionales.',
       'Cline no tiene comandos de barra: sus reglas viven en `.clinerules/` y se adjuntan con una mención. No hay instalador de skills para Cline en el registro de agentes, así que `--write` solo registra el MCP.',
+    ],
+  },
+  {
+    id: 'factory-droid',
+    label: 'Factory Droid',
+    skills: { layout: '.factory/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.factory/mcp.json',
+        darwin: '.factory/mcp.json',
+        win32: '.factory/mcp.json',
+      },
+      snippetFormat: 'json',
+      snippet: mcpServersSnippet,
+      verified: true,
+      docUrl: 'https://docs.factory.ai/llms-full.txt',
+    },
+    detect: ['.factory/'],
+    notes: [
+      'Forma VERIFICADA: `.factory/mcp.json` en la raiz del proyecto con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array) hermanos. Documentacion: https://docs.factory.ai/llms-full.txt (seccion MCP, "Configuration file"); espejo por pagina: https://docs.factory.ai/droid-cli/settings.md.',
+      'Los servidores de proyecto se leen en modo solo lectura desde el CLI (`droid mcp remove` no puede borrarlos) y no deben contener secretos: el snippet registra un servidor local (node <cli> mcp), no una credencial.',
+      'Skills: `.factory/skills/<n>/SKILL.md` documentado; el instalador de skills es el siguiente incremento (G-35).',
+    ],
+  },
+  {
+    id: 'roo-code',
+    label: 'Roo Code',
+    skills: { layout: '.roo/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.roo/mcp.json',
+        darwin: '.roo/mcp.json',
+        win32: '.roo/mcp.json',
+      },
+      snippetFormat: 'json',
+      snippet: mcpServersSnippet,
+      verified: true,
+      docUrl: 'https://roocodeinc.github.io/Roo-Code/features/mcp/using-mcp-in-roo',
+    },
+    detect: ['.roo/', '.roorules'],
+    notes: [
+      'Forma VERIFICADA: `.roo/mcp.json` con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array). Documentacion: https://roocodeinc.github.io/Roo-Code/features/mcp/using-mcp-in-roo.',
+      'Roo Code tambien lee `.agents/skills/` y AGENTS.md; el instalador de skills es el siguiente incremento (G-35).',
+    ],
+  },
+  {
+    id: 'kilo-code',
+    label: 'Kilo Code',
+    skills: { layout: '.kilo/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.kilo/kilo.jsonc',
+        darwin: '.kilo/kilo.jsonc',
+        win32: '.kilo/kilo.jsonc',
+      },
+      snippetFormat: 'json',
+      snippet: localArraySnippet,
+      verified: true,
+      docUrl: 'https://kilocode.ai/docs/llms.txt',
+    },
+    detect: ['.kilo/'],
+    notes: [
+      'Forma VERIFICADA y DISTINTA de la familia `mcpServers`: clave de primer nivel `mcp`, entrada con `type: "local"` y `command` como ARRAY (no `command`+`args`), con `environment` en lugar de `env`. Documentacion: https://kilocode.ai/docs/llms.txt.',
+      'El archivo documentado es `.kilo/kilo.jsonc`: si ya contiene comentarios, el merge se NIEGA a reescribirlo en vez de destruirlos (el lector es JSON estricto) y lo dice.',
+      'Kilo Code lee `.agents/skills/`, `.claude/skills/` y AGENTS.md; el instalador de skills es el siguiente incremento (G-35).',
+    ],
+  },
+  {
+    id: 'junie',
+    label: 'JetBrains Junie',
+    skills: { layout: '.junie/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.junie/mcp/mcp.json',
+        darwin: '.junie/mcp/mcp.json',
+        win32: '.junie/mcp/mcp.json',
+      },
+      snippetFormat: 'json',
+      snippet: mcpServersSnippet,
+      verified: true,
+      docUrl: 'https://junie.jetbrains.com/docs/junie-cli-mcp-configuration.html',
+    },
+    detect: ['.junie/'],
+    notes: [
+      'Forma VERIFICADA: `.junie/mcp/mcp.json` (usuario `~/.junie/mcp/mcp.json`) con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array). Documentacion: https://junie.jetbrains.com/docs/junie-cli-mcp-configuration.html; ajustes del plugin: https://junie.jetbrains.com/docs/junie-plugin-mcp-settings.html.',
+      'Ojo con el anfitrion de documentacion: `www.jetbrains.com/help/junie/*` devuelve 200 pero son cascaras de redireccion de 203 bytes; la documentacion real vive en junie.jetbrains.com/docs/.',
+      'Skills: `.junie/skills/<n>/SKILL.md` documentado; el instalador de skills es el siguiente incremento (G-35).',
+    ],
+  },
+  {
+    id: 'mimocode',
+    label: 'MiMoCode (Xiaomi)',
+    skills: { layout: '.mimocode/skills/**/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.mimocode/mimocode.json',
+        darwin: '.mimocode/mimocode.json',
+        win32: '.mimocode/mimocode.json',
+      },
+      snippetFormat: 'json',
+      snippet: localArraySnippet,
+      verified: true,
+      docUrl: 'https://mimo.xiaomi.com/mimocode/mcp-servers',
+    },
+    detect: ['.mimocode/'],
+    notes: [
+      'Forma VERIFICADA y DISTINTA: `.mimocode/mimocode.json` (o `.jsonc`; usuario `~/.config/mimocode/mimocode.jsonc`) con la clave `mcp`, entrada `type: "local"` y `command` como ARRAY, y `environment` en lugar de `env`. Documentacion: https://mimo.xiaomi.com/mimocode/mcp-servers.',
+      'Skills: `.mimocode/skills/**/SKILL.md` documentado (tambien los compatibles `.claude/`, `.agents/`, `.codex/`, `.opencode/`); el instalador de skills es el siguiente incremento (G-35).',
+    ],
+  },
+  {
+    id: 'iflow',
+    label: 'iFlow CLI',
+    skills: { layout: 'IFLOW.md (skills no documentados)', mode: 'prompt-file' },
+    invocation: '/sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.iflow/settings.json',
+        darwin: '.iflow/settings.json',
+        win32: '.iflow/settings.json',
+      },
+      snippetFormat: 'json',
+      snippet: mcpServersSnippet,
+      verified: true,
+      docUrl: 'https://raw.githubusercontent.com/iflow-ai/iflow-cli/main/docs_en/examples/mcp.md',
+    },
+    detect: ['.iflow/', 'IFLOW.md'],
+    notes: [
+      'Forma VERIFICADA: `.iflow/settings.json` (usuario `~/.iflow/settings.json`) con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array). Documentacion: https://raw.githubusercontent.com/iflow-ai/iflow-cli/main/docs_en/examples/mcp.md.',
+      'Sin Agent Skills documentados para el CLI (el repo iflow-ai/iflow-skills apunta a otros anfitriones): no se declara un layout de skills que nadie haya documentado.',
+      'El fichero de contexto por defecto es IFLOW.md; `contextFileName` puede apuntarlo a AGENTS.md.',
+    ],
+  },
+  {
+    id: 'zcode',
+    label: 'ZCode (Z.ai)',
+    skills: { layout: '.zcode/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.zcode/config.json',
+        darwin: '.zcode/config.json',
+        win32: '.zcode/config.json',
+      },
+      snippetFormat: 'json',
+      snippet: zcodeSnippet,
+      verified: true,
+      docUrl: 'https://zcode.z.ai/en/docs/mcp-services',
+    },
+    detect: ['.zcode/'],
+    notes: [
+      'Forma VERIFICADA: los servidores viven bajo `mcp.servers` en `.zcode/config.json` (usuario `~/.zcode/cli/config.json`), con `command` (cadena) + `args` (array); el mismo documento admite el compatible `.agents/mcp.json` con la clave `mcpServers`. Documentacion: https://zcode.z.ai/en/docs/mcp-services.',
+      'El path de proyecto de comandos y skills es SOURCE-VERIFIED (resolver del propio vendor), no documentado; ver la fila de plantillas de comando.',
+      'AGENTS.md plano (sin fusion anidada); limites publicados de skill: descripcion <=1024 caracteres y cuerpo >100 KB truncado.',
+    ],
+  },
+  {
+    id: 'trae',
+    label: 'Trae (ByteDance)',
+    skills: { layout: '.trae/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.trae/mcp.json',
+        darwin: '.trae/mcp.json',
+        win32: '.trae/mcp.json',
+      },
+      snippetFormat: 'json',
+      snippet: mcpServersSnippet,
+      verified: true,
+      docUrl: 'https://docs.trae.ai/ide/add-mcp-servers?_lang=en',
+    },
+    detect: ['.trae/'],
+    notes: [
+      'Forma VERIFICADA: `.trae/mcp.json` en el proyecto con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array). Documentacion: https://docs.trae.ai/ide/add-mcp-servers?_lang=en.',
+      'Las paginas de docs.trae.ai son una SPA de ByteDance que embebe el cuerpo del documento como JSON Quill-delta en el HTML servido: se lee sin JavaScript, y `.md`/`sitemap.xml`/`llms.txt` devuelven la SPA, no el documento.',
+    ],
+  },
+  {
+    id: 'qoder',
+    label: 'Qoder (Alibaba)',
+    skills: { layout: '.qoder/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.mcp.json',
+        darwin: '.mcp.json',
+        win32: '.mcp.json',
+      },
+      snippetFormat: 'json',
+      snippet: mcpServersSnippet,
+      verified: true,
+      docUrl: 'https://docs.qoder.com/cli/mcp-servers.md',
+    },
+    detect: ['.qoder/'],
+    notes: [
+      'Forma VERIFICADA: `.mcp.json` en el proyecto con el objeto `mcpServers`; el lado chino documenta ademas `<proyecto>/.qoder/settings[.local].json` y las reglas en `.qoder/rules/**/*.md` con un presupuesto documentado de 100.000 caracteres entre TODOS los ficheros de reglas activos. Documentacion: https://docs.qoder.com/cli/mcp-servers.md.',
+      'Qoder es el nombre actual de Tongyi Lingma. docs.qoder.com y help.aliyun.com sirven gzip SIN negociar `Content-Encoding`: hay que usar `curl --compressed` o se obtiene binario.',
+    ],
+  },
+  {
+    id: 'codebuddy',
+    label: 'CodeBuddy (Tencent)',
+    skills: { layout: '.codebuddy/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.mcp.json',
+        darwin: '.mcp.json',
+        win32: '.mcp.json',
+      },
+      snippetFormat: 'json',
+      snippet: stdioTypedSnippet,
+      verified: true,
+      docUrl: 'https://www.codebuddy.ai/docs/cli/mcp',
+    },
+    detect: ['.codebuddy/', 'CODEBUDDY.md'],
+    notes: [
+      'Forma VERIFICADA: `.mcp.json` en la raiz con la clave `mcpServers`, y la entrada exige un `type: "stdio"` EXPLICITO (ademas de `command` cadena y `args` array). Documentacion: https://www.codebuddy.ai/docs/cli/mcp.',
+      'CODEBUDDY.md es el fichero de instrucciones nativo; AGENTS.md se lee solo como respaldo cuando CODEBUDDY.md no existe.',
+      'docs.codebuddy.ai y codebuddy.ai/docs no resuelven por DNS (HTTP 000): la documentacion viva esta en www.codebuddy.ai.',
+    ],
+  },
+  {
+    id: 'crush',
+    label: 'Crush (Charm)',
+    skills: { layout: '.crush/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: 'skills: sdd-* (auto-loaded)',
+    mcp: {
+      configPaths: {
+        linux: '.crush.json',
+        darwin: '.crush.json',
+        win32: '.crush.json',
+      },
+      snippetFormat: 'json',
+      snippet: mcpKeySnippet,
+      verified: true,
+      docUrl: 'https://raw.githubusercontent.com/charmbracelet/crush/main/docs/config/README.md',
+    },
+    detect: ['.crush.json', '.crushrc'],
+    notes: [
+      'Forma VERIFICADA: `./.crush.json` (o `./.crushrc`, que es bash) con la clave de primer nivel `mcp` y entradas de `command` (cadena) + `args` (array); el ambito de usuario es `~/.config/crush/crush.json|crushrc`. Documentacion: https://raw.githubusercontent.com/charmbracelet/crush/main/docs/config/README.md.',
+      'Crush no tiene comandos personalizados: su superficie son las Agent Skills (proyecto `.crush/skills`, `.agents/skills`, `.claude/skills`, `.cursor/skills`) y el contexto de proyecto via AGENTS.md.',
+      'El instalador de skills para Crush es el siguiente incremento (G-35): hoy `integrate crush --write` escribe el MCP y declara el hueco de skills.',
+    ],
+  },
+  {
+    id: 'amp',
+    label: 'Amp (Sourcegraph)',
+    skills: { layout: '.agents/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: 'skills: sdd-* (auto-selected)',
+    mcp: {
+      configPaths: {
+        linux: '.amp/settings.json',
+        darwin: '.amp/settings.json',
+        win32: '.amp/settings.json',
+      },
+      snippetFormat: 'json',
+      snippet: ampSnippet,
+      verified: true,
+      docUrl: 'https://ampcode.com/docs/markdown/customize/mcp',
+    },
+    detect: ['.amp/'],
+    notes: [
+      'Forma VERIFICADA: `.amp/settings.json` del espacio de trabajo con la clave NAMESPACED `amp.mcpServers` (usuario `~/.config/amp/settings.json`), entradas de `command` (cadena) + `args` (array). Documentacion: https://ampcode.com/docs/markdown/customize/mcp.',
+      'Amp no tiene comandos de barra ("You do not need a slash command"): su superficie son las skills del proyecto (`.agents/skills/`, `.claude/skills/`) y AGENTS.md/AGENT.md/CLAUDE.md leidos en el cwd y sus ancestros.',
+      'Amp publica Markdown crudo en `/docs/markdown/<ruta>` para sus 54 paginas, indexadas en https://ampcode.com/llms.txt.',
+    ],
+  },
+  {
+    id: 'kimi-code',
+    label: 'Kimi Code CLI (Moonshot)',
+    skills: { layout: '.kimi-code/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/skill:sdd-brownfield',
+    mcp: {
+      configPaths: {
+        linux: '.kimi-code/mcp.json',
+        darwin: '.kimi-code/mcp.json',
+        win32: '.kimi-code/mcp.json',
+      },
+      snippetFormat: 'json',
+      snippet: mcpServersSnippet,
+      verified: true,
+      docUrl: 'https://raw.githubusercontent.com/MoonshotAI/kimi-code/main/docs/en/customization/mcp.md',
+    },
+    detect: ['.kimi-code/'],
+    notes: [
+      'Forma VERIFICADA: `.kimi-code/mcp.json` en el proyecto (usuario `~/.kimi-code/mcp.json`) con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array). Documentacion: https://raw.githubusercontent.com/MoonshotAI/kimi-code/main/docs/en/customization/mcp.md.',
+      'NO tiene comandos personalizados: su propio TOC de documentacion (https://moonshotai.github.io/kimi-code/llms.txt) no tiene pagina de comandos y dice que las barras son "built-in control commands"; un `/x` desconocido se envia como mensaje normal. Por eso NO hay fila de plantillas de comando para este anfitrion.',
+      'Skills: proyecto `.kimi-code/skills/` y `.agents/skills/`, invocadas `/skill:<name>`; el instalador de skills es el siguiente incremento (G-35).',
+    ],
+  },
+  {
+    id: 'warp',
+    label: 'Warp',
+    skills: { layout: '.agents/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield (skill)',
+    mcp: {
+      configPaths: {
+        linux: '.warp/.mcp.json',
+        darwin: '.warp/.mcp.json',
+        win32: '.warp/.mcp.json',
+      },
+      snippetFormat: 'json',
+      snippet: mcpServersSnippet,
+      verified: true,
+      docUrl: 'https://docs.warp.dev/_llms-txt/agents.txt',
+    },
+    detect: ['.warp/'],
+    notes: [
+      'Forma VERIFICADA: `.warp/.mcp.json` (usuario `~/.warp/.mcp.json`; el Warp Agent CLI usa `~/.warp_cli/.mcp.json`) con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array) + `env` opcional. Documentacion: https://docs.warp.dev/_llms-txt/agents.txt.',
+      'Warp NO documenta directorio de comandos de proyecto (sus prompts viven en Warp Drive, en la nube): la integracion es por Agent Skills, con `.agents/skills/` como ruta recomendada entre las diez que documenta, y AGENTS.md/WARP.md en mayusculas.',
+      'El instalador de skills para Warp es el siguiente incremento (G-35).',
+    ],
+  },
+  {
+    id: 'devin',
+    label: 'Devin (Cognition)',
+    skills: { layout: '.devin/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield (skill)',
+    mcp: {
+      configPaths: {
+        linux: '.devin/mcp_config.json',
+        darwin: '.devin/mcp_config.json',
+        win32: '.devin/mcp_config.json',
+      },
+      snippetFormat: 'json',
+      snippet: mcpServersSnippet,
+      verified: true,
+      docUrl: 'https://docs.devin.ai/cli/extensibility/mcp/configuration.md',
+    },
+    detect: ['.devin/'],
+    notes: [
+      'Forma VERIFICADA: `.devin/mcp_config.json` para el ambito de proyecto y `~/.config/devin/mcp_config.json` para el de usuario (`%APPDATA%\\devin\\mcp_config.json` en Windows), con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array) + `env`. Documentacion: https://docs.devin.ai/cli/extensibility/mcp/configuration.md.',
+      'Migracion documentada: desde la v3000.3 los servidores viven en ficheros dedicados; ANTES estaban en la clave `mcpServers` de `.devin/config.json`. El merge escribe el fichero nuevo, no el antiguo.',
+      'Devin no documenta directorio de comandos de proyecto: su superficie es skills (`.devin/skills/`, `.agents/skills/`, `.windsurf/skills/`) y reglas. El instalador de skills es el siguiente incremento (G-35).',
     ],
   },
 ];

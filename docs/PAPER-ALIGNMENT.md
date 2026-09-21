@@ -954,6 +954,40 @@ Fixed, with the evidence kept where a reader can check it:
 `open-sdd templates` prints, per host, the directory, the invocation, the argument token and the
 documented limit — so the matrix that used to be an internal table is now the thing a user reads.
 
+### G-35 — The new hosts have a verified command and MCP surface; their skills surface is not installed
+
+Paper: §6.4 / Table 4 (agent-agnostic installation). Eleven hosts gained a verified prompt-command
+convention (Factory Droid, Roo Code, Kilo Code, JetBrains Junie, MiMoCode, iFlow CLI, ZCode, Augment
+Code, Trae, Qoder, CodeBuddy), each one read from the vendor's own documentation — or, for ZCode, from
+the vendor's own resolver, and that row says SOURCE-VERIFIED instead of pretending the docs state it.
+Every row carries its URL in `argumentEvidence` and `evidence`, and `open-sdd templates --json` prints
+them. Fifteen hosts gained a verified **MCP** registration, and six of them forced a shape of their own
+rather than a plausible neighbour: Kilo Code and MiMoCode use a top-level `mcp` with `type: "local"`
+and `command` as an **array**, Crush uses `mcp` with a **string** command, ZCode nests the servers under
+`mcp.servers`, Amp namespaces the key as `amp.mcpServers`, and CodeBuddy keeps `mcpServers` but requires
+an explicit `type: "stdio"`. Kilo's documented file is JSONC, so a config that already holds comments is
+**refused, not rewritten**: the merge reads strict JSON, and destroying someone's comments to gain a
+server entry is not a trade this tool makes.
+
+What is **not** shipped for those hosts is the **skills** surface. Their `SKILL.md` layouts are
+documented (`.factory/skills/`, `.roo/skills/`, `.kilo/skills/`, `.junie/skills/`, `.mimocode/skills/`,
+`.augment/skills/`, `.trae/skills/`, `.qoder/skills/`, `.codebuddy/skills/`, `.kimi-code/skills/`,
+`.devin/skills/`, and the cross-tool `.agents/skills/` that Warp, Amp, OpenHands, Goose, Crush, dsh and
+Kimi Code also read), but the installer ships a hand-adapted skill tree **per host** and this increment
+did not write sixteen more of them. Saying that plainly is the point: `--skills` on such a host
+**declares the gap and exits 0** — it does not attempt an install it cannot complete, and it does not
+report a failure the user cannot fix. The next increment is one shared neutral tree plus a small
+per-host adapter, which is also what removes the duplication of the eight trees that exist today.
+
+Seven hosts were investigated and get **no** MCP row at all (Augment Code, Amazon Q Developer,
+Continue.dev, DeepSeek Harness, Goose, OpenHands, JetBrains AI Assistant): their file path or their
+entry shape is not documented, or the config is user-scoped only. Fourteen were refused a commands row
+for the same reason (no documented project-scoped commands directory). Amazon Q Developer is
+additionally time-boxed — its IDE plugins are documented as end-of-support on 2027-04-30 with a
+migration to Kiro — so it is a bridge and not a destination. In every case the URLs that failed are
+recorded in the row or in the report, so a later increment starts from evidence instead of starting
+over.
+
 ---
 
 ## 6. Where the paper and the code genuinely disagree

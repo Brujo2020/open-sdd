@@ -1383,11 +1383,18 @@ export const planIntegrate = async (input: PlanIntegrateInput): Promise<Integrat
       verified: true,
     });
   } else {
+    // El layout puede estar VERIFICADO (documentado por el fabricante) sin que esta versión traiga su
+    // instalador: son dos cosas distintas y decirlas igual sería mentir en una de las dos direcciones.
+    // Si el layout está documentado se declara la brecha de instalación; si no, se declara que no hay
+    // layout que escribir.
+    const layoutDocumented = !/^\s*(IFLOW\.md|AGENTS\.md|\(|$)/.test(host.skills.layout);
     artifacts.push({
       kind: 'agent-skills',
       path: host.skills.layout,
       action: 'keep',
-      reason: `${host.label} no tiene un instalador de skills en el registro de agentes (modo ${host.skills.mode}): open-sdd no escribe reglas de un anfitrión cuyo layout no puede verificar.`,
+      reason: layoutDocumented
+        ? `${host.label} tiene layout de skills VERIFICADO (${host.skills.layout}) pero esta versión no trae su instalador: brecha declarada G-35. No se escribe a medias.`
+        : `${host.label} no documenta un layout de Agent Skills (modo ${host.skills.mode}): open-sdd no inventa uno.`,
       verified: false,
     });
   }

@@ -44,6 +44,31 @@ pretending it was detected. An explicit host always wins.
 | Google Antigravity | `antigravity` | `.agent/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.agents/mcp_config.json` (workspace), `~/.gemini/config/mcp_config.json` (global) | **yes** |
 | Zed | `zed` | `AGENTS.md` | `@AGENTS.md run the sdd-brownfield workflow` | Zed `settings.json` | yes |
 | Cline | `cline` | `.clinerules/sdd-*.md` | `@.clinerules/sdd-brownfield.md` | `cline_mcp_settings.json` | **yes** |
+| Factory Droid | `factory-droid` | `.factory/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.factory/mcp.json` | **yes** |
+| Roo Code | `roo-code` | `.roo/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.roo/mcp.json` | **yes** |
+| Kilo Code | `kilo-code` | `.kilo/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.kilo/kilo.jsonc` | **yes** (key `mcp`, ARRAY command) |
+| JetBrains Junie | `junie` | `.junie/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.junie/mcp/mcp.json` | **yes** |
+| MiMoCode (Xiaomi) | `mimocode` | `.mimocode/skills/**/SKILL.md` | `/sdd-brownfield` | `.mimocode/mimocode.json` | **yes** (key `mcp`, ARRAY command) |
+| iFlow CLI | `iflow` | no Agent Skills documented | `/sdd-brownfield` | `.iflow/settings.json` | **yes** |
+| ZCode (Z.ai) | `zcode` | `.zcode/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.zcode/config.json` | **yes** (key `mcp.servers`) |
+| Augment Code | `augment` | `.augment/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | none documented (Settings panel / import JSON) | **no** — refused on purpose |
+| Trae (ByteDance) | `trae` | `.trae/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.trae/mcp.json` | **yes** |
+| Qoder (Alibaba) | `qoder` | `.qoder/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.mcp.json` | **yes** |
+| CodeBuddy (Tencent) | `codebuddy` | `.codebuddy/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.mcp.json` | **yes** (`type: "stdio"` required) |
+| Crush (Charm) | `crush` | `.crush/skills/sdd-*/SKILL.md` | skills, auto-loaded | `.crush.json` | **yes** (key `mcp`) |
+| Amp (Sourcegraph) | `amp` | `.agents/skills/sdd-*/SKILL.md` | skills, auto-selected | `.amp/settings.json` | **yes** (key `amp.mcpServers`) |
+| Kimi Code CLI (Moonshot) | `kimi-code` | `.kimi-code/skills/sdd-*/SKILL.md` | `/skill:sdd-brownfield` | `.kimi-code/mcp.json` | **yes** |
+| Warp | `warp` | `.agents/skills/sdd-*/SKILL.md` | `/sdd-brownfield` (skill) | `.warp/.mcp.json` | **yes** |
+| Devin (Cognition) | `devin` | `.devin/skills/sdd-*/SKILL.md` | `/sdd-brownfield` (skill) | `.devin/mcp_config.json` | **yes** |
+
+Six of these hosts do **not** use the `mcpServers` family, and the matrix writes each one's own shape
+rather than a plausible-looking neighbour: Kilo Code and MiMoCode use a top-level `mcp` key with
+`type: "local"` and `command` as an **array**; Crush uses `mcp` but keeps a **string** `command` with a
+sibling `args`; ZCode nests the servers under `mcp.servers`; Amp namespaces the key itself
+(`amp.mcpServers`); CodeBuddy keeps `mcpServers` but demands an explicit `type: "stdio"`; Qoder and
+CodeBuddy both write `<root>/.mcp.json`. Because Kilo's documented file is `.kilo/kilo.jsonc`, a config
+that already has comments is **refused rather than rewritten** — the reader is strict JSON and losing
+someone's comments to gain an MCP entry is not a trade this tool makes.
 
 **Verified** means the snippet shape (and the file the tool writes) is one this project is confident
 about, and the `notes` in the matrix say how we know. Every host in the shipped matrix is verified

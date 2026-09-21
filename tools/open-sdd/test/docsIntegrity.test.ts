@@ -176,3 +176,34 @@ describe('documentation — the surfaces the docs promise actually exist', () =>
     expect(missing, `README links to missing files:\n${missing.join('\n')}`).toEqual([]);
   });
 });
+
+describe('documentation — the gap ids cited elsewhere exist in the report', () => {
+  // Un `write` que no llegó a ejecutarse dejó el CHANGELOG citando G-35 mientras el informe no tenía
+  // esa brecha: el texto seguía leyéndose bien y el enlace a la evidencia no existía. Es la misma
+  // clase de fallo silencioso que la putrefacción de anclas, así que se comprueba igual.
+  it('every G-NN cited outside the report is a gap the report actually declares', () => {
+    const report = path.join(repoRoot, 'docs', 'PAPER-ALIGNMENT.md');
+    const declared = new Set(
+      [...readFileSync(report, 'utf8').matchAll(/^###\s+(G-\d\d)\b/gm)].map((match) => match[1]),
+    );
+    expect(declared.size).toBeGreaterThan(30);
+
+    const files = markdownFiles(path.join(repoRoot, 'docs'))
+      .concat(['README.md', 'README.es.md', 'CHANGELOG.md', 'AGENTS.md', 'CLAUDE.md'].map((f) => path.join(repoRoot, f)))
+      .filter((file) => file !== report);
+
+    const unknown: string[] = [];
+    for (const file of files) {
+      let content: string;
+      try {
+        content = readFileSync(file, 'utf8');
+      } catch {
+        continue; // un fichero opcional que no existe no es una referencia rota
+      }
+      for (const match of content.matchAll(/\bG-\d\d\b/g)) {
+        if (!declared.has(match[0])) unknown.push(`${path.relative(repoRoot, file)}: ${match[0]}`);
+      }
+    }
+    expect(unknown, `referencias a brechas que el informe no declara:\n${unknown.join('\n')}`).toEqual([]);
+  });
+});

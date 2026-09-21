@@ -26,8 +26,8 @@ Ejecútalo dentro de tu repositorio. Detecta el agente anfitrión, registra el n
 sin claves de API— las **22 plantillas de comando** como comandos propios del anfitrión. Es
 plan-first: sin `--write` solo imprime el plan, y nunca sobrescribe un archivo existente. Para
 instalar también las skills del anfitrión, añade `--skills`; `open-sdd integrate <host> --write`
-instala las skills **y** registra el servidor MCP (`--list` muestra los diez anfitriones, cada uno con
-su registro verificado).
+instala las skills **y** registra el servidor MCP (`--list` muestra los 25 anfitriones, cada uno con su
+registro verificado).
 
 ¿Quieres ver el flujo antes de instalarlo? `open-sdd templates` lista los 22 workflows, qué escribe
 cada uno y el directorio que lee cada uno de los once anfitriones. MCP es opt-in (`--mcp`): un
@@ -95,7 +95,7 @@ Cualitativo, a partir de la documentación pública de las alternativas. Esto **
 | | esta herramienta | spec-kit | Kiro | paquetes de skills solo-prompt |
 |---|---|---|---|---|
 | Naturaleza | CLI + motor MCP | toolkit de prompts/skills | SDD dentro de un IDE | prompts y skills |
-| Integración con el anfitrión | servidor MCP; 29 definiciones de agente, 22 convenciones de comando (19 verificadas, 3 rechazadas por su nombre), 10 registros MCP verificados; las 22 plantillas de comando son el camino por defecto sin MCP | amplia superficie de instalación e integración | su propio IDE | el chat del anfitrión |
+| Integración con el anfitrión | servidor MCP; 29 definiciones de agente, 22 convenciones de comando (19 verificadas, 3 rechazadas por su nombre), 25 registros MCP verificados; las 22 plantillas de comando son el camino por defecto sin MCP | amplia superficie de instalación e integración | su propio IDE | el chat del anfitrión |
 | Specs para código existente | specs delta + constitución reversa | flujo de specs; hay una extensión de bootstrap brownfield propuesta (#1436) | flujo de specs en el IDE | solo documentos |
 | Enforcement | gates ejecutables, códigos de salida, hook de commit + checks de PR | prompts y revisión | flujo guiado por el IDE | ninguno |
 | Evidencia / auditoría | paquete de auditoría, sha256 por artefacto, SARIF | los propios documentos | artefactos del IDE | ninguno |

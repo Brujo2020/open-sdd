@@ -26,7 +26,7 @@ Run it inside your repository. It detects the host agent, records the rigor leve
 network and no API key — the **22 prompt templates** as the host's own chat commands. It is
 plan-first: without `--write` it only prints the plan, and it never overwrites an existing file. To
 install the host's skills too, add `--skills`; `open-sdd integrate <host> --write` installs the skills
-**and** registers the MCP server (`--list` shows the ten hosts, each with a verified registration).
+**and** registers the MCP server (`--list` shows all 25 hosts, each with a verified registration).
 
 Want to see the flow before installing it? `open-sdd templates` lists all 22 workflows, what each one
 writes, and the directory each of the eleven hosts reads. MCP is opt-in (`--mcp`): a host that blocks
@@ -89,7 +89,7 @@ Qualitative, from the alternatives' public documentation. This is **not a benchm
 | | this tool | spec-kit | Kiro | prompt-only skill packs |
 |---|---|---|---|---|
 | Nature | CLI + MCP engine | prompt/skill toolkit | SDD inside one IDE | prompts and skills |
-| Host integration | MCP server; 29 agent definitions, 22 command conventions (19 verified, 3 refused by name), 10 verified MCP registrations; the 22 prompt templates are the no-MCP default | broad install and integration surface | its own IDE | the host's chat |
+| Host integration | MCP server; 29 agent definitions, 22 command conventions (19 verified, 3 refused by name), 25 verified MCP registrations; the 22 prompt templates are the no-MCP default | broad install and integration surface | its own IDE | the host's chat |
 | Specs for existing code | delta specs + reverse constitution | spec workflow; a brownfield-bootstrap extension is proposed (#1436) | spec workflow in the IDE | documents only |
 | Enforcement | executable gates, exit codes, commit hook + PR checks | prompts and review | IDE-guided workflow | none |
 | Evidence / audit | audit bundle, sha256 per artifact, SARIF | the documents themselves | IDE artifacts | none |

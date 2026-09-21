@@ -27,6 +27,29 @@ resolver, and the row says SOURCE-VERIFIED), and the row carries the URL it was 
 - **Qoder (Alibaba)** — `.qoder/commands/`; Qoder is the current name of Tongyi Lingma.
 - **CodeBuddy (Tencent)** — `.codebuddy/commands/`, `$ARGUMENTS`.
 
+### Twenty-five MCP registrations, each in its host's own shape
+
+Fifteen more hosts gained a **verified** MCP registration, and six of them do not use the
+`mcpServers` family — so the matrix writes each host's own shape instead of a plausible neighbour:
+
+- `mcpServers` with a string `command` + `args` array: **Factory Droid** (`.factory/mcp.json`),
+  **Roo Code** (`.roo/mcp.json`), **JetBrains Junie** (`.junie/mcp/mcp.json`), **iFlow CLI**
+  (`.iflow/settings.json`), **Trae** (`.trae/mcp.json`), **Kimi Code CLI** (`.kimi-code/mcp.json`),
+  **Warp** (`.warp/.mcp.json`), **Devin** (`.devin/mcp_config.json`), **Qoder** (`.mcp.json`).
+- Top-level `mcp` with `type: "local"` and `command` as an **array**: **Kilo Code**
+  (`.kilo/kilo.jsonc`) and **MiMoCode** (`.mimocode/mimocode.json`).
+- Top-level `mcp` with a **string** `command`: **Crush** (`.crush.json`).
+- Servers nested under `mcp.servers`: **ZCode** (`.zcode/config.json`).
+- A namespaced key, `amp.mcpServers`: **Amp** (`.amp/settings.json`).
+- `mcpServers` plus an explicit `type: "stdio"`: **CodeBuddy** (`.mcp.json`).
+
+Kilo's documented file is JSONC, so a config that already contains comments is **refused rather than
+rewritten** — a strict-JSON reader that silently dropped someone's comments to add a server would be
+the same class of defect this tool exists to catch. Augment Code, Amazon Q Developer, Continue.dev,
+DeepSeek Harness, Goose, OpenHands and the JetBrains AI Assistant were investigated and get **no** MCP
+row: their file path or entry shape is not documented, or the config is user-scoped only, and the URLs
+that failed are recorded in the report instead.
+
 `open-sdd templates` now lists 22 conventions (19 verified, 3 refused) and `open-sdd --agent <id>`
 accepts 29 agent definitions. Fourteen further hosts were investigated and are **not** given a
 commands row, because no project-scoped commands directory is documented for them (Warp, Devin,
