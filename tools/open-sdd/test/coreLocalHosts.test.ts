@@ -139,7 +139,8 @@ describe('overlay local — instalacion y aislamiento', () => {
 
     // Y el caso realmente normal: sin variable y sin fichero de usuario, no hay nada que reportar.
     const none = loadLocalHosts({ env: {} as NodeJS.ProcessEnv });
-    if (none.path === null) expect(renderIsEmpty(none.issues)).toBe(true);
+    expect(none.path).toBeNull();
+    expect(renderIsEmpty(none.issues)).toBe(true);
   });
 
   it('el fichero de usuario por defecto vive FUERA del repositorio', () => {

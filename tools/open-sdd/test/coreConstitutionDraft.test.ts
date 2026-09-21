@@ -126,7 +126,7 @@ describe('core/constitutionDraft — el día uno no es una página en blanco', (
       // kept as-is instead of being dropped.
       for (const entry of proposal.evidence) {
         const artifact = parseEvidenceArtifact(entry, { cwd: dir });
-        if (artifact.file !== undefined) expect(artifact.resolvable, `${entry} debe existir`).toBe(true);
+        expect(artifact.file === undefined || artifact.resolvable, `${entry} debe existir`).toBe(true);
       }
     }
   });

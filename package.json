@@ -28,6 +28,8 @@
     "gates:run": "node tools/open-sdd/dist/cli.js gates run",
     "crosswalk": "node tools/open-sdd/dist/cli.js gates crosswalk",
     "mutate": "node scripts/mutation.mjs",
+    "assertions": "node scripts/assertions.mjs",
+    "assertions:probe": "node scripts/assertions.mjs --probe 30",
     "conformance": "node tools/open-sdd/dist/cli.js govern conformance",
     "assure": "node tools/open-sdd/dist/cli.js assure threats",
     "floor:status": "node tools/open-sdd/dist/cli.js floor status",

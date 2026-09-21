@@ -98,7 +98,8 @@ describe('exit-code contract', () => {
     expect(code).not.toBe(0);
     expect(out).not.toContain('gates OK');
     // El pie no puede reproducir la cadena que el propio comando ejecutó: la declara no medida.
-    if (FOOTER.test(out)) expect(out).toContain('no medidos en esta ejecución');
+    expect(FOOTER.test(out)).toBe(true);
+    expect(out).toContain('no medidos en esta ejecución');
   });
 
   it('help exit-codes documents 0–4 and reconciles the host-loop sentinel', async () => {

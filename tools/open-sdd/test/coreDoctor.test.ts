@@ -154,7 +154,9 @@ describe('doctor — forma del informe', () => {
     for (const item of report.checks) {
       expect(['ok', 'warn', 'fail']).toContain(item.status);
       expect(item.detail.length).toBeGreaterThan(0);
-      if (item.status !== 'ok') expect(item.fix, `${item.id} sin fix`).toBeDefined();
+      // Incondicional a propósito: la forma `if (status !== 'ok') expect(fix)` sólo comprueba algo
+      // cuando existe un check no-ok, y sin esa precondición afirmada el test puede pasar sin mirar.
+      expect(item.fix !== undefined || item.status === 'ok', `${item.id} sin fix`).toBe(true);
     }
     expect(report.counts.ok + report.counts.warn + report.counts.fail).toBe(report.checks.length);
     expect(report.ok).toBe(report.counts.fail === 0);
