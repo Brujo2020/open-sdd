@@ -130,11 +130,22 @@ root; inside this repository use `node tools/open-sdd/dist/cli.js` in place of `
 | `open-sdd govern discipline` | The §9.7 decidable properties over the working diff |
 | `open-sdd assure threats` / `lab` / `skills` / `memory` | Threat and regulatory crosswalks, risk-lab banks, skill privileges, memory quarantine |
 | `open-sdd assure claims --verify` | Decides every documentation claim by its verifier's exit code |
+| `open-sdd standards list\|show\|explain\|check\|fix` | The machine-checkable standards catalogue: what each rule detects, its severity, and a remedy or a question |
+| `open-sdd requirements review <feature>` | The requirements-quality checks over a spec: position, basis, and a graded remedy or an explicit question |
+| `open-sdd requirements checklist <feature> --verify` | Executes the checklist predicates and records the digest each item needs to count as complete |
+| `open-sdd review <feature> --base <ref>` | One page: requirement diffs, their tasks, the tests that would fail, and a risk score |
+| `open-sdd brownfield ids <feature> --base <ref>` | Stable-id audit: `ID-MUTATED` / `ID-LOST` against a base revision |
 | `open-sdd waves <feature>` | The transactional wave plan and the git commands that materialise it |
 | `open-sdd floor status` / `floor install [target] --ci` | Whether the commit/merge floor is installed, and installing it |
+| `open-sdd uninstall` / `restore [--from <receipt>]` | The plan to undo what this tool wrote, and applying it — never `.sdd/` without `--purge-sdd` |
 
 Non-negotiables when reporting on this model:
 
+- **No shipped standard blocks.** Every entry in the standards catalogue is advisory until a corpus
+  measures its precision (`isBlocking` requires a calibrated corpus). Report its findings; never
+  present an uncalibrated standard as a gate.
+- **The requirements coach never certifies.** It says how many checks ran and which findings were
+  adjudicated — never that a specification is correct.
 - **C7 / Karpathy is vacuous**: it runs without inspecting anything, so never present it as a
   passing control.
 - **No model backend ships with this repository**, so intent alignment (C5) reports
