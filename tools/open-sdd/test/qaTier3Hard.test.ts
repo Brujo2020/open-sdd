@@ -22,6 +22,7 @@ import { auditIdsAgainstBase } from '../src/core/stableIds.js';
 import { applySecurityAllowlist, type SecurityAllowlistEntry } from '../src/core/securityAllowlist.js';
 import { applyUninstall, planUninstall, recordReceipt } from '../src/core/receipt.js';
 import { assessRigor } from '../src/core/rigor.js';
+import { applyDefaultFail, posturePasses } from '../src/core/enforcement.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const runtime = { platform: 'darwin' } as const;
@@ -475,5 +476,21 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
     const code = await runCli(['requirements', 'review', 'f'], runtime, ctx.io, {}, { cwd });
     expect([0, 1]).toContain(code);
     expect(ctx.out()).toContain('not correctness');
+  });
+
+  it('35. a gate that found something FAILS, pinned at the unit and not only through a fixture', () => {
+    const verdict = applyDefaultFail(
+      { gateId: 'C2', posture: 'advisory', sensorAvailable: true, fired: true, inspects: true },
+      'flexible',
+    );
+    expect(verdict.outcome).toBe('fail');
+    expect(posturePasses([verdict])).toBe(false);
+
+    // Y un control que no inspecciona nada tampoco aprueba: se declara advisory, nunca `pass`.
+    const vacuous = applyDefaultFail(
+      { gateId: 'C7', posture: 'advisory', sensorAvailable: true, fired: false, inspects: false },
+      'flexible',
+    );
+    expect(vacuous.outcome).not.toBe('pass');
   });
 });
