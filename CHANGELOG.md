@@ -21,7 +21,7 @@ start. Only the CLI entry point loads it, so importing the matrices in a test st
 matrix and nothing else.
 
 
-### Silence is not a verdict: thirteen refusals, each with the URL that failed
+### Silence is not a verdict: twelve refusals, each with the URL that failed
 
 Eight hosts that the research investigated had no row at all in the command matrix — neither verified
 nor refused. That is the one outcome this project does not accept, because silence reads exactly like
@@ -79,10 +79,9 @@ resolver, and the row says SOURCE-VERIFIED), and the row carries the URL it was 
 - **Qoder (Alibaba)** — `.qoder/commands/`; Qoder is the current name of Tongyi Lingma.
 - **CodeBuddy (Tencent)** — `.codebuddy/commands/`, `$ARGUMENTS`.
 
-### Twenty-five MCP registrations, each in its host's own shape
+### Twenty-six MCP registrations, each in its host's own shape
 
-Fifteen more hosts gained a **verified** MCP registration, and six of them do not use the
-`mcpServers` family — so the matrix writes each host's own shape instead of a plausible neighbour:
+Fifteen hosts gained a **verified** MCP registration, and the matrix now holds twenty-six. Six of them do not use the `mcpServers` family — so the matrix writes each host's own shape instead of a plausible neighbour:
 
 - `mcpServers` with a string `command` + `args` array: **Factory Droid** (`.factory/mcp.json`),
   **Roo Code** (`.roo/mcp.json`), **JetBrains Junie** (`.junie/mcp/mcp.json`), **iFlow CLI**
@@ -102,16 +101,16 @@ DeepSeek Harness, Goose, OpenHands and the JetBrains AI Assistant were investiga
 row: their file path or entry shape is not documented, or the config is user-scoped only, and the URLs
 that failed are recorded in the report instead.
 
-`open-sdd templates` now lists 22 conventions (19 verified, 3 refused) and `open-sdd --agent <id>`
-accepts 29 agent definitions. Fourteen further hosts were investigated and are **not** given a
+`open-sdd templates` now lists 31 conventions (19 verified, 12 refused) and `open-sdd --agent <id>`
+accepts 34 agent definitions. Fourteen further hosts were investigated and are **not** given a
 commands row, because no project-scoped commands directory is documented for them (Warp, Devin,
 Replit, Firebase Studio, Aider, Crush, Amp, OpenHands, Goose, Kimi Code CLI, DeepSeek Harness,
 JetBrains AI Assistant, Continue.dev, Amazon Q Developer) — their surface is skills and/or MCP, which
 is the next increment and is declared in G-35 rather than half-shipped.
 
-## [3.2.1] — 2026-09-21
-
 ### The argument you type now actually arrives
+
+*(This was prepared as 3.2.1 and never published: it ships inside 3.3.0.)*
 
 - **The per-host argument token is translated instead of shipped verbatim.** Every prompt template was
   authored with `$ARGUMENTS` and installed unchanged, so Gemini CLI and Qwen Code — which substitute
