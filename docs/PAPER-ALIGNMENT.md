@@ -850,18 +850,38 @@ exists and is exercised by `coreCommandTemplates.test.ts`. It is recorded here r
 because the fix is a parallel change to the CLI help surface (`src/index.ts`, `src/cli/i18n.ts` — both
 present); until it lands, a reader who only runs `--help` cannot learn that 22 workflows are installed.
 
-### G-32 — The biography's thresholds are chosen, not empirically calibrated
+### G-32 — The biography's thresholds are chosen, and the measurement does not calibrate them (it says so)
 
-Paper: §4.5 (living documentation); *Manual Maestro* v3.0. `specBiography.ts` derives a `breathing`
-verdict from measured git numbers, which is the honest part: nothing is asserted without them. But the
-two boundaries it derives from are **decisions, not truths**, and the module's own header says so:
-`STALE_CODE_COMMITS = 3` ("an isolated commit can be a fix that does not change the contract; three
-code commits without the spec moving is already material movement") and `ALIVE_SPEC_SHARE = 1/3` ("one
-in three pieces that move since birth belongs to the spec"). No corpus calibrates either number; the
-test suite pins the boundary (two code commits do not cross it, three do) but pinning a threshold is
-not validating it. A repository with a legitimate two-commit fix cadence will read `quiet` and one with
-three will read `stale` by fiat. The honest label: a heuristic with a stated rationale, not a measured
-instrument — and `ambiguous` is deliberately absent from the verdict domain rather than faked.
+Paper: §4.5 (living documentation). `specBiography.ts` derives a `breathing` verdict from measured git
+numbers, which is the honest part: nothing is asserted without them. The two boundaries it derives from
+are still **decisions, not truths**, but they are no longer unmeasured. On 2026-09-21 the module was run
+over every feature under `.sdd/specs/` and at 10 earlier revisions through a temporary `git worktree`
+spanning the 81 commits since `.sdd/specs/` first appeared (`af6aa56`): **197 feature × revision
+observations over 7 features** (3 live, 4 demonstration specs), one author, one workflow, 5 days. The
+module's verdict matched independently computed git numbers on all 23 cross-checked observations.
+
+- **`STALE_CODE_COMMITS = 3`.** The measured reconciliation latency — commits of silence before the spec
+  was next updated — is `{0,0,0,0,1,2,3,5,5,12}` for the 3 live features (median 2, mean 2.8, max 12),
+  against open gaps of 27–30 at the measurement revision. One commit is demonstrably noise (4 of the 10
+  reconciled silences peaked at 0–1; a threshold of 1 would flag 6 of 10) and 3 sits at the mean. But
+  **3 is not a materiality boundary**: 4 of the 10 silences that were eventually reconciled had already
+  reached 3, so `stale` at 3 is an **early warning** that labels in-flight work roughly 4 times in 10,
+  which is why the reason string no longer claims the code "changed materially" — the measurement
+  falsified that wording and it was corrected. The only values with perfect separation here (13–27) form
+  a 15-wide band delimited by 10 closed and 3 open gaps; inventing a threshold inside it from that sample
+  would be worse than keeping the incumbent.
+- **`ALIVE_SPEC_SHARE = 1/3`.** The share branch is reached in only 14 of 197 observations (10 revisions).
+  Below 1/3 the observed shares are 23–31% and the spec never moved again (4/4); at or above it they are
+  38–67% and the spec moved again in 8 of 10 (2 right-censored at the feature's final revision). Nothing
+  falls between 31% and 38%, so 1/3 sits inside an **empty band** and is indistinguishable from 0.32 or
+  0.37 on this sample.
+
+The suite pins the boundary (two commits do not cross it, three do; 33% crosses the share, 29% does not)
+— but pinning a threshold is not validating it. The honest label remains: a heuristic with a stated
+rationale and a **measured cost**, not a calibrated instrument. The measurement is reproducible from the
+revisions named above; the sample is too small to move either constant, and the calibration target
+(whether a silent spec was actually WRONG) is unobservable — the proxy is "the spec eventually moved
+again", which is why the perfect-separation band is reported as an interval, not a value.
 
 ### G-33 — The branch role is a report; nothing installs branch protection
 
