@@ -226,7 +226,7 @@ make them hold — warning when they do not, always with a solution.*
   ```
 
 - **Harvest, do not invent.** The seed catalogue is the mechanical content that already exists:
-  the `ears.ts` diagnostics, the three "Mechanical Checks" sections, the EARS patterns in
+  the `ears.ts` diagnostics, the two "Mechanical Checks" sections, the EARS patterns in
   `ears-format.md`, the boundary/traceability rules in `requirements-review-gate.md`, and the
   evidence rule already enforced by C3.
 - **Console.** `open-sdd standards list | show <id> | explain <id> | check [--json] |
@@ -239,6 +239,13 @@ make them hold — warning when they do not, always with a solution.*
   it with a rationale and an owner, reusing the waiver shape (`.sdd/settings/standards.local.yaml`).
 - **No dead ends, mechanically.** A test enumerates every finding the engine can emit and fails if
   any lacks `fix:` or `question:` (tenet 2).
+- **Four checks the field proved are load-bearing** (designs in W8.1): the **drift sentinel**
+  (row 1 — `REQ` id → globs + text hash, checked per commit, waivers with owner and expiry, wired
+  into the staged-index hook at `spec-anchored`); **block-allocated, non-renumbering ids** with
+  `ids audit` reporting `ID-MUTATED` / `ID-LOST` / `ID-REUSED` (row 4); the **reuse gate** — a
+  symbol index and a `delta validate` that blocks a new symbol with no `reuse:` evidence (row 7);
+  and **monotone convergence** over the existing `converge.ts` (row 6 — citations required, dedupe,
+  `--require-progress`, `--verify <cmd>`).
 
 **Acceptance.** `standards check` on this repository reports every violation with a remedy;
 disabling a standard without a reason is an error; the `rules/*.md` files are byte-identical to
@@ -269,8 +276,15 @@ does not check the quality characteristics that make a requirement usable, and i
   alternatives; when the honest answer is "the human must supply the datum" (the actor, the
   threshold, the trigger), the tool asks an explicit question instead of inventing a template with
   holes — the rule `assistants.ts` already enforces.
+- **Checklist items are predicates, not prose** (W8.1 row 3): each item declares `cmd:` (exit code
+  and digest), `artifact:` (file#line/hash) or `trace:` (REQ→task); `checklist verify <feature>`
+  runs them and a `[x]` without a stored digest fails the commit gate, reusing C3's evidence store.
 - **Traceability is part of quality.** A requirement with no task and no verification is a finding;
   the delta/evidence machinery already supplies the other end of the link.
+- **A one-page review surface** (W8.1 row 8): `review <feature> --base <ref>` renders ADDED/MODIFIED/
+  REMOVED requirements as word-level diffs, each row carrying its tasks, the tests that would fail if
+  it changed (`brownfield contracts`) and a risk score, exiting 1 on unapproved requirement changes —
+  because reviewing markdown is not reviewing code.
 
 **Acceptance.** Against a labelled corpus of requirements with known defects (this corpus also
 closes G-03 for requirements): recall and false-positive rate are measured and published in
@@ -333,8 +347,11 @@ injected instruction in a requirement is reported rather than executed.
 
 ### W6 — Integration everywhere
 
-**Problem.** The integration surface is already the widest in the field, but discovery is manual and
-findings live in the terminal instead of where the code lives.
+**Problem.** The integration surface is already very wide — 31 command conventions and 26 verified
+host integrations — but breadth is not the moat: the field's leading toolkit lists 41 integration
+rows (https://raw.githubusercontent.com/github/spec-kit/main/docs/reference/integrations.md). Our
+edge is that every row is either verified with the URL it was read from or refused by name.
+Discovery is still manual, and findings live in the terminal instead of where the code lives.
 
 **Design.**
 - **One registry generates every surface:** the agent registry (`agents/registry.ts`) renders the
@@ -349,6 +366,14 @@ findings live in the terminal instead of where the code lives.
 - **`open-sdd watch`** re-runs the relevant checks on change, in the background, without noise.
 - **MCP parity:** expose standards and the requirements coach as MCP tools/resources so any host that
   speaks MCP gets the coach without installing anything else.
+- **One editable rule source, projected** (W8.1 row 9): `integrate <host> --project-steering --write`
+  generates the host rule file from the constitution + steering with an embedded
+  `<!-- sdd-projection: sha256=… -->`; `doctor` fails on a stale or hand-edited projection and
+  `--fix` regenerates it, so `AGENTS.md`, `CLAUDE.md` and the rest cannot become a second authority.
+- **A supply chain with evidence** (W8.1 row 10): `ext add --sha256`, a
+  `.sdd/extensions.lock.json` verified by `ext verify`, hooks declaring `command`/`timeout`/`sandbox`
+  and running in declared order, `unsafe: true` refused under `--frozen`, and per-hook firing counts
+  so "installed" is never reported as "working".
 
 **Acceptance.** From a clean checkout, `up` wires the detected host, the hook and CI; a violation
 appears inline in an editor with an applicable fix; a PR receives a comment naming the remedy.
@@ -368,6 +393,12 @@ asserted rather than exercised.
   guarantee, and no network call anywhere in the deterministic core (already true — make it a test).
 - **Performance budget:** every command that grows with repository size declares its budget and is
   measured in `bench/`.
+- **Pay the context tax visibly** (W8.1 row 5): `init --context-report` measures what the install
+  writes, prints per-host and total token estimates against the host's documented budget, and writes
+  `.sdd/settings/context-budget.json`; `doctor --context` fails above the ceiling and offers
+  `--lazy` (one-line stubs expanded on demand) or `--install a,b,c`. The field measured 18.6k
+  tokens/session for an unconditionally installed surface — the number is the argument for lazy
+  defaults.
 
 **Acceptance.** The survey detects modules in all six ecosystems on fixtures; a cold vs warm index
 measurement is published; an air-gapped install reaches a green `doctor` with the network disabled.
@@ -398,6 +429,54 @@ resulting specs are *good*.
 **Acceptance.** `COMPARE.md` is generated, cites sources, and contains no hand-written count; a test
 fails if a generated block drifts from its source.
 
+#### W8.1 — What the field proved, and the improved design
+
+External research (2026-09-21, primary sources; `web_search` was unavailable, so everything below was
+fetched directly — raw templates, GitHub API issue search, vendor docs). github/spec-kit is the
+reference: **138,177★, 12,381 forks, 300 open issues, MIT, Python, created 2025-08-21**
+(https://api.github.com/repos/github/spec-kit). It earned the adoption; its own issues and its own
+docs name the failures. Each row is an idea to imitate and beat, not to copy.
+
+| # | Idea to imitate (source) | The failure it fixes | The improved design here |
+|---|---|---|---|
+| 1 | A constitution every command analyses against (`/constitution`) | spec-kit's docs admit spec-anchoring is a *convention*, not a mechanism; issue **#1191** (115 reactions) is the top unmet need — specs are write-once | **Drift sentinel in the floor**: `drift bind <feature>` records each `REQ` id → claimed globs + sha256 of its text; `drift check --since <ref>` exits 1 on a commit touching uncovered paths; `drift waive` writes a waiver with owner + expiry; the staged-index hook runs it at `spec-anchored`. `driftDetected` already exists in `auditEngine` — this makes it per-commit and blocking |
+| 2 | Size the process to the change (BMAD's "the process sizes itself") | "Sledgehammer to crack a nut": `/clarify`, `/checklist`, `/analyze` are optional with no rule for when they are required | **`open-sdd route "<intent>"`**: survey + reuse + impact forecast returns **S/M/L** with its evidence (files likely touched, dependents, public-API deltas, coverage), fixes the artifact set and rigor in `.sdd/settings/route.json`, and `delta init` refuses extra ceremony for S unless `--override` (recorded, visible in `status`) |
+| 3 | "Unit tests for English" (`/checklist`) | spec-kit's items are unverifiable prose and `/implement` only counts unchecked boxes; Fowler: no guarantee they are respected | **Executable checklist predicates**: every item in `checklist.md` declares `cmd:` (exit code + digest), `artifact:` (file#line/hash) or `trace:` (REQ→task); `checklist verify <feature>` runs them, a `[x]` without a stored digest fails the commit gate, and C3's evidence store is reused, not duplicated |
+| 4 | Stable ids with traceability | **#4065**: inserting an `FR` silently invalidates every citation ("nothing errors — the references just quietly mean something else") | **Block-allocated, non-renumbering ids** (`REQ-AUTH-010…019`); `ids audit --base <ref>` fails `ID-MUTATED` / `ID-LOST` / `ID-REUSED` with git evidence, as a PR check |
+| 5 | Measure the context the tool installs | **#1401**: installed command surface measured at **18.6k tokens/session** (~93 % of Cursor's default chat) | **`init --context-report`** measures the generated files and prints per-host + total token estimates against the host's documented budget, writes `context-budget.json`; `doctor --context` fails above the ceiling and suggests `--lazy` (one-line stubs expanded by `prompt <workflow>`) or `--install a,b,c` |
+| 6 | Post-implementation convergence (`/converge`) | Append-only LLM gap-hunting with no dedupe, no progress requirement, no budget; **#4164** reports clean while the line was never in context | **Monotone convergence**: a finding without `file:line` + source-ref is dropped (and counted); dedupe by (source-ref, gap-type, evidence-hash); `--require-progress` fails when `uncovered(n) ≥ uncovered(n−1)`; `--verify <cmd>` refuses "converged" while the external suite is red; a `convergence.json` series makes the trend auditable |
+| 7 | Reuse before writing (Fowler's agent regenerated existing classes; #1436 lists it as a must) | Duplication created by agents that never looked | **Reuse as a blocking gate**: `brownfield reuse --index` builds a symbol index (name, signature, path, hash); `delta validate` blocks a newly declared symbol without `reuse:` evidence, or flags near-identical signatures as candidates; the hook can run it over the staged index |
+| 8 | Archive the change into the living spec (OpenSpec's `/opsx:archive`) | Spec trees accumulate dead branches instead of staying current | **`delta merge --archive`**: fold the delta into the base and move the change to `.sdd/specs/<f>/archive/<date>/`; add `review <feature> --base <ref>` — one diff-shaped page with ADDED/MODIFIED/REMOVED requirements, their tasks, the tests that would fail (from `brownfield contracts`) and a risk score, exiting 1 on unapproved requirement changes |
+| 9 | One rule source per project | **#609** ("CLAUDE.md vs constitution.md", 24👍, open+stale), **#2362**, **#2681**: governance duplicated across constitution, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, copilot-instructions | **Generated host projections**: `integrate <host> --project-steering --write` generates the host rule file **from** the constitution + steering with an embedded `<!-- sdd-projection: sha256=… -->`; `doctor` fails on a stale or hand-edited projection and `--fix` regenerates it. Exactly one editable source |
+| 10 | Extensions and hooks | spec-kit's docs admit preset `update` has no rollback, hooks ignore `priority`, `auto_execute_hooks` is not consulted, and workflow `shell` steps interpolate agent output with no sandbox; **#4200** measured extension commands invoked **0 of 30** runs | **Supply chain with evidence**: `ext add --sha256` verifies before unpack; `.sdd/extensions.lock.json` stores per-artifact hashes and `ext verify` recomputes them; hooks declare `command`, `timeout`, `sandbox: none|read-only` and run in declared order; anything interpolating untrusted values is `unsafe: true` and refused under `--frozen`; per-hook firing counts are reported, so "installed" ≠ "working" |
+
+Adjacent tools, one idea each: **Kiro** — event-driven hooks (enforce steering at write time, not read
+time); **cc-sdd** — `_Boundary:_`/`_Depends:_` tasks plus a fresh implementer + independent reviewer
+(our `waves`/`scheduler.ts` already plans this; executing it closes G-10); **Tessl** —
+`GENERATED FROM SPEC — DO NOT EDIT` banners that make the spec's authority machine-checkable;
+**OpenSpec** — archive-as-merge-back (row 8); **BMAD** — the explicit planning-path chooser (row 2);
+**Agent OS / Cursor rules** — path/glob-scoped rule loading, the cheapest known fix for context tax
+(rows 5 and 9). Copilot Workspace's current model could not be verified (its docs page 404s) and is
+deliberately not characterised.
+
+#### W8.2 — Measured anti-evidence (why "calibrate before blocking" is earned)
+
+- **Scott Logic** measured spec-kit at roughly **10× slowdown**: 33 m 30 s + 23 m 30 s of agent time
+  and 2,577 + 2,262 lines of markdown for 689 + ~300 LOC, with 3.5 h + ~2 h of review and one bug
+  shipped — against ~1,000 LOC in 8 min with 15 min of review and no bugs conventionally
+  (https://blog.scottlogic.com/2025/11/26/putting-spec-kit-through-its-paces-radical-idea-or-reinvented-waterfall.html).
+- A brownfield audit reported a green pipeline while external CI had **12/20 failing**, and 440
+  claimed tests against **55** real (https://hubreb.github.io/blog/spec-kit-brownfield-applicability).
+- The top "ceremony" complaint is the volume itself: **#75**, "creates the illusion of work,
+  generating a bunch of text" (24 reactions).
+- Artifact-level traceability detected **0 %** of hallucinations in the cited study; cited,
+  per-line requirements reached 86–88 % at 0 % FPR (https://arxiv.org/abs/2606.30689) — which is the
+  argument for rows 3 and 4 above, and for evidence predicates over prose.
+
+Read together with our own C4 lesson, this is why **every new check ships advisory and blocking is
+earned by a measured corpus** (tenet 7), and why the plan budgets artifacts per change class rather
+than maximising them.
+
 ---
 
 ## 4. Sequencing
@@ -427,6 +506,10 @@ Each phase ends with its acceptance criteria demonstrated in CI and recorded in
 | **Floor green** | Linux + Windows + publish workflows | all green | CI |
 | **Host coverage** | Verified / refused-by-name / declared, with URLs | no silent host | `integrate --list`, a test |
 | **Honesty** | `assure claims --verify` | 0 broken | `assure claims` |
+| **Drift coverage** | Commits touching a path no spec change or waiver covers | measured, then driven down | `drift check --since` |
+| **Context tax** | Tokens the install writes, per host and total | under the declared budget | `init --context-report` |
+| **Reuse gate** | New symbols blocked or flagged as near-duplicates | measured per change | `reuse --index`, `delta validate` |
+| **Convergence monotonicity** | Rounds where `uncovered(n) ≥ uncovered(n−1)` | 0 | `convergence.json` |
 | **Cost** | Tokens per AI review, when enabled | budget-enforced | `telemetry.ts` |
 
 The rule from the paper's own discipline applies to every row: a metric whose instrument cannot be
@@ -437,7 +520,10 @@ named is not reported as a number.
 ## 6. Anti-goals and risks
 
 - **Ceremony.** More checks is not more quality. Every standard ships advisory, is calibrated, and
-  must justify its false-positive cost before it may block.
+  must justify its false-positive cost before it may block. This is measured, not cautious: the
+  field's leading toolkit was clocked at roughly **10× slowdown** with thousands of lines of markdown
+  for hundreds of lines of code, and one brownfield audit reported a green pipeline over **12/20
+  failing** external CI checks (W8.2). Artifacts are budgeted per change class (W8.1 row 2).
 - **AI noise.** Suggestions appear only on a real finding, once per run (the `assistants.ts` ledger),
   ordered by severity and by what unblocks the next phase — never a stream of opinions.
 - **Model dependency.** If it needs a model to be useful, it is broken. The deterministic core stays
