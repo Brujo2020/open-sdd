@@ -80,11 +80,11 @@ interface Frontmatter {
 }
 
 const parseFrontmatter = (raw: string): Frontmatter => {
-  const match = raw.match(/^---\n([\s\S]*?)\n---\n/);
+  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
   if (!match) throw new Error('missing YAML frontmatter');
   const scalars: Record<string, string> = {};
   const lists: Record<string, string[]> = {};
-  const lines = match[1].split('\n');
+  const lines = match[1].split(/\r?\n/);
 
   for (let i = 0; i < lines.length; i += 1) {
     const key = lines[i].match(/^([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
