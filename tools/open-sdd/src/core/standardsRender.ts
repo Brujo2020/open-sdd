@@ -159,8 +159,12 @@ const readIfPresent = async (abs: string): Promise<string | null> => {
 
 /**
  * Deriva entre el catálogo y los `rules/*.md` en disco. Un fichero ausente se reporta como `missing`
- * con todas sus entradas; un fichero distinto se reporta como `differs` nombrando las entradas cuyo
- * bloque no aparece. Nunca lanza: un fichero ilegible cuenta como ausente.
+ * con todas sus entradas; un fichero del que FALTA o fue EDITADO el bloque de una entrada se reporta
+ * como `differs` nombrándola. Nunca lanza: un fichero ilegible cuenta como ausente.
+ *
+ * Un documento vivo puede llevar prosa escrita a mano además de los bloques generados: eso NO es
+ * deriva. Exigir igualdad byte a byte con el render completo haría imposible convivir con la prosa y
+ * forzaría a borrarla para poner el chequeo en verde, que es lo contrario de lo que se quiere.
  */
 export const detectDrift = async (cwd: string, entries: readonly StandardEntry[]): Promise<RuleDrift[]> => {
   const rendered = renderRules(entries);
@@ -174,11 +178,11 @@ export const detectDrift = async (cwd: string, entries: readonly StandardEntry[]
       drifts.push({ file: rule.file, reason: 'missing', entries: allIds });
       continue;
     }
-    if (onDisk.trim() === rule.content.trim()) continue;
     const disagreeing = (grouped.get(rule.file) ?? [])
       .filter((entry) => !onDisk.includes(renderEntryBlock(entry)))
       .map((entry) => entry.id);
-    drifts.push({ file: rule.file, reason: 'differs', entries: disagreeing.length > 0 ? disagreeing : allIds });
+    if (disagreeing.length === 0) continue;
+    drifts.push({ file: rule.file, reason: 'differs', entries: disagreeing });
   }
 
   return drifts;
@@ -197,4 +201,80 @@ export const writeRules = async (cwd: string, entries: readonly StandardEntry[])
     written.push(rule.file);
   }
   return written;
+};
+
+export interface RuleInjection {
+  file: string;
+  action: 'created' | 'updated' | 'kept';
+  entries: string[];
+}
+
+/**
+ * Inyecta los bloques generados en los ficheros de reglas EXISTENTES, conservando su prosa.
+ *
+ * `writeRules` devuelve el fichero entero, así que aplicarlo sobre `rules/*.md` borraría el texto
+ * escrito a mano que esos documentos llevan. Esta es la operación correcta para un documento vivo:
+ *  - si el bloque de una entrada ya está (marcadores `begin`/`end`), se REEMPLAZA su interior;
+ *  - si no está, se AÑADE al final dentro de una sección generada, sin tocar nada más;
+ *  - si el fichero no existe, se crea con la forma completa.
+ *
+ * Nada fuera de los bloques marcados cambia, así que un revisor ve en el diff exactamente lo que la
+ * catálogo cambió.
+ */
+export const injectRules = async (
+  cwd: string,
+  entries: readonly StandardEntry[],
+): Promise<RuleInjection[]> => {
+  const grouped = entriesByFile(entries);
+  const results: RuleInjection[] = [];
+
+  for (const file of [...grouped.keys()].sort()) {
+    const list = grouped.get(file) ?? [];
+    const abs = path.resolve(cwd, file);
+    const existing = await readIfPresent(abs);
+
+    if (existing === null) {
+      const content = renderRules(list).find((rule) => rule.file === file)?.content ?? '';
+      await mkdir(path.dirname(abs), { recursive: true });
+      await writeFile(abs, content, 'utf8');
+      results.push({ file, action: 'created', entries: list.map((entry) => entry.id) });
+      continue;
+    }
+
+    let content = existing;
+    const missing: StandardEntry[] = [];
+    for (const entry of list) {
+      const begin = beginMarker(entry.id);
+      const end = endMarker(entry.id);
+      const start = content.indexOf(begin);
+      const stop = content.indexOf(end);
+      if (start >= 0 && stop > start) {
+        content = content.slice(0, start) + renderEntryBlock(entry) + content.slice(stop + end.length);
+      } else {
+        missing.push(entry);
+      }
+    }
+
+    if (missing.length > 0) {
+      const section = [
+        '',
+        `<!-- ${RENDER_MARKER} -->`,
+        '',
+        '## Generated standards',
+        '',
+        ...missing.map(renderEntryBlock),
+        '',
+      ].join('\n');
+      content = `${content.replace(/\s*$/, '')}\n${section}`;
+    }
+
+    if (content !== existing) {
+      await writeFile(abs, content, 'utf8');
+      results.push({ file, action: 'updated', entries: list.map((entry) => entry.id) });
+    } else {
+      results.push({ file, action: 'kept', entries: list.map((entry) => entry.id) });
+    }
+  }
+
+  return results;
 };

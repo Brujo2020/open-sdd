@@ -49,3 +49,72 @@ Before applying judgment, verify these mechanically:
 - If issues are local to the draft, repair the draft and re-run the review gate.
 - Keep the loop bounded: no more than 2 review-and-repair passes before escalating a real ambiguity back to the user.
 - Write `requirements.md` only after the review gate passes.
+
+<!-- GENERATED from .sdd/settings/standards by tools/open-sdd/src/core/standardsRender.ts; edit the catalogue entry, not this file -->
+
+## Generated standards
+
+<!-- standards:REQ-GATE-001:begin -->
+## REQ-GATE-001 — Requirement headings declare a numeric identifier
+
+- **Category:** `requirements`
+- **Severity:** `warning` (advisory until a measured corpus exists)
+- **Applies to:** `requirements.md`, `delta.md`
+- **Standard:** internal
+- **Source:** `.sdd/settings/rules/requirements-review-gate.md#mechanical-checks`
+- **Detection:** `structural` — `requirements-numeric-ids`
+- **Message:** un encabezado de requisito no declara identificador numérico
+- **Evidence:** `tools/open-sdd/src/core/standards.ts#runStandard (structural:requirements-numeric-ids)`
+- **Calibration:** not measured
+- **Remedies:**
+  - `maybe-incorrect` — asigna al encabezado un identificador numérico estable, por ejemplo `REQ-AREA-001` o `1.2`
+  - `needs-human` — si el encabezado no es un requisito sino una sección del documento, bájalo a nivel 2
+<!-- standards:REQ-GATE-001:end -->
+<!-- standards:REQ-GATE-002:begin -->
+## REQ-GATE-002 — Every requirement has an EARS acceptance criterion
+
+- **Category:** `requirements`
+- **Severity:** `warning` (advisory until a measured corpus exists)
+- **Applies to:** `requirements.md`, `delta.md`
+- **Standard:** internal
+- **Source:** `.sdd/settings/rules/requirements-review-gate.md#mechanical-checks`
+- **Detection:** `structural` — `requirements-acceptance-criteria`
+- **Message:** la sección de requisito no contiene ningún criterio de aceptación conforme a EARS
+- **Evidence:** `tools/open-sdd/src/core/standards.ts#runStandard (structural:requirements-acceptance-criteria)`
+- **Calibration:** not measured
+- **Remedies:**
+  - `maybe-incorrect` — añade al menos un criterio con una plantilla EARS y un único disparador
+  - `needs-human` — si el requisito no es verificable, reformúlalo o retíralo antes de añadir un criterio
+<!-- standards:REQ-GATE-002:end -->
+<!-- standards:REQ-GATE-003:begin -->
+## REQ-GATE-003 — Requirements avoid implementation language
+
+- **Category:** `requirements`
+- **Severity:** `info` (advisory until a measured corpus exists)
+- **Applies to:** `requirements.md`, `delta.md`
+- **Standard:** internal
+- **Source:** `.sdd/settings/rules/requirements-review-gate.md#mechanical-checks`
+- **Detection:** `regex` — `\b(?:PostgreSQL|Postgres|MySQL|MariaDB|MongoDB|SQLite|Redis|Elasticsearch|Kafka|RabbitMQ|Memcached)\b`, `\b(?:React|Angular|Vue(?:\.js)?|Svelte|Django|Flask|Rails|Laravel|Spring\s+Boot|Express(?:\.js)?|Next\.js|NestJS)\b`, `\b(?:Kubernetes|Docker|Terraform|Ansible|AWS|Azure|GCP)\b`
+- **Message:** el requisito nombra una tecnología concreta que pertenece a `plan.md`, no a `requirements.md`
+- **Evidence:** `tools/open-sdd/src/core/standards.ts#runStandard (regex)`
+- **Calibration:** not measured
+- **Remedies:**
+  - `maybe-incorrect` — sustituye el nombre del producto por la capacidad observable que el requisito exige
+  - `needs-human` — si la tecnología es una restricción de alcance, muévela a `plan.md` o declara la excepción con motivo
+<!-- standards:REQ-GATE-003:end -->
+<!-- standards:REQ-GATE-004:begin -->
+## REQ-GATE-004 — Requirement headings do not mix alphabetic and numeric labels
+
+- **Category:** `requirements`
+- **Severity:** `warning` (advisory until a measured corpus exists)
+- **Applies to:** `requirements.md`, `delta.md`
+- **Standard:** internal
+- **Source:** `.sdd/settings/rules/requirements-review-gate.md#ears-and-testability-review`
+- **Detection:** `regex` — `^#{1,6}\s+[A-Za-z]{1,3}\d+\b`, `^#{1,6}\s+(?:Requirement|Requisito|Section|Sección)\s+\d`
+- **Message:** un encabezado mezcla etiqueta alfabética y numérica: usa solo identificadores numéricos
+- **Evidence:** `tools/open-sdd/src/core/standards.ts#runStandard (regex)`
+- **Calibration:** not measured
+- **Remedies:**
+  - `maybe-incorrect` — vuelve el encabezado a un identificador numérico, por ejemplo `3.` o `REQ-AREA-003`
+  - `needs-human` — si el identificador alfabético ya está en uso, decide la renumeración antes de cambiarlo: un identificador no se renumera en silencio
+<!-- standards:REQ-GATE-004:end -->

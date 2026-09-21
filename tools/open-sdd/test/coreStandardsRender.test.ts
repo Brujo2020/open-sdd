@@ -108,18 +108,19 @@ describe('core/standardsRender — drift names the entry that disagrees', () => 
     expect(drift).toEqual([{ file: '.sdd/settings/rules/a.md', reason: 'missing', entries: ['REQ-A-001'] }]);
   });
 
-  it('reports the repository rules as drifted without overwriting them', async () => {
+  it('finds the repository rules in sync, and reporting never writes', async () => {
     const { entries } = await loadStandards(repoRoot);
-    const drift = await detectDrift(repoRoot, entries);
-    const byFile = new Map(drift.map((rule) => [rule.file, rule]));
-    expect(byFile.has('.sdd/settings/rules/ears-format.md')).toBe(true);
-    expect(byFile.has('.sdd/settings/rules/requirements-review-gate.md')).toBe(true);
-    expect(byFile.get('.sdd/settings/rules/ears-format.md')?.entries).toContain('REQ-EARS-001');
-    expect(byFile.get('.sdd/settings/rules/requirements-review-gate.md')?.entries).toContain('REQ-GATE-001');
+    const abs = path.resolve(repoRoot, '.sdd/settings/rules/ears-format.md');
+    const before = await readFile(abs, 'utf8');
 
-    // El render vive en memoria; el markdown real conserva su prosa y no lleva marcadores generados.
-    const onDisk = await readFile(path.resolve(repoRoot, '.sdd/settings/rules/ears-format.md'), 'utf8');
-    expect(onDisk).toContain('## One template per requirement');
-    expect(onDisk).not.toContain('<!-- standards:');
+    const drift = await detectDrift(repoRoot, entries);
+
+    // La prosa escrita a mano sigue ahí y los bloques generados conviven con ella: eso es un
+    // documento vivo, no deriva. La deriva sería que faltara o estuviera editado un bloque.
+    expect(before).toContain('## One template per requirement');
+    expect(before).toContain('<!-- standards:REQ-EARS-001:begin -->');
+    expect(drift).toEqual([]);
+    // Reportar NUNCA escribe: el fichero queda byte a byte como estaba.
+    expect(await readFile(abs, 'utf8')).toBe(before);
   });
 });
