@@ -157,7 +157,45 @@ npx @brujo2020/open-sdd@1.1.5 --lang ja       # legacy i18n flags still work
 
 ---
 
-## 7. Takeaways
+## 7. Coming from the unscoped `open-sdd` package
+
+Before this project was scoped, `npm install -g open-sdd` shipped the same three command names the
+current package declares (`open-sdd`, `sdd-open`, `sdd`). Two residues of that install break the
+upgrade, and both are silent about their cause:
+
+**1. `npm error code EEXIST … /bin/sdd`.** Uninstalling the old package removes its directory but
+**leaves its symlinks** in the npm prefix's `bin`. `npm install -g @brujo2020/open-sdd@latest` then
+refuses to overwrite a file it does not recognise as its own. The links point into a directory that no
+longer exists, so check before removing:
+
+```bash
+ls -l "$(npm prefix -g)/bin/sdd" "$(npm prefix -g)/bin/sdd-open"   # dangling -> no such file
+rm -f "$(npm prefix -g)/bin/sdd" "$(npm prefix -g)/bin/sdd-open"
+npm install -g @brujo2020/open-sdd@latest
+```
+
+**2. The shell still runs the old binary.** `open-sdd --version` keeps printing the previous 2.x
+banner after a successful upgrade, because the shell hashes the resolved command path. Nothing is
+wrong with the install: clear the cache and it reports the new version.
+
+```bash
+hash -r          # bash   (zsh: rehash, or simply open a new terminal)
+open-sdd --version && sdd --version && sdd-open --version   # all three must print v3.4.0
+```
+
+**Why this matters more than a cosmetic version string.** The installed commit hook resolves its CLI
+in this order: `$OPEN_SDD_CLI`, then project-relative candidates, then the first `open-sdd` on `PATH`.
+A project installed with `npx` has no `node_modules` of its own, so a stale global is what the hook
+runs — and a version that does not enforce turns the commit gate into decoration while the
+configuration still reads "blocking". That is gap **G-36** in
+[`docs/PAPER-ALIGNMENT.md`](../PAPER-ALIGNMENT.md): `gates run C1 C2 C3 --staged --strict` exits 1 with
+an AWS-shaped key staged, while the installed hook exits 0 over the same index. The check that settles
+it is not `doctor` (run through `npx` it reports the cached CLI) but the version of the binary the hook
+actually resolves.
+
+---
+
+## 8. Takeaways
 
 - **Stay on 1.1.5** if you just need the legacy workflow—pin the version and continue as before.
 - **Move to 2.0.0** if you want unified templates, Supporting References, research/design separation, and minimal maintenance via rules.

@@ -32,6 +32,22 @@ Want to see the flow before installing it? `open-sdd templates` lists all 22 wor
 writes, and the directory each of the eleven hosts reads. MCP is opt-in (`--mcp`): a host that blocks
 it, or a security policy that allow-lists it, does not lose any workflow.
 
+**Coming from the unscoped `open-sdd` package?** That older install declared the same three command
+names, and its symlinks survive its own uninstall — so `npm install -g @brujo2020/open-sdd@latest`
+stops with `EEXIST: file already exists … /bin/sdd`. Remove the dangling links, install again, and
+clear the shell's command cache, which still points at the old binary:
+
+```bash
+rm -f "$(npm prefix -g)/bin/sdd" "$(npm prefix -g)/bin/sdd-open"   # left behind, both dangling
+npm install -g @brujo2020/open-sdd@latest
+hash -r                       # zsh: rehash — or open a new terminal
+open-sdd --version            # must print v3.4.0, not the 2.x banner
+```
+
+A stale global is not cosmetic: the installed commit hook resolves its CLI through `PATH`, so an old
+one makes the gate report nothing while the configuration still reads "blocking" (G-36). Details in
+[docs/guides/migration-guide.md](docs/guides/migration-guide.md#7-coming-from-the-unscoped-open-sdd-package).
+
 Then the one door. No arguments, read-only: it prints a 0–100 SDD score, the current phase and ONE
 next action, with one line of why.
 
