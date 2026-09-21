@@ -176,7 +176,9 @@ export const runGate = async (gateId, ctx, regime = 'flexible') => {
                     files.push({ path: rel, content });
             }
             const raw = scanSecurity(files);
-            const decision = applySecurityAllowlist(raw, ctx.securityAllowlist ?? []);
+            const decision = applySecurityAllowlist(raw, ctx.securityAllowlist ?? [], {
+                scannedFiles: files.map((file) => file.path),
+            });
             const findings = decision.kept;
             const suppressedNote = decision.suppressed.length > 0
                 ? ` ${decision.suppressed.length} hallazgo(s) suprimido(s) por la lista de excepciones (${[
@@ -192,6 +194,7 @@ export const runGate = async (gateId, ctx, regime = 'flexible') => {
             // su forma la fija `test/enforcementFloor.test.ts`.
             const expiredWaivers = decision.waivers.filter((waiver) => waiver.code === 'waiverExpired');
             const weakWaivers = decision.waivers.filter((waiver) => waiver.code === 'waiverWeak');
+            const unusedWaivers = decision.waivers.filter((waiver) => waiver.code === 'waiverUnused');
             const expiredNote = expiredWaivers.length > 0
                 ? ` ${expiredWaivers.length} hallazgo(s) se mantienen porque su excepción CADUCÓ: ${expiredWaivers
                     .map((waiver) => `«excepción caducada el ${waiver.expires ?? '(sin fecha)'}; responsable: ${waiver.owner ?? '(sin dueño declarado)'}» (${waiver.id} en ${waiver.file}:${waiver.line})`)
@@ -202,18 +205,25 @@ export const runGate = async (gateId, ctx, regime = 'flexible') => {
                     ...new Set(weakWaivers.map((waiver) => waiver.waiverPath)),
                 ].join(', ')}: nadie responde de la supresión; añade "owner" en .sdd/settings/security-allowlist.json.`
                 : '';
+            const unusedNote = unusedWaivers.length > 0
+                ? ` Aviso: ${unusedWaivers.length} excepción(es) NO suprimieron nada en este cambio (waiverUnused) en ${[
+                    ...new Set(unusedWaivers.map((waiver) => waiver.waiverPath)),
+                ].join(', ')}: el fichero se escaneó y el hallazgo no apareció, así que la excepción es deuda que nadie retirará. Bórrala o explica por qué sigue.`
+                : '';
             const evidence = [
                 ...findings.map((f) => f.waiverExpired
                     ? `${f.kind}:${f.id} ${f.file}:${f.line} — excepción caducada el ${f.expires ?? '(sin fecha)'}; responsable: ${f.owner ?? '(sin dueño declarado)'}`
                     : `${f.kind}:${f.id} ${f.file}:${f.line}`),
                 ...weakWaivers.map((waiver) => `waiverWeak ${waiver.id} ${waiver.file}:${waiver.line} — excepción sin dueño ("owner") en ${waiver.waiverPath}`),
+                ...unusedWaivers.map((waiver) => `waiverUnused ${waiver.id} — la excepción de ${waiver.waiverPath} no suprimió nada en este cambio`),
             ];
             return finalize(true, findings.length > 0, (findings.length > 0
                 ? `${findings.length} hallazgo(s) de línea base de seguridad.`
                 : `${files.length} fichero(s) del cambio sin secretos, comandos destructivos ni patrones de inyección.`) +
                 suppressedNote +
                 expiredNote +
-                weakNote, evidence);
+                weakNote +
+                unusedNote, evidence);
         }
         case 'C3': {
             const tasksText = await readIfExists(path.join(specDir, 'tasks.md'));

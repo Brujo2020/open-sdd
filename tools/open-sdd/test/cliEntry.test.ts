@@ -55,7 +55,9 @@ describe('CLI entry', () => {
   it('shows error on invalid flag', async () => {
     const ctx = makeIO();
     const code = await runCli(['--unknown'], runtime, ctx.io, {});
-    expect(code).toBe(1);
+    // Un flag desconocido es un error de USO: el contrato de códigos de salida pide 2, no 1, para que
+    // un script no confunda «escribiste mal» con «tu repositorio falló un gate».
+    expect(code).toBe(2);
     expect(ctx.errs.join('\n')).toMatch(/Unknown flag/);
   });
 });

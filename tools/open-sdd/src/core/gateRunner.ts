@@ -277,7 +277,9 @@ export const runGate = async (
         if (content !== null) files.push({ path: rel, content });
       }
       const raw = scanSecurity(files);
-      const decision = applySecurityAllowlist(raw, ctx.securityAllowlist ?? []);
+      const decision = applySecurityAllowlist(raw, ctx.securityAllowlist ?? [], {
+        scannedFiles: files.map((file) => file.path),
+      });
       const findings = decision.kept;
       const suppressedNote =
         decision.suppressed.length > 0
@@ -295,6 +297,7 @@ export const runGate = async (
       // su forma la fija `test/enforcementFloor.test.ts`.
       const expiredWaivers = decision.waivers.filter((waiver) => waiver.code === 'waiverExpired');
       const weakWaivers = decision.waivers.filter((waiver) => waiver.code === 'waiverWeak');
+      const unusedWaivers = decision.waivers.filter((waiver) => waiver.code === 'waiverUnused');
       const expiredNote =
         expiredWaivers.length > 0
           ? ` ${expiredWaivers.length} hallazgo(s) se mantienen porque su excepción CADUCÓ: ${expiredWaivers
@@ -312,6 +315,12 @@ export const runGate = async (
               ...new Set(weakWaivers.map((waiver) => waiver.waiverPath)),
             ].join(', ')}: nadie responde de la supresión; añade "owner" en .sdd/settings/security-allowlist.json.`
           : '';
+      const unusedNote =
+        unusedWaivers.length > 0
+          ? ` Aviso: ${unusedWaivers.length} excepción(es) NO suprimieron nada en este cambio (waiverUnused) en ${[
+              ...new Set(unusedWaivers.map((waiver) => waiver.waiverPath)),
+            ].join(', ')}: el fichero se escaneó y el hallazgo no apareció, así que la excepción es deuda que nadie retirará. Bórrala o explica por qué sigue.`
+          : '';
       const evidence = [
         ...findings.map((f) =>
           f.waiverExpired
@@ -324,6 +333,10 @@ export const runGate = async (
           (waiver) =>
             `waiverWeak ${waiver.id} ${waiver.file}:${waiver.line} — excepción sin dueño ("owner") en ${waiver.waiverPath}`,
         ),
+        ...unusedWaivers.map(
+          (waiver) =>
+            `waiverUnused ${waiver.id} — la excepción de ${waiver.waiverPath} no suprimió nada en este cambio`,
+        ),
       ];
       return finalize(
         true,
@@ -333,7 +346,8 @@ export const runGate = async (
           : `${files.length} fichero(s) del cambio sin secretos, comandos destructivos ni patrones de inyección.`) +
           suppressedNote +
           expiredNote +
-          weakNote,
+          weakNote +
+          unusedNote,
         evidence,
       );
     }

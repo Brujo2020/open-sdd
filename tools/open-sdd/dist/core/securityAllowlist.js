@@ -110,12 +110,14 @@ export const applySecurityAllowlist = (findings, entries, options = {}) => {
     const kept = [];
     const suppressed = [];
     const waivers = [];
+    const usedEntries = new Set();
     for (const finding of findings) {
         const entry = entries.find((e) => e.ids.includes(finding.id) && pathMatches(finding.file, e.path));
         if (!entry) {
             kept.push(finding);
             continue;
         }
+        usedEntries.add(entry);
         if (isExpired(entry.expires, now)) {
             kept.push({
                 ...finding,
@@ -149,6 +151,33 @@ export const applySecurityAllowlist = (findings, entries, options = {}) => {
                 ...(entry.expires ? { expires: entry.expires } : {}),
                 waiverPath: entry.path,
                 message: `La excepción de ${entry.path} para "${finding.id}" se aplicó pero no declara dueño: nadie responde de ella. Añade "owner" (y de ser posible "expires") en .sdd/settings/security-allowlist.json.`,
+            });
+        }
+    }
+    // ── Supresiones que ya no suprimen (REQ-STD-007) ──────────────────────────────────────────────
+    // Una excepción cuyo fichero se escaneó y que no cubrió ningún hallazgo es deuda aceptada que nadie
+    // retirará. Se emite como AVISO, nunca como fallo: convertir una lista heredada en un gate roto el
+    // día del despliegue es justo lo que el mecanismo de excepciones existe para evitar. La diferencia
+    // con no poder saberlo es `scannedFiles`: sin el conjunto escaneado, «no la vi» no es «no existe» y
+    // este módulo se calla en vez de inventar una acusación.
+    if (options.scannedFiles) {
+        const scanned = options.scannedFiles;
+        for (const entry of entries) {
+            if (usedEntries.has(entry))
+                continue;
+            if (!scanned.some((file) => pathMatches(file, entry.path)))
+                continue;
+            waivers.push({
+                code: 'waiverUnused',
+                severity: 'warning',
+                id: entry.ids.join('/'),
+                file: entry.path,
+                line: 0,
+                reason: entry.reason,
+                ...(entry.owner ? { owner: entry.owner } : {}),
+                ...(entry.expires ? { expires: entry.expires } : {}),
+                waiverPath: entry.path,
+                message: `La excepción de ${entry.path} para "${entry.ids.join(', ')}" no suprimió nada en este cambio: el fichero se escaneó y el hallazgo no apareció. Una excepción que ya no suprime es deuda que nadie retirará: bórrala, o explica por qué sigue declarada.`,
             });
         }
     }

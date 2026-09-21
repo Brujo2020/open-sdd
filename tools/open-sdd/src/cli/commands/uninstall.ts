@@ -17,6 +17,7 @@ import path from 'node:path';
 import type { CliIO } from '../io.js';
 import { colors, formatHeading } from '../ui/colors.js';
 import { jsonEnvelope } from '../jsonOut.js';
+import { stableEnvelopeDetail } from '../i18n.js';
 import {
   RECEIPT_FILE,
   RECEIPT_SCHEMA,
@@ -136,7 +137,11 @@ export const handleUninstallCommand = async (
       io.log(JSON.stringify(jsonEnvelope({
         command: `${command} (plan)`,
         data: plan,
-        detail: `plan: ${remove.length} a eliminar, ${plan.entries.length - remove.length} conservados; nada se ha escrito`,
+        detail: stableEnvelopeDetail({
+          command: `${command} (plan)`,
+          ok: true,
+          warnings: plan.problems.length,
+        }),
         warnings: plan.problems,
       }), null, 2));
     }
@@ -158,7 +163,12 @@ export const handleUninstallCommand = async (
       data: { plan, result },
       errors: result.failed.map((failure) => `${failure.path}: ${failure.reason}`),
       warnings: plan.problems,
-      detail: `${result.removed.length} eliminado(s), ${result.failed.length} fallo(s)`,
+      detail: stableEnvelopeDetail({
+        command,
+        ok: result.failed.length === 0,
+        errors: result.failed.length,
+        warnings: plan.problems.length,
+      }),
     }), null, 2));
   }
   return result.failed.length > 0 ? 1 : 0;

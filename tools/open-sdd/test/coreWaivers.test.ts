@@ -164,4 +164,54 @@ describe('core/securityAllowlist — dueño y caducidad', () => {
     // them", not the count.
     expect(expiredWaivers(entries, new Date('2027-04-01T00:00:00Z'))).toHaveLength(entries.length);
   });
+
+  it('una excepción que no suprime nada en lo escaneado se reporta como NO USADA (warning, no fallo)', () => {
+    const entries: SecurityAllowlistEntry[] = [
+      {
+        path: 'tools/open-sdd/README.md',
+        ids: ['curl-pipe-shell'],
+        reason: 'el literal ya no está',
+        actor: 'spec:demo',
+        owner: 'seguridad',
+        expires: '2027-03-31',
+      },
+    ];
+
+    // El fichero SÍ se escaneó y no apareció el hallazgo: la excepción es deuda que nadie retirará.
+    const decision = applySecurityAllowlist([], entries, {
+      now: new Date('2026-01-01T00:00:00Z'),
+      scannedFiles: ['tools/open-sdd/README.md'],
+    });
+
+    expect(decision.kept).toEqual([]);
+    expect(decision.suppressed).toEqual([]);
+    const note = decision.waivers.find((waiver) => waiver.code === 'waiverUnused');
+    expect(note?.severity).toBe('warning');
+    expect(note?.waiverPath).toBe('tools/open-sdd/README.md');
+    expect(note?.message).toContain('no suprimió nada');
+  });
+
+  it('sin conocer el conjunto escaneado NO se acusa a una excepción de no usarse', () => {
+    const entries: SecurityAllowlistEntry[] = [
+      { path: 'tools/open-sdd/README.md', ids: ['curl-pipe-shell'], reason: 'r', actor: 'spec:demo', owner: 'seguridad', expires: '2027-03-31' },
+    ];
+
+    // Sin `scannedFiles`, «no la vi» no es «no existe»: el módulo se calla en vez de inventar la acusación.
+    const decision = applySecurityAllowlist([], entries, { now: new Date('2026-01-01T00:00:00Z') });
+    expect(decision.waivers).toEqual([]);
+  });
+
+  it('una excepción que SÍ suprime no se reporta como no usada', () => {
+    const entries: SecurityAllowlistEntry[] = [
+      { path: 'tools/open-sdd/README.md', ids: ['curl-pipe-shell'], reason: 'r', actor: 'spec:demo', owner: 'seguridad', expires: '2027-03-31' },
+    ];
+
+    const decision = applySecurityAllowlist([FINDING], entries, {
+      now: new Date('2026-01-01T00:00:00Z'),
+      scannedFiles: ['tools/open-sdd/README.md'],
+    });
+
+    expect(decision.suppressed).toHaveLength(1);
+    expect(decision.waivers).toEqual([]);
+  });
 });

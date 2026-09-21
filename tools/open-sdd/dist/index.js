@@ -505,8 +505,11 @@ export const runCli = async (rawArgv, runtime = { platform: process.platform, en
     }
     catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        io.error(formatError(`Error: ${msg}`));
-        return EXIT.GATE_FAILED;
+        // Un error de argumentos es un error de USO (2), no un fallo de gobernanza (1): el contrato de
+        // códigos de salida existe para que un script distinga «escribiste mal» de «tu repositorio falló».
+        io.error(formatError(`error[usage]: ${msg}`));
+        io.error('  = help: run `open-sdd --help` to list every command and flag, or `open-sdd help exit-codes`');
+        return EXIT.USAGE;
     }
     parsedArgs.agent = await ensureAgentSelection(parsedArgs.agent ?? loadedConfig.agent, io);
     if (parsedArgs.agent === 'codex') {

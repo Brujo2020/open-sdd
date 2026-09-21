@@ -152,8 +152,11 @@ export interface AllowlistDecision {
 }
 
 export interface WaiverNote {
-  /** `waiverExpired` = la excepción caducó y el hallazgo vuelve a contar. `waiverWeak` = sin dueño. */
-  code: 'waiverExpired' | 'waiverWeak';
+  /**
+   * `waiverExpired` = la excepción caducó y el hallazgo vuelve a contar. `waiverWeak` = sin dueño.
+   * `waiverUnused` = el fichero se escaneó y la excepción no suprimió nada: deuda que nadie retirará.
+   */
+  code: 'waiverExpired' | 'waiverWeak' | 'waiverUnused';
   severity: 'error' | 'warning';
   id: string;
   file: string;
@@ -169,6 +172,12 @@ export interface WaiverNote {
 export interface ApplyAllowlistOptions {
   /** Reloj inyectable: sin él, «caducada» dependería del día en que se ejecute la prueba. */
   now?: Date;
+  /**
+   * Los ficheros que el escáner miró DE VERDAD. Sin esta lista no se puede afirmar que una excepción
+   * no se usó —«no la vi» no es «no existe»—, así que `waiverUnused` solo se emite cuando se conoce el
+   * conjunto escaneado y la ruta de la excepción cae dentro de él.
+   */
+  scannedFiles?: string[];
 }
 
 /**
@@ -192,6 +201,7 @@ export const applySecurityAllowlist = (
   const kept: AllowlistDecision['kept'] = [];
   const suppressed: AllowlistDecision['suppressed'] = [];
   const waivers: WaiverNote[] = [];
+  const usedEntries = new Set<SecurityAllowlistEntry>();
 
   for (const finding of findings) {
     const entry = entries.find((e) => e.ids.includes(finding.id) && pathMatches(finding.file, e.path));
@@ -199,6 +209,7 @@ export const applySecurityAllowlist = (
       kept.push(finding);
       continue;
     }
+    usedEntries.add(entry);
 
     if (isExpired(entry.expires, now)) {
       kept.push({
@@ -234,6 +245,32 @@ export const applySecurityAllowlist = (
         ...(entry.expires ? { expires: entry.expires } : {}),
         waiverPath: entry.path,
         message: `La excepción de ${entry.path} para "${finding.id}" se aplicó pero no declara dueño: nadie responde de ella. Añade "owner" (y de ser posible "expires") en .sdd/settings/security-allowlist.json.`,
+      });
+    }
+  }
+
+  // ── Supresiones que ya no suprimen (REQ-STD-007) ──────────────────────────────────────────────
+  // Una excepción cuyo fichero se escaneó y que no cubrió ningún hallazgo es deuda aceptada que nadie
+  // retirará. Se emite como AVISO, nunca como fallo: convertir una lista heredada en un gate roto el
+  // día del despliegue es justo lo que el mecanismo de excepciones existe para evitar. La diferencia
+  // con no poder saberlo es `scannedFiles`: sin el conjunto escaneado, «no la vi» no es «no existe» y
+  // este módulo se calla en vez de inventar una acusación.
+  if (options.scannedFiles) {
+    const scanned = options.scannedFiles;
+    for (const entry of entries) {
+      if (usedEntries.has(entry)) continue;
+      if (!scanned.some((file) => pathMatches(file, entry.path))) continue;
+      waivers.push({
+        code: 'waiverUnused',
+        severity: 'warning',
+        id: entry.ids.join('/'),
+        file: entry.path,
+        line: 0,
+        reason: entry.reason,
+        ...(entry.owner ? { owner: entry.owner } : {}),
+        ...(entry.expires ? { expires: entry.expires } : {}),
+        waiverPath: entry.path,
+        message: `La excepción de ${entry.path} para "${entry.ids.join(', ')}" no suprimió nada en este cambio: el fichero se escaneó y el hallazgo no apareció. Una excepción que ya no suprime es deuda que nadie retirará: bórrala, o explica por qué sigue declarada.`,
       });
     }
   }
