@@ -29,8 +29,10 @@ import {
   commandTemplatePath,
   hostForAgent,
   installCommandTemplates,
+  readCommandTemplateCatalogue,
   renderCommandTemplate,
 } from '../src/core/commandTemplates.js';
+import { buildTemplatesReport, handleTemplatesCommand } from '../src/cli/commands/templates.js';
 
 const tempDirs: string[] = [];
 
@@ -603,5 +605,124 @@ describe('init — prompt templates by default, MCP opt-in', () => {
     expect(plan.artifacts.find((artifact) => artifact.kind === 'command-templates')?.action).toBe('keep');
     expect(plan.outcome.written).not.toContain('.codex/prompts');
     expect(await exists(path.join(dir, '.codex', 'prompts'))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// `open-sdd templates` — el camino por defecto, LEGIBLE
+// ---------------------------------------------------------------------------------------------
+
+describe('templates — the default flow is listable, not just installed', () => {
+  it('the catalogue parses every shipped template out of its own frontmatter', async () => {
+    const catalogue = await readCommandTemplateCatalogue();
+
+    expect(catalogue.map((entry) => entry.id)).toEqual([...COMMAND_TEMPLATE_IDS]);
+    for (const entry of catalogue) {
+      // Una entrada sin descripción no se puede listar; una sin comandos no apunta a ningún motor.
+      expect(entry.description.length, `${entry.id} sin descripción`).toBeGreaterThan(10);
+      expect(entry.commands.length, `${entry.id} sin invocaciones del motor`).toBeGreaterThan(0);
+      expect(entry.commands.every((command) => command.startsWith('open-sdd '))).toBe(true);
+    }
+  });
+
+  it('readOnly is derived from `writes`, and the read-only set is exactly the report-only workflows', async () => {
+    const catalogue = await readCommandTemplateCatalogue();
+    const readOnly = catalogue.filter((entry) => entry.readOnly).map((entry) => entry.id);
+
+    for (const entry of catalogue) {
+      expect(entry.readOnly).toBe(entry.writes.length === 0);
+    }
+    // Estos cuatro SOLO informan: declarar `writes: []` es su contrato, no un olvido del frontmatter.
+    expect(readOnly).toEqual(expect.arrayContaining(['status', 'impact', 'reuse', 'gates', 'doctor']));
+    // Y ninguno de los que escriben puede quedarse fuera por accidente.
+    expect(catalogue.find((entry) => entry.id === 'implement')?.readOnly).toBe(false);
+    expect(catalogue.find((entry) => entry.id === 'constitution')?.readOnly).toBe(false);
+  });
+
+  it('the catalogue agrees with the raw frontmatter of every template (no invented engine call)', async () => {
+    const catalogue = await readCommandTemplateCatalogue();
+
+    for (const entry of catalogue) {
+      const raw = await readFile(commandTemplatePath(entry.id), 'utf8');
+      const { lists } = parseFrontmatter(raw);
+      expect(entry.commands, `${entry.id}: commands`).toEqual(lists.commands ?? []);
+      expect(entry.writes, `${entry.id}: writes`).toEqual(lists.writes ?? []);
+    }
+  });
+
+  it('an empty repository reports nothing installed, and init --write moves it to 22/22', async () => {
+    const dir = await makeRoot();
+    await mkdir(path.join(dir, '.cursor'), { recursive: true });
+
+    const before = await buildTemplatesReport(dir);
+    expect(before.templates).toHaveLength(COMMAND_TEMPLATE_IDS.length);
+    expect(before.installed).toEqual([]);
+
+    await installCommandTemplates({ cwd: dir, hosts: ['cursor'], write: true });
+
+    const after = await buildTemplatesReport(dir);
+    expect(after.installed).toHaveLength(1);
+    expect(after.installed[0]).toMatchObject({
+      host: 'cursor',
+      dir: '.cursor/commands',
+      installed: COMMAND_TEMPLATE_IDS.length,
+      total: COMMAND_TEMPLATE_IDS.length,
+      handEdited: 0,
+      stale: 0,
+    });
+  });
+
+  it('counts a hand-edited template as installed AND as hand-edited, because it is not overwritten', async () => {
+    const dir = await makeRoot();
+    await mkdir(path.join(dir, '.cursor'), { recursive: true });
+    await installCommandTemplates({ cwd: dir, hosts: ['cursor'], write: true });
+
+    const edited = path.join(dir, '.cursor', 'commands', 'sdd-specify.md');
+    await writeFile(edited, `${await readFile(edited, 'utf8')}\nNota del equipo: esto es nuestro.\n`, 'utf8');
+
+    const report = await buildTemplatesReport(dir);
+    expect(report.installed[0]).toMatchObject({ installed: COMMAND_TEMPLATE_IDS.length, handEdited: 1, stale: 0 });
+
+    const ctx = makeIO();
+    expect(await handleTemplatesCommand(['--json'], ctx.io, dir)).toBe(0);
+    const payload = JSON.parse(ctx.text()) as { data: { installed: { handEdited: number }[] } };
+    expect(payload.data.installed[0].handEdited).toBe(1);
+  });
+
+  it('the command never writes: a read-only repository is untouched', async () => {
+    const dir = await makeRoot();
+    await mkdir(path.join(dir, '.cursor'), { recursive: true });
+
+    const ctx = makeIO();
+    expect(await handleTemplatesCommand([], ctx.io, dir)).toBe(0);
+
+    // Ni plantillas, ni un directorio inventado, ni un `mcp.json` por cortesía.
+    expect(await exists(path.join(dir, '.cursor', 'commands'))).toBe(false);
+    expect(await exists(path.join(dir, '.cursor', 'mcp.json'))).toBe(false);
+    expect(ctx.text()).toContain('SIN MCP y sin red');
+  });
+
+  it('an unknown --host is a failure that names the known hosts, never an empty success', async () => {
+    const dir = await makeRoot();
+    const ctx = makeIO();
+
+    expect(await handleTemplatesCommand(['--host', 'nope'], ctx.io, dir)).toBe(1);
+    expect(ctx.errs.join('\n')).toContain('claude-code');
+  });
+
+  it('names every host, and marks the unverified convention as unverified', async () => {
+    const dir = await makeRoot();
+    const ctx = makeIO();
+    expect(await handleTemplatesCommand(['--json'], ctx.io, dir)).toBe(0);
+
+    const payload = JSON.parse(ctx.text()) as {
+      data: { hosts: { id: string; verified: boolean; evidence: string; docUrl?: string }[] };
+    };
+    expect(payload.data.hosts.map((host) => host.id)).toEqual(HOST_COMMAND_TEMPLATES.map((host) => host.id));
+    for (const host of payload.data.hosts) {
+      expect(host.evidence.length, `${host.id} sin evidencia`).toBeGreaterThan(40);
+      // La prueba intentada viaja con el veredicto: un «no verificado» sin URL no es auditable.
+      if (!host.verified) expect(host.docUrl, `${host.id} sin docUrl`).toBeTruthy();
+    }
   });
 });

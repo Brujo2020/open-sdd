@@ -251,6 +251,56 @@ const frontmatterDescription = (frontmatter) => {
         return '';
     return line.slice('description:'.length).trim().replace(/^["']|["']$/g, '');
 };
+/**
+ * One frontmatter list (`key:` followed by `  - "value"` entries), or `[]` for the inline empty list.
+ *
+ * The frontmatter is a narrow YAML subset this project authors itself, so the parser is deliberately
+ * narrow too: it reads the block list and stops at the first line that leaves it. Anything richer
+ * would be a YAML implementation pretending to be a list reader.
+ */
+const frontmatterList = (frontmatter, key) => {
+    const lines = frontmatter.split(/\r?\n/);
+    const start = lines.findIndex((line) => line.startsWith(`${key}:`));
+    if (start < 0)
+        return [];
+    if (lines[start].slice(key.length + 1).trim() === '[]')
+        return [];
+    const out = [];
+    for (let i = start + 1; i < lines.length; i += 1) {
+        const line = lines[i];
+        if (!/^\s+-\s/.test(line))
+            break;
+        // El valor va entrecomillado en el YAML que este proyecto escribe: se quitan las comillas
+        // EXTERIORES y se desescapan las interiores, o un `--by \"<name>\"` llegaría al lector con las
+        // barras invertidas dentro y dejaría de ser la orden que dice ser.
+        const value = line
+            .replace(/^\s+-\s+/, '')
+            .trim()
+            .replace(/^["']/, '')
+            .replace(/["']$/, '')
+            .replace(/\\"/g, '"');
+        out.push(value);
+    }
+    return out;
+};
+/** Read the shipped templates and parse their contract out of the frontmatter, in inventory order. */
+export const readCommandTemplateCatalogue = async (templatesRoot) => {
+    const entries = [];
+    for (const id of COMMAND_TEMPLATE_IDS) {
+        const raw = await readFile(commandTemplatePath(id, templatesRoot), 'utf8');
+        const { frontmatter } = splitFrontmatter(raw);
+        const writes = frontmatterList(frontmatter, 'writes');
+        entries.push({
+            id,
+            description: frontmatterDescription(frontmatter),
+            writes,
+            readOnly: writes.length === 0,
+            parallelSafe: frontmatterList(frontmatter, 'parallelSafe')[0] === 'true',
+            commands: frontmatterList(frontmatter, 'commands'),
+        });
+    }
+    return entries;
+};
 const sha256 = (value) => createHash('sha256').update(value, 'utf8').digest('hex');
 const signatureLine = (format, id, hash) => format === 'toml'
     ? `# open-sdd:command-template id=${id} sha256=${hash}`

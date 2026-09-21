@@ -22,10 +22,16 @@ npx @brujo2020/open-sdd init . --write
 ```
 
 Ejecútalo dentro de tu repositorio. Detecta el agente anfitrión, registra el nivel de exigencia en
-`.sdd/settings/rigor.json` e instala el gate de commit (`.git/hooks/pre-commit`). Es plan-first: sin
-`--write` solo imprime el plan, y nunca sobrescribe un archivo existente. Para instalar también las
-skills del anfitrión, añade `--skills`; `open-sdd integrate <host> --write` instala las skills **y**
-registra el servidor MCP (`--list` muestra los diez anfitriones; seis llevan un registro verificado).
+`.sdd/settings/rigor.json`, instala el gate de commit (`.git/hooks/pre-commit`) y —sin MCP, sin red y
+sin claves de API— las **22 plantillas de comando** como comandos propios del anfitrión. Es
+plan-first: sin `--write` solo imprime el plan, y nunca sobrescribe un archivo existente. Para
+instalar también las skills del anfitrión, añade `--skills`; `open-sdd integrate <host> --write`
+instala las skills **y** registra el servidor MCP (`--list` muestra los diez anfitriones, cada uno con
+su registro verificado).
+
+¿Quieres ver el flujo antes de instalarlo? `open-sdd templates` lista los 22 workflows, qué escribe
+cada uno y el directorio que lee cada uno de los once anfitriones. MCP es opt-in (`--mcp`): un
+anfitrión que lo bloquee, o una política de seguridad que lo restrinja, no pierde ningún workflow.
 
 Después, la única puerta. Sin argumentos, de solo lectura: imprime un score SDD de 0–100, la fase
 actual y UNA acción siguiente, con una línea de por qué.
@@ -53,8 +59,14 @@ distinto de cero si la herramienta deja pasar alguna.
 
 ## Lo que obtienes
 
-- **Un servidor MCP.** Un servidor stdio JSON-RPC con 11 herramientas y recursos de solo lectura,
-  invocable desde cualquier anfitrión MCP moderno. Sin red, sin backend de modelo, sin claves de API.
+- **22 plantillas de comando, instaladas por defecto.** Cada workflow es un comando en el chat del
+  propio agente (`/sdd-specify`, `/sdd-converge`, …), y cada uno ejecuta una orden real del motor en
+  vez de pedirle a un modelo que «considere» una comprobación. Sin MCP y sin red. `open-sdd templates`
+  las lista.
+- **Un servidor MCP, si lo quieres.** Un servidor stdio JSON-RPC con 11 herramientas y recursos de solo
+  lectura, invocable desde cualquier anfitrión MCP moderno. Sin red, sin backend de modelo, sin claves
+  de API. Es opt-in (`--mcp`), porque algunos anfitriones y algunas políticas de seguridad no lo
+  permiten.
 - **Specs delta.** `ADDED` / `MODIFIED` / `REMOVED` / `RENAMED`, con ids `REQ-<AREA>-<NNN>` acotados
   a la delta, para que el contrato del cambio siga siendo finito.
 - **Una constitución como pivote.** Cada spec se valida contra `.sdd/steering/constitution.md`;
@@ -81,7 +93,7 @@ Cualitativo, a partir de la documentación pública de las alternativas. Esto **
 | | esta herramienta | spec-kit | Kiro | paquetes de skills solo-prompt |
 |---|---|---|---|---|
 | Naturaleza | CLI + motor MCP | toolkit de prompts/skills | SDD dentro de un IDE | prompts y skills |
-| Integración con el anfitrión | servidor MCP; 18 definiciones de agente, 10 registros de anfitrión (6 verificados) | amplia superficie de instalación e integración | su propio IDE | el chat del anfitrión |
+| Integración con el anfitrión | servidor MCP; 18 definiciones de agente, 10 registros de anfitrión (todos verificados); 22 plantillas de comando como camino por defecto sin MCP | amplia superficie de instalación e integración | su propio IDE | el chat del anfitrión |
 | Specs para código existente | specs delta + constitución reversa | flujo de specs; hay una extensión de bootstrap brownfield propuesta (#1436) | flujo de specs en el IDE | solo documentos |
 | Enforcement | gates ejecutables, códigos de salida, hook de commit + checks de PR | prompts y revisión | flujo guiado por el IDE | ninguno |
 | Evidencia / auditoría | paquete de auditoría, sha256 por artefacto, SARIF | los propios documentos | artefactos del IDE | ninguno |
@@ -102,11 +114,12 @@ esta herramienta.
 - **El análisis de impacto tiene clases conocidas de falsos positivos.** `brownfield impact` lee el
   grafo de imports y la delta, y una comprobación con ese nivel de ruido puede entrenar a sus
   lectores a ignorarla.
-- **Cuatro de los diez registros MCP no están verificados.** Copilot, OpenCode, Zed y Antigravity se
-  distribuyen como no verificados: se imprime el fragmento y `--write` se niega a tocar su
-  configuración.
-- **El contenedor se construye para una sola arquitectura.** `docker build` produce la arquitectura
-  del builder, y ningún job de CI construye ni publica una imagen multi-arquitectura.
+- **Tres convenciones de plantillas de comando se rechazan, no se adivinan.** Codex, Zed y Cline no
+  documentan directorio de comandos de proyecto, así que `init --write` imprime la convención que no
+  pudo verificar y no escribe nada ahí. `open-sdd templates` lista los once anfitriones y los marca.
+- **Un `docker build` local sigue siendo de una sola arquitectura.** Produce la arquitectura del
+  builder; la imagen multi-arquitectura (`linux/amd64` + `linux/arm64`) la construye y publica el job
+  de contenedor de CI, así que necesita los runners de GitHub, no un portátil.
 - **Las mediciones son sintéticas.** `docs/MEASUREMENTS.md` registra 10/10 clases inyectadas
   detectadas en repositorios que escribió este proyecto —autoconsistencia, no recall ni precisión de
   campo. Las cifras κ/FPR/latencia del paper pertenecen a un prototipo no publicado y no son
@@ -115,7 +128,7 @@ esta herramienta.
   existen y se ejecutan; ningún centinela de comportamiento ha verificado el bloqueo en tiempo de
   escritura en ningún anfitrión, y `git commit --no-verify` no se registra.
 
-La lista completa de brechas (G-01 … G-29), cada una con su ubicación en el código, está en
+La lista completa de brechas (G-01 … G-33), cada una con su ubicación en el código, está en
 [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
 
 ## Documentación

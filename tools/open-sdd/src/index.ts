@@ -41,6 +41,7 @@ import { handleGitflowCommand } from './cli/commands/gitflow.js';
 import { handleProgressCommand } from './cli/commands/progress.js';
 import { handleBackupCommand } from './cli/commands/backup.js';
 import { handleBiographyCommand } from './cli/commands/biography.js';
+import { handleTemplatesCommand } from './cli/commands/templates.js';
 import { SCORE_FOOTER_FLAG, emitScoreFooter } from './cli/jsonOut.js';
 import { computeSddScore, explainNextAction, renderScoreFooter } from './core/sddScore.js';
 
@@ -98,6 +99,11 @@ Quick Examples:
   npx open-sdd@latest --antigravity           Install Google Antigravity skills
   npx open-sdd@latest --copilot-skills        Install GitHub Copilot skills
   npx open-sdd@latest --lang es -y            Install in Spanish without prompts
+
+Command templates (the DEFAULT integration: 22 workflows, no MCP and no network):
+  templates [--json] [--host <id>]            List the 22 templates, what each one writes, and where each host reads them
+  npx open-sdd@latest init . --write          Install them as the host's own chat commands (plan only without --write)
+    MCP is opt-in (--mcp); the default path needs neither MCP nor the network.
 
 In-Chat Skills (The Apple-grade Experience):
   /sdd-help                                   Interactive guide with real-world examples
@@ -449,6 +455,11 @@ const dispatchSubcommand = async (
   }
   if (cmd === 'biography') {
     return handleBiographyCommand(subArgv, io, targetCwd);
+  }
+  // El camino por defecto se puede LEER: las 22 plantillas, qué escribe cada una, dónde las lee cada
+  // anfitrión y si ya están instaladas aquí. Solo informa: no escribe y no ejecuta la cadena.
+  if (cmd === 'templates') {
+    return handleTemplatesCommand(subArgv, io, targetCwd);
   }
   return undefined;
 };

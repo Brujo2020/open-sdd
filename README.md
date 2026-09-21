@@ -22,10 +22,15 @@ npx @brujo2020/open-sdd init . --write
 ```
 
 Run it inside your repository. It detects the host agent, records the rigor level in
-`.sdd/settings/rigor.json` and installs the commit gate (`.git/hooks/pre-commit`). It is plan-first:
-without `--write` it only prints the plan, and it never overwrites an existing file. To install the
-host's skills too, add `--skills`; `open-sdd integrate <host> --write` installs the skills **and**
-registers the MCP server (`--list` shows the ten hosts; six carry a verified registration).
+`.sdd/settings/rigor.json`, installs the commit gate (`.git/hooks/pre-commit`) and — with no MCP, no
+network and no API key — the **22 prompt templates** as the host's own chat commands. It is
+plan-first: without `--write` it only prints the plan, and it never overwrites an existing file. To
+install the host's skills too, add `--skills`; `open-sdd integrate <host> --write` installs the skills
+**and** registers the MCP server (`--list` shows the ten hosts, each with a verified registration).
+
+Want to see the flow before installing it? `open-sdd templates` lists all 22 workflows, what each one
+writes, and the directory each of the eleven hosts reads. MCP is opt-in (`--mcp`): a host that blocks
+it, or a security policy that allow-lists it, does not lose any workflow.
 
 Then the one door. No arguments, read-only: it prints a 0–100 SDD score, the current phase and ONE
 next action, with one line of why.
@@ -53,8 +58,12 @@ misses any of them.
 
 ## What you get
 
-- **An MCP server.** A stdio JSON-RPC server with 11 tools and read-only resources, callable by any
-  modern MCP host. No network, no model backend, no API keys.
+- **22 prompt templates, installed by default.** Every workflow is a command in your agent's own chat
+  (`/sdd-specify`, `/sdd-converge`, …), and each one runs a real engine command rather than asking a
+  model to "consider" a check. No MCP, no network. `open-sdd templates` lists them.
+- **An MCP server, if you want one.** A stdio JSON-RPC server with 11 tools and read-only resources,
+  callable by any modern MCP host. No network, no model backend, no API keys. It is opt-in (`--mcp`),
+  because some hosts and some security policies do not allow it.
 - **Delta specs.** `ADDED` / `MODIFIED` / `REMOVED` / `RENAMED`, with delta-scoped `REQ-<AREA>-<NNN>`
   ids, so the contract of change stays finite.
 - **A constitution as the pivot.** Every spec is validated against
@@ -78,7 +87,7 @@ Qualitative, from the alternatives' public documentation. This is **not a benchm
 | | this tool | spec-kit | Kiro | prompt-only skill packs |
 |---|---|---|---|---|
 | Nature | CLI + MCP engine | prompt/skill toolkit | SDD inside one IDE | prompts and skills |
-| Host integration | MCP server; 18 agent definitions, 10 host registrations (6 verified) | broad install and integration surface | its own IDE | the host's chat |
+| Host integration | MCP server; 18 agent definitions, 10 host registrations (all verified); 22 prompt templates as the no-MCP default | broad install and integration surface | its own IDE | the host's chat |
 | Specs for existing code | delta specs + reverse constitution | spec workflow; a brownfield-bootstrap extension is proposed (#1436) | spec workflow in the IDE | documents only |
 | Enforcement | executable gates, exit codes, commit hook + PR checks | prompts and review | IDE-guided workflow | none |
 | Evidence / audit | audit bundle, sha256 per artifact, SARIF | the documents themselves | IDE artifacts | none |
@@ -96,10 +105,12 @@ one.
   and Python monorepos return a single root module from `brownfield bootstrap`.
 - **Impact analysis has known false-positive classes.** `brownfield impact` reads the import graph
   and the delta, and a check with that noise level can train its readers to ignore it.
-- **Four of ten MCP registrations are unverified.** Copilot, OpenCode, Zed and Antigravity ship as
-  unverified: the snippet is printed and `--write` refuses to touch their config.
-- **The container is built for one architecture.** `docker build` produces the builder's
-  architecture, and no CI job builds or pushes a multi-arch image.
+- **Three command-template conventions are refused, not guessed.** Codex, Zed and Cline document no
+  project-scoped command directory, so `init --write` prints the convention it could not verify and
+  writes nothing there. `open-sdd templates` lists all eleven hosts and marks each one.
+- **A local `docker build` is still single-architecture.** It produces the builder's architecture; the
+  multi-arch image (`linux/amd64` + `linux/arm64`) is built and pushed by the CI container job, so it
+  requires GitHub's runners rather than a laptop.
 - **The measurements are synthetic.** `docs/MEASUREMENTS.md` records 10/10 injected classes caught on
   repositories this project wrote — self-consistency, not field recall or precision. The paper's
   κ/FPR/latency figures belong to an unpublished prototype and are not measurements of this repository.
@@ -107,7 +118,7 @@ one.
   and run; no behavioural sentinel has verified write-time blocking in any host, and
   `git commit --no-verify` is not recorded.
 
-The complete list of gaps (G-01 … G-29), each with its code location, is in
+The complete list of gaps (G-01 … G-33), each with its code location, is in
 [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
 
 ## Documentation

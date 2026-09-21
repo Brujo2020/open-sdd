@@ -88,6 +88,12 @@ security policies block or allow-list it. The default path must work on every ho
 policy, so it does not depend on MCP at all. `open-sdd integrate <host> --write` still registers MCP
 and installs the skills for one host; `init --write` is the project-wide default.
 
+**Read the flow before installing it:** `open-sdd templates` lists all 22 workflows, what each one
+writes, the directory every one of the eleven hosts reads, and whether that convention is verified —
+plus how many are already installed *here* (counted by the installer, not by a directory listing, so a
+template a human edited by hand is reported as edited and not as missing). `--host <id>` narrows it to
+one host and `--json` returns the same object a script can read. It writes nothing.
+
 The prompt templates live in the host's own convention, and only **verified** conventions are
 written:
 
