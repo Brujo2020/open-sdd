@@ -33,6 +33,7 @@ const requirements = [
   '- Statement: The System shall, where possible, display the User_Location.',
   '- Statement: The System shall store A, B, and so on.',
   '- Statement: The System shall be more efficient than the Legacy_Module.',
+  '- Statement: The System shall achieve the highest possible throughput.',
   '- Statement: It shall be delivered prior to his Shift.',
   '- Statement: The System shall eventually empty the tank.',
   '- Statement: The System shall Open/Close the User_Account.',

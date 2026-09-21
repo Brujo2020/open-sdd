@@ -337,6 +337,15 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
     expect(decision.kept[0].waiverExpired).toBe(true);
     expect(decision.kept[0].owner).toBe('sec');
   });
+  it('26b. an exception for a DIFFERENT rule on the same path suppresses nothing', () => {
+    const decision = applySecurityAllowlist(
+      [{ id: 'aws-access-key', kind: 'secret', file: 'src/old.ts', line: 3 }],
+      [{ path: 'src/old.ts', ids: ['some-other-rule'], reason: 'fixture', actor: 'spec:q', owner: 'sec', expires: '2027-03-31' }],
+      { now: new Date('2026-01-01T00:00:00Z'), scannedFiles: ['src/old.ts'] },
+    );
+    expect(decision.suppressed).toEqual([]);
+    expect(decision.kept).toHaveLength(1);
+  });
 
   // ── The console contract under failure ──────────────────────────────────────────────────────
   it('27. an unknown command exits 2 and suggests the nearest one', async () => {

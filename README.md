@@ -92,7 +92,7 @@ Qualitative, from the alternatives' public documentation. This is **not a benchm
 | Host integration | MCP server; 35 agent definitions, 32 command conventions (20 verified, 12 refused with the URL that failed) plus a declared fork, 26 verified MCP registrations; the 22 prompt templates are the no-MCP default | broad install and integration surface | its own IDE | the host's chat |
 | Specs for existing code | delta specs + reverse constitution | spec workflow; a brownfield-bootstrap extension is proposed (#1436) | spec workflow in the IDE | documents only |
 | Enforcement | executable gates, exit codes, commit hook + PR checks | prompts and review | IDE-guided workflow | none |
-| Requirements & standards | 31 machine-checkable requirements checks and a 16-entry standards catalogue (`standards`, `requirements review`); every finding carries a position, a basis and a graded remedy or an explicit question — and it stays **advisory until a corpus measures its precision** | a checklist prompt | IDE quality hints | none |
+| Requirements & standards | 32 machine-checkable requirements checks and a 16-entry standards catalogue (`standards`, `requirements review`); every finding carries a position, a basis and a graded remedy or an explicit question — and it stays **advisory until a corpus measures its precision**; the count is verified by `CLM-067`, not hand-written | a checklist prompt | IDE quality hints | none |
 | Evidence / audit | audit bundle, sha256 per artifact, SARIF | the documents themselves | IDE artifacts | none |
 | Offline | no network, no model backend | local templates and scripts | IDE product | host-dependent |
 

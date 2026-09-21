@@ -1,10 +1,12 @@
-# Requirements-quality catalog — research input
+# Requirements-quality catalog — the register the coach implements from
 
 **What this is.** The stored best practice behind workstreams W2 (standards engine) and W3
-(requirements coach) of [`docs/EVOLUTION-PLAN.md`](../EVOLUTION-PLAN.md). It is **research input, not
-an enforced standard**: nothing here runs yet. It exists so the 42 checks, the rewrite playbook, the
-definitions of "done" and the critique contract are not lost before the implementation spec is
-written.
+(requirements coach) of [`docs/EVOLUTION-PLAN.md`](../EVOLUTION-PLAN.md). It is the **source of the
+register, not a second copy of the implementation**: the deterministic subset runs today under
+`open-sdd requirements review`, and which checks are in that subset is whatever `BUILT_IN_CHECK_IDS`
+reports — the count is derived from the code and verified by `CLM-067`, never hand-written here. The
+remaining entries are delegated (model critique) or, where a defect cannot be decided mechanically,
+a question with a named human on the other end.
 
 **Provenance.** Compiled 2026-09-21 from primary sources (the INCOSE *Guide to Writing Requirements*
 v3.1 full text, ISO/IEC/IEEE 29148:2011/2018 full texts, IEEE 830-1998, Femmer et al.'s requirements
@@ -54,6 +56,9 @@ guards are required in the implementation.
 ---
 
 ## 2. The check register — 42 checks in 8 families
+
+The subset implemented deterministically is derived from `BUILT_IN_CHECK_IDS`; this register is where
+each check is defined, not a place to restate how many run.
 
 Format: `id` · severity · what it detects · example (bad → rewritten).
 

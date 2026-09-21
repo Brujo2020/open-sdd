@@ -80,6 +80,7 @@ const BASIS = {
     'AMB-003': 'INCOSE R8; ISO/IEC/IEEE 29148 §5.2.7',
     'AMB-004': 'INCOSE R9; ISO/IEC/IEEE 29148 §5.2.7',
     'AMB-005': 'ISO/IEC/IEEE 29148 §5.2.7; Femmer et al. (comparative P 0.48)',
+    'AMB-006': 'ISO/IEC/IEEE 29148 §5.2.7; INCOSE R7 ("best practices" is unmeasured); Femmer et al. (superlative P 0.49)',
     'AMB-007': 'INCOSE R24; Femmer et al. (vague pronoun P 0.26)',
     'AMB-008': 'INCOSE R35',
     'AMB-009': 'INCOSE R15, R17 (exceptions: SI units and ranges)',
@@ -653,6 +654,32 @@ const AMB_005 = makeRule('AMB-005', 'AMB', 'comparative without a fixed baseline
     }
     return matches;
 }));
+const SUPERLATIVE_RE = /\b(most secure|most efficient|most reliable|most scalable|most available|state[- ]of[- ]the[- ]art|world[- ]class|best[- ]in[- ]class|cutting[- ]edge|top[- ]of[- ]the[- ]line|best|worst|highest|lowest|greatest|fastest|slowest|cheapest|strongest|weakest|largest|smallest|maximum|minimum|most|least)\b/gi;
+/**
+ * Un superlativo afirma una relación con TODOS los demás sin nombrar el conjunto: «el mejor», «la
+ * mayor resolución». No hay nada contra lo que medirlo, así que la resolución honesta es una pregunta
+ * por la línea base, no una reescritura inventada.
+ */
+const AMB_006 = makeRule('AMB-006', 'AMB', 'superlative without a baseline', 'S3', ['requirements'], (ctx) => perStatement(ctx, (stmt) => {
+    const matches = [];
+    for (const m of findAll(stmt.text, SUPERLATIVE_RE)) {
+        const index = m.index ?? 0;
+        const token = m[0].toLowerCase();
+        const before = stmt.text.slice(Math.max(0, index - 6), index);
+        const after = stmt.text.slice(index + m[0].length, index + m[0].length + 20);
+        // Guarda 1: `at most`/`at least` son una cota, no un superlativo.
+        if (/^(?:most|least)$/.test(token) && /\bat\s+$/i.test(before))
+            continue;
+        // Guarda 2: `maximum`/`minimum` seguido de una cantidad es una cota con su número.
+        if (/^(?:maximum|minimum)$/.test(token) && /^\s*(?:of|to|at|is|are|=|:)?\s*\d/.test(after))
+            continue;
+        matches.push(rel(stmt, index, m[0].length, {
+            message: `superlative \`${token}\` has no baseline, so nothing can be compared against it (\`AMB-006\`)`,
+            question: `what baseline and numeric target replace \`${token}\`?`,
+        }));
+    }
+    return matches;
+}));
 const AMB_007 = makeRule('AMB-007', 'AMB', 'pronoun with an external referent', 'S2', ['requirements'], (ctx) => perStatement(ctx, (stmt) => {
     const subject = stmt.text.match(/^(it|they|this|that|these|those|he|she)\b/i);
     const clause = stmt.text.match(/(?:[,;]\s*|\band\s+|\bbut\s+)(it|they|this|that|he|she)\s+(?:shall|should|must|will|is|are|was|were|has|have)\b/i);
@@ -731,21 +758,33 @@ const AMB_009 = makeRule('AMB-009', 'AMB', 'oblique slash or and/or', 'S2', ['re
             remedies: [remedy('state the alternatives explicitly and say whether the disjunction is inclusive or exclusive')],
         }));
     }
-    for (const m of findAll(stmt.text, /(\p{L}+)\s*\/\s*(\p{L}+)/gu)) {
+    // Una CADENA (`read/write/delete`) es UN hallazgo, no uno por par. La guarda anterior
+    // (`after === '/'`) existía para no duplicar, pero suprimía la cadena entera: el defecto
+    // desaparecía en silencio, que es la peor forma de no reportar.
+    for (const m of findAll(stmt.text, /\p{L}+(?:\s*\/\s*\p{L}+)+/gu)) {
         const index = m.index ?? 0;
-        const left = m[1].toLowerCase();
-        const right = m[2].toLowerCase();
-        if (UNIT_ABBREVIATIONS.has(left) || UNIT_ABBREVIATIONS.has(right))
+        const chain = m[0];
+        if (/^and\s*\/\s*or$/i.test(chain.trim()))
+            continue; // esa ya la reporta la rama de `and/or`
+        const tokens = chain
+            .split('/')
+            .map((token) => token.trim().toLowerCase())
+            .filter(Boolean);
+        if (tokens.length < 2)
             continue;
-        if (left.length === 1 && right.length === 1)
+        if (tokens.every((token) => UNIT_ABBREVIATIONS.has(token)))
             continue;
+        if (tokens.every((token) => token.length === 1))
+            continue; // `I/O`, `A/B`
         const before = stmt.text[index - 1] ?? '';
-        const after = stmt.text[index + m[0].length] ?? '';
-        if (before === '/' || after === '/' || before === '.' || after === '.')
+        const after = stmt.text[index + chain.length] ?? '';
+        if (before === '.' || after === '.')
             continue;
-        matches.push(rel(stmt, index, m[0].length, {
-            message: `oblique slash in \`${m[0]}\` hides two obligations in one statement (\`AMB-009\`)`,
-            remedies: [remedy('split it into two statements, or write the logical `AND`/`OR` expression explicitly')],
+        matches.push(rel(stmt, index, chain.length, {
+            message: tokens.length > 2
+                ? `oblique chain \`${chain}\` hides ${tokens.length} obligations in one statement (\`AMB-009\`)`
+                : `oblique slash in \`${chain}\` hides two obligations in one statement (\`AMB-009\`)`,
+            remedies: [remedy('split it into one statement per alternative, or write the logical `AND`/`OR` expression explicitly')],
         }));
     }
     return matches;
@@ -1195,6 +1234,7 @@ export const DETERMINISTIC_CHECKS = [
     AMB_003,
     AMB_004,
     AMB_005,
+    AMB_006,
     AMB_007,
     AMB_008,
     AMB_009,

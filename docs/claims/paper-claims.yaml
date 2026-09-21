@@ -484,3 +484,10 @@
   statement_en: 'The requirements coach never certifies: its output states that it reports checks and adjudication, not correctness.'
   verifier: 'node tools/open-sdd/dist/cli.js requirements review standards-engine 2>&1 | grep -q "not correctness"'
   expectation: pass
+
+- id: CLM-067
+  section: "W3 / the check register is implemented, not only documented"
+  statement_es: 'Los dos checks que destapo la horda estan implementados y fijados por tests: AMB-006 (superlativo sin linea base) y la CADENA multi-slash de AMB-009; el numero de checks deterministas sale del codigo, no de la prosa.'
+  statement_en: 'The two checks the QA horde exposed are implemented and pinned by tests: AMB-006 (superlative without a baseline) and the multi-slash CHAIN of AMB-009; the deterministic check count is derived from the code, not from prose.'
+  verifier: 'node scripts/assert-coach-checks.mjs'
+  expectation: pass

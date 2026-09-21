@@ -74,13 +74,11 @@ const AMBIGUITY: Attack[] = [
   { name: 'all-vague-at-once', text: '- The system shall be fast, flexible, robust, scalable and user-friendly.', expect: 'AMB-001' },
   { name: 'synonym-pile', text: '- The system shall be quick, rapid and prompt.', expect: 'AMB-002' },
   { name: 'comparative', text: '- The new module shall be better than the legacy module.', expect: 'AMB-005' },
-  // `AMB-006` (superlative) is specified but NOT implemented in this slice, so the horde keeps the
-  // attack and asserts the survival contract only — pinning an expectation there would be a lie.
-  { name: 'superlative', text: '- The system shall use the best possible approach.' },
+  { name: 'superlative', text: '- The system shall use the best possible approach.', expect: 'AMB-006' },
   { name: 'bare-pronoun', text: '- It shall deliver that to them.', expect: 'AMB-007' },
   { name: 'temporal-pile', text: '- The system shall eventually, soon or promptly respond.', expect: 'AMB-008' },
   { name: 'and-or', text: '- The system shall open and/or close the account.', expect: 'AMB-009' },
-  { name: 'slash-pile', text: '- The system shall read/write/delete the record.' },
+  { name: 'slash-pile', text: '- The system shall read/write/delete the record.', expect: 'AMB-009' },
   { name: 'unit-missing', text: '- The system shall respond in 30 units of at most 5.', expect: 'AMB-010' },
   { name: 'minimize-maximize', text: '- The system shall minimize cost and maximize speed.', expect: 'AMB-012' },
   { name: 'placeholders', text: '- The system shall encrypt with TBD, TBS and TBR.', expect: 'AMB-013' },

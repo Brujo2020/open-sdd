@@ -67,6 +67,22 @@ describe('tier 2 — intermediate: the checks, their guards, and the no-dead-end
   it('16. AMB-012 fires on minimize with no bound', () => {
     expect(fires('AMB-012', requirements('- The system shall use minimum power.'))).toBe(true);
   });
+  it('16b. AMB-006 fires on a superlative with no baseline', () => {
+    expect(fires('AMB-006', requirements('- The system shall achieve the highest possible throughput.'))).toBe(true);
+  });
+  it('16c. AMB-006 does NOT fire on `at most N`, which is a bound', () => {
+    expect(fires('AMB-006', requirements('- The system shall retry at most 5 times.'))).toBe(false);
+  });
+  it('16d. AMB-006 does NOT fire on a bounded maximum', () => {
+    expect(fires('AMB-006', requirements('- The system shall set the maximum to 5 seconds.'))).toBe(false);
+  });
+  it('16e. AMB-009 fires once on a slash CHAIN, not zero times and not three', () => {
+    const report = coachReview(requirements('- The system shall read/write/delete the record.'));
+    expect(countByCheck(report.findings)['AMB-009']).toBe(1);
+  });
+  it('16f. AMB-009 does NOT fire on SI units or a single-letter pair', () => {
+    expect(fires('AMB-009', requirements('- The device shall measure in km/h.', '- The system shall support I/O.'))).toBe(false);
+  });
   it('17. AMB-013 fires on an unresolved placeholder', () => {
     expect(fires('AMB-013', requirements('- The system shall encrypt data at rest using TBD.'))).toBe(true);
   });
