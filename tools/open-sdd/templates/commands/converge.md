@@ -1,6 +1,7 @@
 ---
 id: converge
 description: Reconcile what the specs claim with what the code and the engine reports show, and turn every real gap into an explicit task.
+argument-hint: "<feature>"
 writes:
   - ".sdd/specs/<feature>/tasks.md"
   - ".sdd/specs/<feature>/convergence.md"

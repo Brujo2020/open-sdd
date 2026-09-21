@@ -1,6 +1,7 @@
 ---
 id: reuse
 description: Search the existing symbols before creating a new one, and report honestly when nothing can be reused.
+argument-hint: "<feature> [symbols to search for]"
 writes: []
 mustNotTouch:
   - "**"

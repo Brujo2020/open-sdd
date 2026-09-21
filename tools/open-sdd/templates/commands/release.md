@@ -1,6 +1,7 @@
 ---
 id: release
 description: Run the release gate chain, verify the claims registry and audit bundle, then tag and publish through the two documented credential routes.
+argument-hint: "<version> [feature]"
 writes:
   - "CHANGELOG.md"
   - ".sdd/specs/<feature>/release.md"

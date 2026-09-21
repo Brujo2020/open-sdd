@@ -66,6 +66,10 @@ export interface TemplatesReport {
     dir: string | null;
     invocation: string;
     format: string;
+    /** The placeholder this host's engine substitutes, or null when the artifact carries prose. */
+    argumentSyntax: string | null;
+    /** Documented per-file size limit in characters, when the vendor publishes one. */
+    maxChars: number | null;
     verified: boolean;
     evidence: string;
     docUrl: string | undefined;
@@ -116,6 +120,8 @@ export const buildTemplatesReport = async (cwd: string): Promise<TemplatesReport
       dir: host.dir,
       invocation: host.invocation('specify'),
       format: host.format,
+      argumentSyntax: host.argumentSyntax,
+      maxChars: host.maxChars ?? null,
       verified: host.verified,
       evidence: host.evidence,
       docUrl: host.docUrl,
@@ -198,10 +204,20 @@ export const handleTemplatesCommand = async (
     return host.verified ? host.dir : `${host.dir} (sin verificar)`;
   };
   const dirWidth = Math.max(...report.hosts.map((host) => dirLabel(host).length));
+  const argLabel = (host: TemplatesReport['hosts'][number]): string =>
+    host.argumentSyntax === null ? '(instrucción)' : host.argumentSyntax;
+  const argWidth = Math.max(...report.hosts.map((host) => argLabel(host).length));
   for (const host of report.hosts) {
     const verdict = host.verified ? colors.green('verificado   ') : colors.red('NO VERIFICADO');
-    io.log(`  ${verdict}  ${pad(host.id, hostWidth)}  ${pad(dirLabel(host), dirWidth)}  ${host.invocation}`);
+    const limit = host.maxChars === null ? '' : `  ≤${host.maxChars.toLocaleString('en-US')} car.`;
+    io.log(
+      `  ${verdict}  ${pad(host.id, hostWidth)}  ${pad(dirLabel(host), dirWidth)}  ${pad(host.invocation, 18)}  ${pad(argLabel(host), argWidth)}${limit}`,
+    );
   }
+  io.log('');
+  io.log(
+    `  «argumento» es el marcador que SU motor sustituye de verdad: las 22 plantillas se escriben una vez con «$ARGUMENTS» y el instalador lo traduce por anfitrión. «(instrucción)» = su documentación no describe ningún marcador, así que el bloque llega como frase y no como un token que nunca se expande. El límite de caracteres, cuando el fabricante lo publica, se COMPRUEBA al instalar: pasarse es un error, nunca un recorte silencioso.`,
+  );
   io.log('');
   io.log(
     `  «NO VERIFICADO» significa que la documentación del anfitrión no declara un directorio de comandos de proyecto: --write se niega en vez de adivinar. La prueba intentada está en --json (campo evidence / docUrl).`,

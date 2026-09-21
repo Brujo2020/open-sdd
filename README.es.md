@@ -61,8 +61,10 @@ distinto de cero si la herramienta deja pasar alguna.
 
 - **22 plantillas de comando, instaladas por defecto.** Cada workflow es un comando en el chat del
   propio agente (`/sdd-specify`, `/sdd-converge`, …), y cada uno ejecuta una orden real del motor en
-  vez de pedirle a un modelo que «considere» una comprobación. Sin MCP y sin red. `open-sdd templates`
-  las lista.
+  vez de pedirle a un modelo que «considere» una comprobación. Sin MCP y sin red. El argumento que
+  escribes se traduce al marcador propio de cada anfitrión (`{{args}}`, `${input:request}`,
+  `$ARGUMENTS`), y el límite de tamaño que documenta cada fabricante se comprueba en vez de suponerse.
+  `open-sdd templates` las lista.
 - **Un servidor MCP, si lo quieres.** Un servidor stdio JSON-RPC con 11 herramientas y recursos de solo
   lectura, invocable desde cualquier anfitrión MCP moderno. Sin red, sin backend de modelo, sin claves
   de API. Es opt-in (`--mcp`), porque algunos anfitriones y algunas políticas de seguridad no lo

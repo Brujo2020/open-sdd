@@ -1,6 +1,7 @@
 ---
 id: constitution
 description: Establish, amend or ratify the project constitution that every other command in this repository cites as authority.
+argument-hint: "[an amendment, a principle to add, or a question to decide]"
 writes:
   - ".sdd/steering/constitution.draft.md"
   - ".sdd/settings/constitution/"

@@ -1,6 +1,7 @@
 ---
 id: gates
 description: Resolve and run the declared rigor level's gate chain, with the enforcement levels and the honest ceiling-versus-floor distinction.
+argument-hint: "[--profile solo|team|regulated]"
 writes: []
 mustNotTouch:
   - "**"

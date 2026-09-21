@@ -1,6 +1,7 @@
 ---
 id: status
 description: Read the repository's real state — score, phase and the one next action — and route to the right command without writing anything.
+argument-hint: "[feature]"
 writes: []
 mustNotTouch:
   - "**"

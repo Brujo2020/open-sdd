@@ -23,6 +23,7 @@ import path from 'node:path';
 import { runCli } from '../src/index.js';
 import { handleInitCommand } from '../src/cli/commands/init.js';
 import {
+  ARGUMENT_PLACEHOLDER,
   COMMAND_TEMPLATE_IDS,
   HOST_COMMAND_TEMPLATES,
   commandHostById,
@@ -286,7 +287,14 @@ describe('command templates — host conventions are declared, verified or refus
     for (const host of HOST_COMMAND_TEMPLATES) {
       expect(host.label, host.id).toBeTruthy();
       expect(host.evidence.length, host.id).toBeGreaterThan(0);
-      expect(host.argumentSyntax.length, host.id).toBeGreaterThan(0);
+      // El marcador es un contrato con evidencia: o lo sustituye el motor del anfitrión, o se dice
+      // que su documentación no describe ninguno (y entonces el artefacto lleva prosa, no un token).
+      if (host.argumentSyntax === null) {
+        expect(host.argumentEvidence, `${host.id}: null sin URL`).toMatch(/https?:\/\//);
+      } else {
+        expect(host.argumentSyntax.length, host.id).toBeGreaterThan(0);
+        expect(host.argumentEvidence, `${host.id}: con marcador pero sin evidencia`).toMatch(/VERIFIED/);
+      }
       // A verified convention always has a directory to write into; an unverified one may not.
       if (host.verified) {
         expect(host.dir, `${host.id}: verified host needs a dir`).not.toBeNull();
@@ -724,5 +732,115 @@ describe('templates — the default flow is listable, not just installed', () =>
       // La prueba intentada viaja con el veredicto: un «no verificado» sin URL no es auditable.
       if (!host.verified) expect(host.docUrl, `${host.id} sin docUrl`).toBeTruthy();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// La entrega del argumento — el marcador se traduce, no se envía muerto
+// ---------------------------------------------------------------------------------------------
+
+describe('argument delivery — the placeholder is translated, never shipped dead', () => {
+  it('every template carries exactly one canonical input block, so a translation cannot miss', async () => {
+    for (const id of COMMAND_TEMPLATE_IDS) {
+      const raw = await readFile(commandTemplatePath(id), 'utf8');
+      const occurrences = raw.split(ARGUMENT_PLACEHOLDER).length - 1;
+      expect(occurrences, `${id}: ocurrencias de ${ARGUMENT_PLACEHOLDER}`).toBe(1);
+      // El bloque tiene forma canónica en las 22: si dejara de tenerla, la traducción de los
+      // anfitriones sin marcador (el reemplazo del bloque) dejaría de aplicarse en silencio.
+      expect(/```text\r?\n\$ARGUMENTS\r?\n```/.test(raw), `${id}: bloque de entrada no canónico`).toBe(true);
+    }
+  });
+
+  it('renders the host’s OWN placeholder and never a foreign one', async () => {
+    const documented = [
+      ...new Set(
+        HOST_COMMAND_TEMPLATES.map((host) => host.argumentSyntax).filter((value): value is string => value !== null),
+      ),
+    ];
+    // Los tres motores que recibían el marcador de otro: el arreglo se prueba por su nombre.
+    expect(documented).toEqual(expect.arrayContaining([ARGUMENT_PLACEHOLDER, '{{args}}', '${input:request}']));
+
+    for (const host of HOST_COMMAND_TEMPLATES) {
+      const rendered = await renderCommandTemplate('specify', host);
+      if (host.argumentSyntax === null) {
+        expect(rendered.content, `${host.id}: no debe llevar un token que su motor no expande`).not.toContain(
+          ARGUMENT_PLACEHOLDER,
+        );
+        expect(rendered.content).toContain('The human’s request exactly as they typed it');
+      } else {
+        expect(rendered.content, `${host.id}: debe llevar ${host.argumentSyntax}`).toContain(host.argumentSyntax);
+        if (host.argumentSyntax !== ARGUMENT_PLACEHOLDER) {
+          expect(rendered.content, `${host.id}: conserva el token canónico`).not.toContain(ARGUMENT_PLACEHOLDER);
+        }
+      }
+      for (const foreign of documented) {
+        if (foreign === host.argumentSyntax) continue;
+        expect(rendered.content, `${host.id}: contiene el marcador de otro anfitrión (${foreign})`).not.toContain(foreign);
+      }
+    }
+  });
+
+  it('every host declares where its placeholder was read, and a null one names the URL that failed', () => {
+    for (const host of HOST_COMMAND_TEMPLATES) {
+      expect(host.argumentEvidence.length, `${host.id}: sin argumentEvidence`).toBeGreaterThan(40);
+      if (host.argumentSyntax === null) {
+        // Un «no hay marcador» sin la prueba intentada es una afirmación de los autores.
+        expect(host.argumentEvidence, `${host.id}: null sin URL`).toMatch(/https?:\/\//);
+      } else {
+        expect(host.argumentEvidence, `${host.id}: con marcador pero sin evidencia`).toMatch(/VERIFIED/);
+      }
+    }
+  });
+
+  it('every shipped template carries the argument-hint its host reads in the composer', async () => {
+    for (const id of COMMAND_TEMPLATE_IDS) {
+      const raw = await readFile(commandTemplatePath(id), 'utf8');
+      // Documentado en Claude Code (`argument-hint`) y en las prompt files de VS Code; inerte para el resto.
+      expect(/^argument-hint: ".+"$/m.test(raw), `${id}: sin argument-hint`).toBe(true);
+    }
+  });
+
+  it('every rendered artifact stays inside the host’s DOCUMENTED character limit', async () => {
+    const limited = HOST_COMMAND_TEMPLATES.filter((host) => host.maxChars !== undefined);
+    expect(limited.map((host) => host.id).sort()).toEqual(['antigravity', 'windsurf']);
+
+    let worst = { host: '', id: '', chars: 0, limit: 0 };
+    for (const host of limited) {
+      for (const id of COMMAND_TEMPLATE_IDS) {
+        const rendered = await renderCommandTemplate(id, host);
+        expect(rendered.chars, `${host.id}/${id}: ${rendered.chars} > ${host.maxChars}`).toBeLessThanOrEqual(
+          host.maxChars as number,
+        );
+        if (rendered.chars > worst.chars) worst = { host: host.id, id, chars: rendered.chars, limit: host.maxChars as number };
+      }
+    }
+    // El margen se mide, no se supone: el mayor artefacto queda muy por debajo del techo.
+    expect(worst.chars).toBeGreaterThan(0);
+    expect(worst.chars).toBeLessThan(worst.limit);
+  });
+
+  it('a template over the limit is a FAILURE with the number, not a silent truncation', async () => {
+    const dir = await makeRoot();
+    const templatesRoot = path.join(dir, 'tpl');
+    await mkdir(path.join(templatesRoot, 'commands'), { recursive: true });
+    for (const id of COMMAND_TEMPLATE_IDS) {
+      await writeFile(
+        path.join(templatesRoot, 'commands', `${id}.md`),
+        await readFile(commandTemplatePath(id), 'utf8'),
+        'utf8',
+      );
+    }
+    const victim = path.join(templatesRoot, 'commands', 'specify.md');
+    await writeFile(victim, `${await readFile(victim, 'utf8')}\n${'x'.repeat(13_000)}\n`, 'utf8');
+
+    const outcome = await installCommandTemplates({ cwd: dir, hosts: ['windsurf'], templatesRoot, write: true });
+    const failure = outcome.failures.join('\n');
+
+    expect(failure).toContain('12,000');
+    expect(failure).toContain('sdd-specify.md');
+    expect(outcome.written).not.toContain('.windsurf/workflows/sdd-specify.md');
+    expect(await exists(path.join(dir, '.windsurf', 'workflows', 'sdd-specify.md'))).toBe(false);
+    // El hueco queda declarado y los otros 21 sí entran: un límite no bloquea la instalación entera.
+    expect(outcome.written).toContain('.windsurf/workflows/sdd-plan.md');
   });
 });

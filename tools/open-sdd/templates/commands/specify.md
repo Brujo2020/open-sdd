@@ -1,6 +1,7 @@
 ---
 id: specify
 description: Turn a natural-language intent into a numbered EARS requirements document under the ratified constitution.
+argument-hint: "<feature> [--auto]"
 writes:
   - ".sdd/specs/<feature>/spec.json"
   - ".sdd/specs/<feature>/requirements.md"

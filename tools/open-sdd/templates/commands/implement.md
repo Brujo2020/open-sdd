@@ -1,6 +1,7 @@
 ---
 id: implement
 description: Execute the task list one task at a time, with a real test run as the only accepted proof of completion.
+argument-hint: "<feature> [task numbers]"
 writes:
   - "src/**"
   - "test/**"

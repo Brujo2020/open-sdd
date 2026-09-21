@@ -1,6 +1,7 @@
 ---
 id: clarify
 description: Ask the human only the questions the spec cannot answer, bounded to five, and verify that every answer removed the ambiguity.
+argument-hint: "<feature> [--max N]"
 writes:
   - ".sdd/specs/<feature>/requirements.md"
   - ".sdd/specs/<feature>/clarifications.md"

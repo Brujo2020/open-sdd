@@ -1,6 +1,7 @@
 ---
 id: analyze
 description: Cross-check requirements, plan, tasks and code against each other, delegating every real check to the engine instead of re-deriving it in prose.
+argument-hint: "<feature>"
 writes:
   - ".sdd/specs/<feature>/analysis.md"
 mustNotTouch:

@@ -1,6 +1,7 @@
 ---
 id: tasks-to-issues
 description: Publish the approved task list as one issue per task, preserving the requirement, the test command and the evidence line.
+argument-hint: "<feature>"
 writes:
   - ".sdd/specs/<feature>/issues/"
 mustNotTouch:

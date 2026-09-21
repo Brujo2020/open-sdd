@@ -1,6 +1,7 @@
 ---
 id: onboard
 description: Day one in one flow — install the host templates, recon the repo, draft the constitution, and hand ratification to a human.
+argument-hint: "[your agent host, or nothing to auto-detect]"
 writes:
   - ".sdd/settings/"
   - ".sdd/steering/constitution.draft.md"

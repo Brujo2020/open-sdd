@@ -920,6 +920,40 @@ inherited from the paper's own ownership argument (the floor belongs to the orga
 tool); what this repository adds is that it is now *named at the moment the role is read*, instead of
 being left implicit in a policy table.
 
+### G-34 — RESOLVED: the argument placeholder was declared per host and never consumed
+
+Paper: §6.4 / Table 4 (agent-agnostic installation). `HOST_COMMAND_TEMPLATES` carried an
+`argumentSyntax` field per host and the interface said, in its own words, that it was "for the reader;
+the body still uses `$ARGUMENTS`". So all 22 rendered artifacts shipped the canonical token verbatim,
+whatever the host's engine actually substitutes — and three hosts substitute something else: Gemini
+CLI and Qwen Code inject `{{args}}`, and the VS Code prompt files behind GitHub Copilot have no
+`$ARGUMENTS` at all (their documented mechanism is the soft `${input:variableName}`, which the model is
+asked to prompt for). A human typing `/sdd-specify <feature>` on those three hosts had the argument
+silently dropped, and a prompt that reads `$ARGUMENTS` is not the prompt anyone wrote. The field was
+decoration: the same class of defect as a gate chain that resolves over an empty control set
+(`76278cf`), and it survived because the matrix *looked* like it already handled it.
+
+Fixed, with the evidence kept where a reader can check it:
+
+- **One authored token, translated per host.** `ARGUMENT_PLACEHOLDER` is the single canonical block,
+  and `renderCommandTemplate` renders each host's own form. A host whose documentation describes no
+  placeholder at all (Cursor, Windsurf, Antigravity, and the refused Codex row) now receives a plain
+  instruction instead of a token its engine would never expand.
+- **Every row carries `argumentEvidence`**: the quoted mechanism plus the URL for a documented token
+  (`VERIFIED: …`), or the URLs that were tried and failed for a row whose token is `null`. A test
+  requires one or the other — a bare `null` is not allowed to exist without the URL that justifies it.
+- **`maxChars` turns a prose claim into a checked invariant.** Windsurf and Antigravity document a
+  12,000-character ceiling per workflow file. The installer measures every rendered artifact against
+  it and a template over the limit is reported as a **failure with the number**, never truncated: a
+  prompt cut in half is worse than a prompt that was not installed.
+- **The negative is pinned too.** A test renders every template for every host and asserts that no
+  artifact contains *another* host's placeholder, which is what would have caught the original defect.
+- **`argument-hint` ships in all 22 templates**, the composer hint both Claude Code and the VS Code
+  prompt files document, so the human sees what to type instead of guessing.
+
+`open-sdd templates` prints, per host, the directory, the invocation, the argument token and the
+documented limit — so the matrix that used to be an internal table is now the thing a user reads.
+
 ---
 
 ## 6. Where the paper and the code genuinely disagree

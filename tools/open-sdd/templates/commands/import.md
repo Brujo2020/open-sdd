@@ -1,6 +1,7 @@
 ---
 id: import
 description: Adopt specs from Kiro, spec-kit or cc-sdd as mapped seeds, reporting every file skipped and overwriting nothing.
+argument-hint: "[kiro|spec-kit|cc-sdd]"
 writes:
   - ".sdd/specs/"
   - ".sdd/steering/"

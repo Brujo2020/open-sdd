@@ -1,6 +1,7 @@
 ---
 id: tour
 description: The guided first run — recon, draft, check, status and delta — that hands over at the human decision and never ratifies for you.
+argument-hint: "[target]"
 writes:
   - ".sdd/steering/constitution.draft.md"
   - ".sdd/settings/"

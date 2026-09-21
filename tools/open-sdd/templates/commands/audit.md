@@ -1,6 +1,7 @@
 ---
 id: audit
 description: Produce the evidence bundle — a hash per artifact, the compliance matrix, the claims registry and SARIF — without inventing a verdict.
+argument-hint: "[feature]"
 writes:
   - ".sdd/audit/"
 mustNotTouch:

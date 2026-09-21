@@ -97,19 +97,30 @@ one host and `--json` returns the same object a script can read. It writes nothi
 The prompt templates live in the host's own convention, and only **verified** conventions are
 written:
 
-| Host | Commands directory | File | Verified |
-|---|---|---|---|
-| Claude Code | `.claude/commands/` | `sdd-<id>.md` | yes |
-| Cursor | `.cursor/commands/` | `sdd-<id>.md` | yes |
-| GitHub Copilot | `.github/prompts/` | `sdd-<id>.prompt.md` | yes |
-| Gemini CLI | `.gemini/commands/` | `sdd-<id>.toml` | yes |
-| OpenCode | `.opencode/commands/` | `sdd-<id>.md` | yes |
-| Qwen Code | `.qwen/commands/` | `sdd-<id>.md` | yes — the docs now specify Markdown with `{{args}}`; the `.toml` form is deprecated |
-| Windsurf | `.windsurf/workflows/` | `sdd-<id>.md` | yes — legacy path but still read; `.devin/workflows/` is the newer preferred path |
-| Antigravity | `.agents/workflows/` | `sdd-<id>.md` | yes — legacy workflows, deprecated 2026-11-01 in favour of `.agents/skills/` |
-| Codex CLI | `.codex/prompts/` (declared) | `sdd-<id>.md` | **NO** — docs document only a deprecated user-scoped `~/.codex/prompts/`; the repo surface is `.agents/skills/` |
-| Zed | none | — | **NO** — slash commands come from Skills; no prompt-file directory is documented |
-| Cline | none | — | **NO** — customization is Skills; no workflow directory is documented |
+| Host | Commands directory | File | Argument token | Verified |
+|---|---|---|---|---|
+| Claude Code | `.claude/commands/` | `sdd-<id>.md` | `$ARGUMENTS` | yes |
+| Cursor | `.cursor/commands/` | `sdd-<id>.md` | none documented | yes |
+| GitHub Copilot | `.github/prompts/` | `sdd-<id>.prompt.md` | `${input:request}` (soft) | yes |
+| Gemini CLI | `.gemini/commands/` | `sdd-<id>.toml` | `{{args}}` | yes |
+| OpenCode | `.opencode/commands/` | `sdd-<id>.md` | `$ARGUMENTS` | yes |
+| Qwen Code | `.qwen/commands/` | `sdd-<id>.md` | `{{args}}` | yes — the docs now specify Markdown with `{{args}}`; the `.toml` form is deprecated |
+| Windsurf | `.windsurf/workflows/` | `sdd-<id>.md` | none documented | yes — legacy path but still read; `.devin/workflows/` is the newer preferred path; **12 000-character limit enforced** |
+| Antigravity | `.agents/workflows/` | `sdd-<id>.md` | none documented | yes — legacy workflows, deprecated 2026-11-01 in favour of `.agents/skills/`; **12 000-character limit enforced** |
+| Codex CLI | `.codex/prompts/` (declared) | `sdd-<id>.md` | none | **NO** — docs document only a deprecated user-scoped `~/.codex/prompts/`; the repo surface is `.agents/skills/` |
+| Zed | none | — | none | **NO** — slash commands come from Skills; no prompt-file directory is documented |
+| Cline | none | — | none | **NO** — customization is Skills; no workflow directory is documented |
+
+**The argument is translated, not passed through.** The 22 templates are authored once, with a single
+`$ARGUMENTS` block. At install time the installer renders each host's own token: `{{args}}` for Gemini
+CLI and Qwen Code, `${input:request}` for Copilot, the canonical `$ARGUMENTS` where that is what the
+host substitutes, and — for the hosts whose documentation describes no placeholder at all — a plain
+instruction instead of a token their engine would never expand. Before this was wired, the field was
+declared in the matrix and never consumed, so three hosts silently received an argument that never
+arrived. A host that publishes a per-file size limit also gets it **checked**: `windsurf` and
+`antigravity` cap a workflow at 12 000 characters, and a template over the limit is reported as a
+failure with the number rather than truncated. `open-sdd templates` prints both the token and the
+limit per host.
 
 An unverified host is printed as **NO VERIFICADA** and `--write` refuses to write into it, exactly as
 the MCP matrix refuses an unverified snippet. The `evidence` string is the audit trail: it names the

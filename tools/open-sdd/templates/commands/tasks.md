@@ -1,6 +1,7 @@
 ---
 id: tasks
 description: Decompose the approved plan into ordered, independently testable tasks, each with the exact test command and an evidence line.
+argument-hint: "<feature>"
 writes:
   - ".sdd/specs/<feature>/tasks.md"
 mustNotTouch:

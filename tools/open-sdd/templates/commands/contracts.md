@@ -1,6 +1,7 @@
 ---
 id: contracts
 description: Report the regression oracle — which tests protect the change, and which changed files no test covers.
+argument-hint: "<feature>"
 writes:
   - ".sdd/specs/<feature>/contracts/"
 mustNotTouch:

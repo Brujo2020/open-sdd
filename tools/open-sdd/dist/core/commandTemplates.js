@@ -58,6 +58,20 @@ export const COMMAND_TEMPLATE_IDS = [
 ];
 /** Bumped only when the rendering itself changes; the body hash is what detects real staleness. */
 export const COMMAND_TEMPLATE_FORMAT_REVISION = 1;
+/**
+ * The ONE token the templates are authored with, translated per host at render time.
+ *
+ * This used to be decoration: the matrix declared each host's native placeholder "for the reader"
+ * while every artifact shipped the literal `$ARGUMENTS`. Gemini CLI, Qwen Code and Copilot therefore
+ * received a token their engine never substitutes — the argument a human typed after the command was
+ * silently dropped, and a prompt that reads `$ARGUMENTS` is not the prompt anyone wrote. A declared
+ * field that nothing consumes is the same class of defect as a gate that resolves to an empty scan.
+ */
+export const ARGUMENT_PLACEHOLDER = '$ARGUMENTS';
+/** The fenced block every template uses to receive the human's request. */
+const INPUT_BLOCK = /```text\r?\n\$ARGUMENTS\r?\n```/;
+/** What replaces the block when the host documents no placeholder at all. */
+const NEUTRAL_INPUT = 'The human’s request exactly as they typed it after the command. If it is empty, ask for it before doing anything else.';
 const flatMarkdown = (id) => `sdd-${id}.md`;
 /**
  * The command-template matrix, one row per host. Kept separate from `HOST_INTEGRATIONS` (which
@@ -73,6 +87,7 @@ export const HOST_COMMAND_TEMPLATES = [
         format: 'markdown',
         invocation: (id) => `/sdd-${id}`,
         argumentSyntax: '$ARGUMENTS',
+        argumentEvidence: 'VERIFIED: `https://docs.claude.com/en/docs/claude-code/slash-commands.md` (fetched, 200 text/markdown) documents the "Arguments" section with the `$ARGUMENTS` placeholder, the positional `$1`/`$2` forms, and the `argument-hint` frontmatter key that shows the expected input in the chat composer.',
         verified: true,
         evidence: 'Claude Code documents custom slash commands as Markdown files in the commands directory, and this repository already installs its own prompt mode into `.claude/commands/sdd/` in `src/agents/registry.ts`.',
         docUrl: 'https://docs.anthropic.com/en/docs/claude-code/slash-commands',
@@ -84,7 +99,8 @@ export const HOST_COMMAND_TEMPLATES = [
         fileName: flatMarkdown,
         format: 'markdown',
         invocation: (id) => `/sdd-${id}`,
-        argumentSyntax: '$ARGUMENTS',
+        argumentSyntax: null,
+        argumentEvidence: 'NOT DOCUMENTED as an engine substitution: `https://cursor.com/docs/customize-cursor.md` (fetched, 200 text/markdown) lists "Commands — Reusable prompts you invoke with `/` in Agent chat. Commands are markdown files that define a focused workflow or action", and describes no argument placeholder; the dedicated pages `https://cursor.com/docs/commands.md`, `https://cursor.com/docs/agent/commands.md` and `https://cursor.com/docs/customize/commands.md` all return 404. The input is therefore delivered as a plain instruction instead of a token Cursor never expands.',
         verified: true,
         evidence: 'Cursor documents Commands as Markdown files invoked with `/` in Agent chat, and this repository already installs its own prompt mode into `.cursor/commands/sdd/`. Cursor is migrating Commands to Skills; the workspace commands directory still loads them.',
         docUrl: 'https://cursor.com/docs/customize-cursor.md',
@@ -96,7 +112,8 @@ export const HOST_COMMAND_TEMPLATES = [
         fileName: (id) => `sdd-${id}.prompt.md`,
         format: 'markdown',
         invocation: (id) => `/sdd-${id}`,
-        argumentSyntax: '${input:name}',
+        argumentSyntax: '${input:request}',
+        argumentEvidence: 'VERIFIED: `https://code.visualstudio.com/docs/agent-customization/prompt-files` (fetched) documents the frontmatter key `argument-hint` ("Hint text shown in the chat input field") and the body syntax `${input:variableName}` / `${input:variableName:placeholder}`, adding that "Most language models understand this syntax and will prompt for these inputs" — it is a SOFT prompt, not an engine substitution, which is exactly why the template must carry it in that form and carry `argument-hint` in its frontmatter.',
         verified: true,
         evidence: 'VS Code documents workspace prompt files at `.github/prompts` with the `.prompt.md` extension, invoked with `/` in chat. The newer Agent Host migrates prompt files to skills; the Local agent still loads them.',
         docUrl: 'https://code.visualstudio.com/docs/agent-customization/prompt-files',
@@ -109,6 +126,7 @@ export const HOST_COMMAND_TEMPLATES = [
         format: 'toml',
         invocation: (id) => `/sdd-${id}`,
         argumentSyntax: '{{args}}',
+        argumentEvidence: 'VERIFIED: `https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/custom-commands.md` (fetched, 200) documents "Handling arguments" with "Context-aware injection with `{{args}}`": "If your `prompt` contains the special placeholder `{{args}}`, the CLI will…". The previous `$ARGUMENTS` never reached Gemini’s engine, so the argument was dropped.',
         verified: true,
         evidence: 'Gemini CLI documents project commands as `.toml` files under `.gemini/commands/`, with `prompt` and optional `description`; a flat file becomes `/name`, a subdirectory namespaces it.',
         docUrl: 'https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/custom-commands.md',
@@ -121,6 +139,7 @@ export const HOST_COMMAND_TEMPLATES = [
         format: 'markdown',
         invocation: (id) => `/sdd-${id}`,
         argumentSyntax: '$ARGUMENTS',
+        argumentEvidence: 'VERIFIED: `https://opencode.ai/docs/commands/` (fetched) states "Pass arguments to commands using the `$ARGUMENTS` placeholder." and shows `$ARGUMENTS` inside the Markdown body.',
         verified: true,
         evidence: 'OpenCode documents per-project commands as Markdown files in `.opencode/commands/`, with `description` in the frontmatter and `$ARGUMENTS` in the body.',
         docUrl: 'https://opencode.ai/docs/commands/',
@@ -132,7 +151,8 @@ export const HOST_COMMAND_TEMPLATES = [
         fileName: flatMarkdown,
         format: 'markdown',
         invocation: (id) => `/prompts:sdd-${id}`,
-        argumentSyntax: '$ARGUMENTS',
+        argumentSyntax: null,
+        argumentEvidence: 'NOT DOCUMENTED and refused anyway: `https://learn.chatgpt.com/docs/custom-prompts.md` documents the prompt surface as DEPRECATED and user-scoped only (`~/.codex/prompts/*.md`), with no project commands directory, so no placeholder is claimed.',
         verified: false,
         evidence: 'NOT VERIFIED as a repository-scoped convention: `https://learn.chatgpt.com/docs/custom-prompts.md` (fetched) documents custom prompts as DEPRECATED and only in the user home — `~/.codex/prompts/*.md`, top-level Markdown files only, invoked `/prompts:<name>` — and states they "live in your local Codex home directory (for example, `~/.codex`), so they\'re not shared through your repository". `https://learn.chatgpt.com/docs/customization/overview.md` (fetched) documents the repository-scoped surface as skills in `.agents/skills/` (global `~/.agents/skills/`), with no project commands directory. No project-scoped `.codex/prompts/` is documented, so `--write` refuses it; use the Codex skills install instead.',
         docUrl: 'https://learn.chatgpt.com/docs/custom-prompts.md',
@@ -144,7 +164,9 @@ export const HOST_COMMAND_TEMPLATES = [
         fileName: flatMarkdown,
         format: 'markdown',
         invocation: (id) => `/sdd-${id}`,
-        argumentSyntax: '$ARGUMENTS',
+        argumentSyntax: null,
+        argumentEvidence: 'NOT DOCUMENTED: `https://docs.devin.ai/desktop/cascade/workflows.md` (fetched, 200 text/markdown) documents the workflow file, its title/description and its steps, and mentions no argument placeholder at all. The input is delivered as a plain instruction rather than as a token Windsurf never expands.',
+        maxChars: 12_000,
         verified: true,
         evidence: 'Windsurf documentation (docs.windsurf.com now 308-redirects to docs.devin.ai) documents workflows as Markdown files in `.windsurf/workflows/`, each carrying a title/description and a series of steps, invoked in Cascade as `/[name-of-workflow]`. The same page documents the global location `~/.codeium/windsurf/global_workflows/` and the OS-specific system locations, and a 12,000-character per-file limit that every shipped template stays under. `.windsurf/workflows/` is the legacy path but is still read; the migration page names `.devin/workflows/` as the newer preferred path.',
         docUrl: 'https://docs.devin.ai/desktop/cascade/workflows.md',
@@ -157,6 +179,7 @@ export const HOST_COMMAND_TEMPLATES = [
         format: 'markdown',
         invocation: (id) => `/sdd-${id}`,
         argumentSyntax: '{{args}}',
+        argumentEvidence: 'VERIFIED: `https://raw.githubusercontent.com/QwenLM/qwen-code/main/docs/users/features/commands.md` (fetched, 200) states "Use {{args}} for parameter injection." and tabulates "Context-aware Injection — `{{args}}`". The previous `$ARGUMENTS` was never injected by Qwen Code.',
         verified: true,
         evidence: 'Qwen Code documents custom commands as Markdown files with optional YAML frontmatter (`description`) under `<project root>/.qwen/commands/` (flat file `sdd-<id>.md` becomes `/sdd-<id>`; a subdirectory would namespace it `/dir:name`), with `{{args}}` for parameter injection and project commands taking priority over `~/.qwen/commands/`. The documentation states TOML is deprecated but still supported pending automatic migration, so this matrix now writes Markdown (`sdd-<id>.md`) rather than the deprecated `sdd-<id>.toml`.',
         docUrl: 'https://raw.githubusercontent.com/QwenLM/qwen-code/main/docs/users/features/commands.md',
@@ -168,7 +191,9 @@ export const HOST_COMMAND_TEMPLATES = [
         fileName: flatMarkdown,
         format: 'markdown',
         invocation: (id) => `/sdd-${id}`,
-        argumentSyntax: '$ARGUMENTS',
+        argumentSyntax: null,
+        argumentEvidence: 'NOT DOCUMENTED: `https://antigravity.google/docs/migration/workflows-to-skills.md` (fetched, 200 text/markdown) documents the workflow file (`name`, `description`, step body), the 12,000-character limit and the migration to Agent Skills, and mentions no argument placeholder. The input is delivered as a plain instruction rather than as a token Antigravity never expands.',
+        maxChars: 12_000,
         verified: true,
         evidence: 'Antigravity documents legacy workflows as single Markdown files with YAML frontmatter (`name`, `description`) plus a step body, at `.agents/workflows/<name>.md` (workspace) or `~/.gemini/config/workflows/<name>.md` (global), invoked in chat as `/<workflow-name>`, limited to 12,000 characters each. Note the documented directory is the PLURAL `.agents/workflows/`, not the `.agent/workflows/` this matrix previously assumed. The same page deprecates workflows with a stated retirement of 2026-11-01 in favour of Agent Skills at `.agents/skills/<name>/SKILL.md`; the Antigravity skills layout this repository already ships is that successor.',
         docUrl: 'https://antigravity.google/docs/migration/workflows-to-skills.md',
@@ -180,7 +205,8 @@ export const HOST_COMMAND_TEMPLATES = [
         fileName: flatMarkdown,
         format: 'markdown',
         invocation: (id) => `@AGENTS.md run the sdd-${id} workflow`,
-        argumentSyntax: 'n/a',
+        argumentSyntax: null,
+        argumentEvidence: 'No documented command directory exists, so no placeholder is claimed: `https://zed.dev/docs/ai/skills.md` (fetched) documents slash commands as coming from Agent Skills and `https://zed.dev/docs/ai/instructions.md` (fetched) documents `AGENTS.md`, with no prompt-file directory in either. The host reads `AGENTS.md` instead and the workflow is referenced from there.',
         verified: false,
         evidence: 'NOT VERIFIED and no documented prompt/command directory: `https://zed.dev/docs/ai/skills.md` (fetched) documents Zed\'s slash commands as coming from Agent Skills (`SKILL.md` bundles, project or user scope), and `https://zed.dev/docs/ai/instructions.md` (fetched) documents `AGENTS.md` plus legacy `.rules` files as the instruction surface. Neither page documents a directory of Markdown prompt/command files, so there is nothing for the prompt-template installer to write and `--write` refuses it; use the Zed skills layout or reference the workflow from AGENTS.md.',
         docUrl: 'https://zed.dev/docs/ai/skills.md',
@@ -192,7 +218,8 @@ export const HOST_COMMAND_TEMPLATES = [
         fileName: flatMarkdown,
         format: 'markdown',
         invocation: (id) => `/sdd-${id}`,
-        argumentSyntax: '$ARGUMENTS',
+        argumentSyntax: null,
+        argumentEvidence: 'No documented prompt/command directory exists, so no placeholder is claimed: `https://docs.cline.bot/core-workflows/using-commands.md` (fetched) lists only built-in slash commands, and `https://docs.cline.bot/customization/skills.md` (fetched) puts customization in skill directories, where no argument placeholder is documented.',
         verified: false,
         evidence: 'NOT VERIFIED and no documented prompt/command directory: `https://docs.cline.bot/core-workflows/using-commands.md` (fetched) lists only built-in slash commands (`/newtask`, `/smol`, `/newrule`, `/deep-planning`, `/reportbug`) plus enabled skills triggered by slash command; `https://docs.cline.bot/customization/skills.md` (fetched) documents the customization surface as skill directories in `.cline/skills/` (or `.clinerules/skills/`, global `~/.cline/skills/`) with a `SKILL.md` each; `https://docs.cline.bot/customization/cline-rules.md` (fetched) documents `.clinerules/` and `.cline/rules/` for rules only. No `.clinerules/workflows/` prompt directory is documented, so no directory is declared and `--write` refuses it.',
         docUrl: 'https://docs.cline.bot/core-workflows/using-commands.md',
@@ -311,13 +338,29 @@ const signaturePattern = (format) => format === 'toml'
 /** A `"""` inside a TOML literal string would terminate it early; our bodies do not contain one. */
 const tomlSafe = (value) => value.replace(/"""/g, '\\"\\"\\"');
 /**
+ * Deliver the human's input in the form THIS host actually substitutes.
+ *
+ * Three cases, and the third is the one that was wrong: the host documents a different placeholder
+ * (translate); the host's own placeholder is the canonical one (the body already carries it); the host
+ * documents none (replace the fenced block with a plain instruction). Leaving a token the engine never
+ * expands is what let Gemini CLI, Qwen Code and Copilot silently drop the argument.
+ */
+const translateInput = (raw, host) => {
+    if (host.argumentSyntax === null)
+        return raw.replace(INPUT_BLOCK, NEUTRAL_INPUT);
+    if (host.argumentSyntax === ARGUMENT_PLACEHOLDER)
+        return raw;
+    return raw.split(ARGUMENT_PLACEHOLDER).join(host.argumentSyntax);
+};
+/**
  * Render one template for one host. Markdown hosts receive the file as authored (frontmatter
  * included, because `description` is meaningful to them); TOML hosts receive the `description` key
- * plus the body as the multi-line `prompt` value.
+ * plus the body as the multi-line `prompt` value. In both cases the input is translated first.
  */
 export const renderCommandTemplate = async (id, host, templatesRoot) => {
     const raw = await readFile(commandTemplatePath(id, templatesRoot), 'utf8');
-    const { frontmatter, body } = splitFrontmatter(raw);
+    const translated = translateInput(raw, host);
+    const { frontmatter, body } = splitFrontmatter(translated);
     const description = frontmatterDescription(frontmatter);
     let content;
     if (host.format === 'toml') {
@@ -325,14 +368,17 @@ export const renderCommandTemplate = async (id, host, templatesRoot) => {
         content = `description = ${JSON.stringify(description)}\nprompt = """\n${prompt}"""\n`;
     }
     else {
-        content = raw.endsWith('\n') ? raw : `${raw}\n`;
+        content = translated.endsWith('\n') ? translated : `${translated}\n`;
     }
     const hash = sha256(content);
+    const full = `${content}${signatureLine(host.format, id, hash)}\n`;
     return {
         id,
         format: host.format,
-        content: `${content}${signatureLine(host.format, id, hash)}\n`,
+        content: full,
         hash,
+        chars: [...full].length,
+        argumentSyntax: host.argumentSyntax,
     };
 };
 const toPosix = (value) => value.split(path.sep).join('/');
@@ -427,6 +473,13 @@ export const installCommandTemplates = async (input) => {
             }
             catch (error) {
                 outcome.failures.push(`no se pudo renderizar ${id}.md (${error.message})`);
+                continue;
+            }
+            // Un límite documentado por el anfitrión no es un consejo: una plantilla que se pasa NO se
+            // escribe recortada (un prompt truncado es peor que uno no instalado) ni se escribe entera
+            // fingiendo que cabe. Se nombra el número y se deja el hueco declarado.
+            if (host.maxChars !== undefined && current.chars > host.maxChars) {
+                outcome.failures.push(`${host.label} documenta un límite de ${host.maxChars.toLocaleString('en-US')} caracteres por archivo y ${relative} tendría ${current.chars.toLocaleString('en-US')}: NO se escribe.`);
                 continue;
             }
             const existing = (await fileExists(target)) ? await readFile(target, 'utf8') : null;

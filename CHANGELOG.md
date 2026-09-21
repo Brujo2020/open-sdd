@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 **Release Notes**: [English](docs/RELEASE_NOTES/RELEASE_NOTES_en.md)
 
+## [3.2.1] — 2026-09-21
+
+### The argument you type now actually arrives
+
+- **The per-host argument token is translated instead of shipped verbatim.** Every prompt template was
+  authored with `$ARGUMENTS` and installed unchanged, so Gemini CLI and Qwen Code — which substitute
+  `{{args}}` — and GitHub Copilot — whose prompt files have no `$ARGUMENTS` at all and use the soft
+  `${input:request}` the model is asked to prompt for — silently dropped the argument.
+  `/sdd-specify my-feature` reached the body as a token nobody expands. The installer now renders each
+  host's own form, and a host whose documentation describes no placeholder receives a plain
+  instruction rather than a dead token.
+- **A host's documented size limit is checked, not asserted.** Windsurf and Antigravity cap a workflow
+  file at 12,000 characters; a template over the limit is reported as a failure **with the number** and
+  is not written. Truncating a prompt would be worse than not installing it.
+- **`argument-hint` ships in all 22 templates**, so Claude Code and the VS Code prompt files show what
+  to type in the composer.
+- **`open-sdd templates` prints the row that was internal until now**: directory, invocation, argument
+  token and documented limit per host. `--json` carries the evidence URL behind each one.
+- Upgrading refreshes the affected templates automatically: an installed template open-sdd generated
+  and nobody edited is reported `update` and rewritten with the correct token; one a human edited is
+  left untouched and named. Re-run `open-sdd init . --write` (or `open-sdd integrate <host> --write`)
+  to pick this up.
+
 ## [3.2.0] — 2026-09-20
 
 ### The way of working: 22 prompt templates, installed by default

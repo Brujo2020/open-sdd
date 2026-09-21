@@ -60,7 +60,9 @@ misses any of them.
 
 - **22 prompt templates, installed by default.** Every workflow is a command in your agent's own chat
   (`/sdd-specify`, `/sdd-converge`, …), and each one runs a real engine command rather than asking a
-  model to "consider" a check. No MCP, no network. `open-sdd templates` lists them.
+  model to "consider" a check. No MCP, no network. The argument you type is translated into each host's
+  own token (`{{args}}`, `${input:request}`, `$ARGUMENTS`), and a host's documented size limit is
+  checked rather than assumed. `open-sdd templates` lists them.
 - **An MCP server, if you want one.** A stdio JSON-RPC server with 11 tools and read-only resources,
   callable by any modern MCP host. No network, no model backend, no API keys. It is opt-in (`--mcp`),
   because some hosts and some security policies do not allow it.

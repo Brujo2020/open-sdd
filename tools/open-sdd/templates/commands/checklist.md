@@ -1,6 +1,7 @@
 ---
 id: checklist
 description: Derive a project-specific readiness checklist from the constitution and the declared rigor level, naming the command that runs each checkable item.
+argument-hint: "<feature>"
 writes:
   - ".sdd/specs/<feature>/checklist.md"
 mustNotTouch:

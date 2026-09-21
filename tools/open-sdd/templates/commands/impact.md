@@ -1,6 +1,7 @@
 ---
 id: impact
 description: Measure the blast radius and forecast of a change before anything is written — dependents, breaking changes and migrations without rollback.
+argument-hint: "<feature>"
 writes: []
 mustNotTouch:
   - "**"

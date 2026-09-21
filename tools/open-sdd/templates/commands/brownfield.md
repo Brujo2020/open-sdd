@@ -1,6 +1,7 @@
 ---
 id: brownfield
 description: Run the whole brownfield entry path — recon, constitution draft, ratification, delta, and the check — on an existing codebase.
+argument-hint: "[focus: a module or area of the existing code]"
 writes:
   - ".sdd/steering/constitution.draft.md"
   - ".sdd/specs/"

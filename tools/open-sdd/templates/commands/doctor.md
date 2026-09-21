@@ -1,6 +1,7 @@
 ---
 id: doctor
 description: Diagnose the installation — Node, CLI, commit hook and its portability, rigor, constitution, specs and offline posture — with the fix for each failure.
+argument-hint: "[target]"
 writes: []
 mustNotTouch:
   - "**"

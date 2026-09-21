@@ -1,6 +1,7 @@
 ---
 id: plan
 description: Turn approved requirements into a technical plan that names the real modules, contracts and tests, under the constitution.
+argument-hint: "<feature>"
 writes:
   - ".sdd/specs/<feature>/plan.md"
   - ".sdd/specs/<feature>/design.md"
