@@ -2,29 +2,29 @@
 
 ## Tasks
 
-- [ ] 1. The catalogue model and its loader — _Requirements: REQ-STD-001_ — _Boundary:_ `tools/open-sdd/src/core/standards.ts`, `tools/open-sdd/test/coreStandards.test.ts`
-  - A typed entry (id, category, severity, blocking, applies_to, standard, source, detect, message, remedy, evidence, calibrated) and a loader that rejects a missing required field **by name**.
-- [ ] 2. Seed the catalogue from what already exists — _Requirements: REQ-STD-001, REQ-STD-002_ — _Boundary:_ `.sdd/settings/standards/**`, `tools/open-sdd/templates/settings/standards/**`, `tools/open-sdd/test/coreStandardsSeed.test.ts`
-  - Harvest the `ears.ts` diagnostics, the two Mechanical Checks sections and the EARS patterns; wire the EARS entries to the `ears.ts` implementation so the two cannot diverge.
+- [x] 1. The catalogue model and its loader — _Requirements: REQ-STD-001_ — _Boundary:_ `tools/open-sdd/src/core/standards.ts`, `tools/open-sdd/test/coreStandards.test.ts`
+  - _Evidence: `loadStandards` reads `.sdd/settings/standards/**`, validates every required field and REJECTS a malformed entry by name (`file#id` for a bad array element, `file#index` for a bad position) without throwing; an absent directory returns `{ entries: [], rejected: [] }`. `test/coreStandards.test.ts` 19 tests green; `npx tsc --noEmit` clean._
+- [x] 2. Seed the catalogue from what already exists — _Requirements: REQ-STD-001, REQ-STD-002_ — _Boundary:_ `.sdd/settings/standards/**`, `tools/open-sdd/templates/settings/standards/**`, `tools/open-sdd/test/coreStandardsSeed.test.ts`
+  - _Evidence: 16 entries (`req-*.json`) under `.sdd/settings/standards/` and a byte-identical shipped copy under `tools/open-sdd/templates/shared/settings/standards/`; the seed covers the `ears.ts` diagnostics, the one-template rule, the mechanical checks and the language question, each with `source` and `evidence`. `standards list` prints all 16._
 - [ ] 3. Render `rules/*.md` from the catalogue — _Requirements: REQ-STD-002_ — _Boundary:_ `tools/open-sdd/src/core/standardsRender.ts`, `.sdd/settings/rules/**`, `tools/open-sdd/test/coreStandardsRender.test.ts`
-  - Deterministic rendering plus a drift report that names the entry that disagrees with a hand-edited file.
-- [ ] 4. The `standards` console — _Requirements: REQ-STD-003_ — _Boundary:_ `tools/open-sdd/src/cli/commands/standards.ts`, `tools/open-sdd/test/cliStandards.test.ts`
-  - `list`, `show <id>`, `explain <id>` (offline), `check [--json]`, `fix <id> [--apply]`, all inside the single JSON envelope.
-- [ ] 5. Findings always carry a remedy or a question — _Requirements: REQ-STD-004, REQ-STD-009_ — _Boundary:_ `tools/open-sdd/src/core/standards.ts`, `tools/open-sdd/test/coreStandardsDeadEnds.test.ts`
-  - A test enumerates every emitted finding kind and fails if any lacks a `fix:` or a `question:`; format failures name `file:line:column`.
-- [ ] 6. Advisory-by-default and the calibration gate — _Requirements: REQ-STD-005_ — _Boundary:_ `tools/open-sdd/src/core/standards.ts`, `tools/open-sdd/test/coreStandardsCalibration.test.ts`
-  - A standard without a corpus reports advisory and cannot block; declaring a corpus publishes recall and false-positive rate.
-- [ ] 7. Wire the requirements subset into C1 and add C8 — _Requirements: REQ-STD-006_ — _Boundary:_ `tools/open-sdd/src/core/gateRunner.ts`, `tools/open-sdd/src/core/gateCatalog.ts`, `tools/open-sdd/test/coreGateRunner.test.ts`, `tools/open-sdd/test/coreGateCatalog.test.ts`
-  - C1 runs the requirements subset; C8 is advisory; an uninspectable control renders `skipped`, never `passed`.
+  - Mechanism built and verified (`renderRules`/`detectDrift`, 7 tests green) but the real `rules/*.md` are **deliberately not overwritten**: `standards check` reports 2 drifted files instead. Applying it is a content decision, not a code gap, and is left open.
+- [x] 4. The `standards` console — _Requirements: REQ-STD-003_ — _Boundary:_ `tools/open-sdd/src/cli/commands/standards.ts`, `tools/open-sdd/test/cliStandards.test.ts`
+  - _Evidence: `standards list|show|explain|check|fix` routed from `src/index.ts`; `explain` resolves offline; `check --json` uses the single envelope with advisory findings in `findings.warnings` and only calibrated blocking ones in `findings.errors`. `test/cliStandards.test.ts` 12 tests green; `open-sdd standards list` prints 16 rows._
+- [x] 5. Findings always carry a remedy or a question — _Requirements: REQ-STD-004, REQ-STD-009_ — _Boundary:_ `tools/open-sdd/src/core/standards.ts`, `tools/open-sdd/test/coreStandardsDeadEnds.test.ts`
+  - _Evidence: `makeFinding` guarantees the invariant by construction (no remedies ⇒ the catalogue `message` becomes the `question`); `test/coreStandardsDeadEnds.test.ts` enumerates every catalogue entry and fails any whose `runStandard` output could lack both — 3 tests green._
+- [x] 6. Advisory-by-default and the calibration gate — _Requirements: REQ-STD-005_ — _Boundary:_ `tools/open-sdd/src/core/standards.ts`, `tools/open-sdd/test/coreStandardsCalibration.test.ts`
+  - _Evidence: `isBlocking(entry)` is the single place REQ-STD-005 is honoured — it requires a non-null `calibrated.corpus` — and it appends `recall`/`fpr` to the message when a corpus is declared. All 16 entries ship `blocking: false`, `corpus: null`; `gates run` reports C8 as `0 bloqueante(s) … 47 advisory`._
+- [x] 7. Wire the requirements subset into C1 and add C8 — _Requirements: REQ-STD-006_ — _Boundary:_ `tools/open-sdd/src/core/gateRunner.ts`, `tools/open-sdd/src/core/gateCatalog.ts`, `tools/open-sdd/test/coreGateRunner.test.ts`, `tools/open-sdd/test/coreGateCatalog.test.ts`
+  - _Evidence: C8 entry in `EXECUTABLE_CHAIN` (`posture: advisory`, `inspects: true`, `imposes: []`) and its branch in `runGate`; C1 additionally runs the `category === 'requirements'` subset and reports its findings as advisory. Wire-level effects updated rather than hidden: `CLM-002` 14→15, `CLM-003` core `C1–C8`, `CLM-005` 13/12/1, `CLM-006` 10, `PAPER-ALIGNMENT.md` §3.3, and the chain-size assertions in `coreGateCatalog/coreRigor/cliGatesArgs/coreGitflow` tests. `gates run` exits 0._
 - [ ] 8. Adjudication in the existing allowlist — _Requirements: REQ-STD-007_ — _Boundary:_ `tools/open-sdd/src/core/securityAllowlist.ts`, `.sdd/settings/security-allowlist.json`, `tools/open-sdd/test/coreSecurityAllowlist.test.ts`
-  - Reason + owner + expiry required; an unused suppression is reported; an expired waiver stops applying and is named.
-- [ ] 9. Graded remedies and guarded application — _Requirements: REQ-STD-008_ — _Boundary:_ `tools/open-sdd/src/cli/commands/standards.ts`, `tools/open-sdd/test/cliStandardsFix.test.ts`
-  - Only `machine-applicable` remedies auto-apply; a meaning-changing rewrite requires explicit confirmation.
+  - Partially met: the allowlist already requires `reason` and enforces `owner`/`expires` (expired waivers stop applying and are named by C2). The new fixtures that quote the AI-002 literal are declared with reason, owner and expiry (24 entries). **What is not built is the "unused suppression is reported" half.**
+- [x] 9. Graded remedies and guarded application — _Requirements: REQ-STD-008_ — _Boundary:_ `tools/open-sdd/src/cli/commands/standards.ts`, `tools/open-sdd/test/cliStandardsFix.test.ts`
+  - _Evidence: every remedy carries a `grade`; `fix --apply` applies only registered `machine-applicable` transforms, refuses `needs-human` by returning its remedy text as the question, and refuses a declared machine-applicable remedy with no registered operation instead of a silent no-op (covered in `test/cliStandards.test.ts`)._
 - [ ] 10. The drift sentinel behind the rigour level — _Requirements: REQ-STD-010_ — _Boundary:_ `tools/open-sdd/src/core/driftCheck.ts`, `tools/open-sdd/src/core/rigor.ts`, `tools/open-sdd/test/coreDriftCheck.test.ts`
-  - Bind requirement ids to declared globs; report an uncovered path; advisory at spec-first, blocking at spec-anchored; waivers carry owner and expiry.
+  - Not implemented in this slice: no requirement→globs binding, no advisory/blocking drift check at the two rigour levels.
 - [ ] 11. Stable, block-allocated identifiers — _Requirements: REQ-STD-011_ — _Boundary:_ `tools/open-sdd/src/core/stableIds.ts`, `tools/open-sdd/src/cli/commands/brownfield.ts`, `tools/open-sdd/test/coreStableIds.test.ts`
-  - `ids audit --base <ref>` reports `ID-MUTATED` and `ID-LOST` with git evidence; never renumber.
+  - Not implemented in this slice: no `ids audit --base`, no `ID-MUTATED`/`ID-LOST` reports.
 - [ ] 12. The reuse gate, advisory until calibrated — _Requirements: REQ-STD-012_ — _Boundary:_ `tools/open-sdd/src/core/reuseFirst.ts`, `tools/open-sdd/src/core/deltaSpec.ts`, `tools/open-sdd/test/coreReuseFirst.test.ts`
-  - Build the symbol index; report a new symbol with no reuse evidence; surface near-signature candidates with their location.
+  - Not implemented in this slice: `reuseFirst.ts` exists and can find candidates, but `delta validate` does not yet block or warn on a new symbol with no `reuse:` evidence.
 - [ ] 13. Documentation and the claim it earns — _Requirements: REQ-STD-001, REQ-STD-003_ — _Boundary:_ `docs/guides/standards.md`, `README.md`, `docs/claims/paper-claims.yaml`, `tools/open-sdd/templates`, `.sdd/specs/**`, `docs/EVOLUTION-PLAN.md`
-  - Teach the console where the agents read it; register the verifiable claim; keep the counts generated, never hand-written.
+  - Not done in this slice: the console is not yet taught where the agents read it, and no claim registers it.
