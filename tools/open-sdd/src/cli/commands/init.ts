@@ -30,6 +30,7 @@ import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { colors } from '../ui/colors.js';
+import { INSTALL_COMMAND } from '../packageIdentity.js';
 import type { CliIO } from '../io.js';
 import { agentList, getAgentDefinition, type AgentType } from '../../agents/registry.js';
 import {
@@ -731,7 +732,7 @@ export const installAgentSkillSet = async (
     return {
       action: 'keep',
       failure:
-        'no se encontró el instalador (CLI) alcanzable: la instalación del agente NO se ha ejecutado. Instálalo con `npx open-sdd@latest --version` o compílalo con `npm --prefix tools/open-sdd run build`.',
+        `no se encontró el instalador (CLI) alcanzable: la instalación del agente NO se ha ejecutado. Instálalo con \`${INSTALL_COMMAND} --version\` o compílalo con \`npm --prefix tools/open-sdd run build\`.`,
     };
   }
   const definition = getAgentDefinition(agent);

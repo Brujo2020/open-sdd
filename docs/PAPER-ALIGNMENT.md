@@ -160,7 +160,7 @@ generator.
 
 ### 3.3 Which controls are executable, and the one that is vacuous
 
-- **Executable (13):** C1–C6 and O1–O7 — `inspects: true`.
+- **Executable (14):** C1–C6, **C8** and O1–O7 — `inspects: true`.
 - **Vacuous (1):** **C7/Karpathy.** `EXECUTABLE_CHAIN` records `inspects: false`; the runtime
   (`enforcement.ts`, `applyDefaultFail`) refuses to let it pass as a control:
 
@@ -168,7 +168,13 @@ generator.
   > (activación ≠ medición)."
 
   `gates chain` prints it as `vacío (activación ≠ medición)` and `gates chain --profile regulated`
-  reports `Declarados: 12 · Ejecutables: 11 · No implementados: 0 · Vacíos: 1`.
+  reports `Declarados: 13 · Ejecutables: 12 · No implementados: 0 · Vacíos: 1`.
+- **Extension beyond the paper (1): C8 Standards Conformance.** The paper's Table 34 chain ends at
+  C7/O7; C8 is **ours**, and this report declares it rather than folding it into the paper's catalog.
+  It runs the machine-checkable standards catalogue over the declared artifacts and is **advisory**:
+  a finding from a standard with no measured corpus is reported and does not fail the chain; only a
+  calibrated (`isBlocking`) standard can. `imposes: []` on purpose — it maps to no logical gate of
+  Table 33, so it adds no coverage claim to the crosswalk.
 - **Declared-but-not-implemented (0 here):** `ExecutableGate.implemented?: boolean` exists precisely
   to carry the paper's §9.5 state "counted in the chain, not executed, reported while the gap
   exists". No entry sets `implemented: false` today, so the profile-executed gap is zero. The field
@@ -198,7 +204,7 @@ where coverage overstates).
 | default-FAIL and the hard subset (§9.2) | Two regimes; the default is the flexible one; an unavailable sensor self-authorizes with a receipt except in the hard subset; a scanner that fired never self-authorizes. | `enforcement.ts` · `HARD_SUBSET`, `applyDefaultFail`, `posturePasses`, `unresolvedReceipts` | `construido` |
 | Control admission criterion A1–A3 (§9.3) | Each logical gate carries `admission: { silence, independence, costAsymmetry }`, derived and shown per row so a reader can disagree with one row rather than an accumulated count. The A2 co-activation measurement is not performed (the paper reports its own failure in §9.4). | `gateCatalog.ts` · `AdmissionCriteria`, `LOGICAL_GATES[].admission` | `construido` (recorded flags) · **brecha declarada** (A2 measurement) |
 | Chain resolution + signals (§9.5, Tables 33–36) | Core constant; opt-in activated by profile or by a repository signal, each activation citing the signal; declared/executed/vacuous reported separately. | `gateCatalog.ts` · `resolveGateChain`, `detectSignals`, `buildCrosswalk`, `computeResidue`, `catalogSummary`; `cli/commands/paper.ts` · `detectRepoSignals` | `construido` |
-| The gate runner (§9.2, §9.5) | One branch per control; every branch reports **sensor availability** and **fired** separately. C1 runs `evaluateTriad` + EARS; C2 `scanSecurity`; C3 evidence lock; C4 `buildSymbolIndex`/`checkSymbols`; C5 declares itself degraded; C6 checks referenced docs exist; C7 returns vacuous; O1–O7 check their artifact. | `gateRunner.ts` · `runGate`, `runChain`, `scanSecurity`, `buildSymbolIndex`, `checkSymbols`, `HARD_CONTROL_BY_GATE` | `construido` |
+| The gate runner (§9.2, §9.5) | One branch per control; every branch reports **sensor availability** and **fired** separately. C1 runs `evaluateTriad` + EARS and the catalogue's requirements subset as advisory; C2 `scanSecurity`; C3 evidence lock; C4 `buildSymbolIndex`/`checkSymbols`; C5 declares itself degraded; C6 checks referenced docs exist; C7 returns vacuous; **C8 (our extension) runs the standards catalogue**; O1–O7 check their artifact. | `gateRunner.ts` · `runGate`, `runChain`, `scanSecurity`, `buildSymbolIndex`, `checkSymbols`, `HARD_CONTROL_BY_GATE`; `standards.ts` · `loadStandards`, `runStandard` | `construido` |
 | Hallucination check C4/G13 and the declared verdict domain (§8.4) | `present` / `absent` / `external` / `undecidable`; only a symbol whose prefix is a module of this repository is judgeable. The index is built in-process; there is no cached `.sdd/.graph` index and no labelled corpus. | `gateRunner.ts` · `SymbolVerdict`, `checkSymbols`, `buildSymbolIndex` | `construido` (domain logic) · **brecha declarada** (index cache and FPR bench — see G-03) |
 | META-EVAL protocol (§7.3, §7.4) | Cohen's κ, Landis–Koch band, preregistered `n = 120`, approval-drift monitor (>2σ), blind-sentinel self-preference test, judge-family independence with honest downgrade to advisory, the three judge biases, the temperature-zero note. | `metaEval.ts` · `cohensKappa`, `checkApprovalDrift`, `checkSelfPreference`, `checkJudgeIndependence`, `JUDGE_BIASES`, `DETERMINISM_NOTE`; CLI `govern meta-eval` | `construido` (model) · `propuesto` (confirmatory study at n ≥ 120; no live judge) |
 | Transactional waves (§7.2) | States, six stated invariants, all-or-nothing `resolveWave`, scope gate, worktree/branch/identity assignment, and the git commands that would materialise the wave. Parallelism is bounded by DAG frontier; the deadlock fallback force-picks one task. | `waves.ts` · `WaveState`, `WAVE_INVARIANTS`, `resolveWave`, `checkScope`, `planWorktrees`, `waveGitCommands`; `scheduler.ts` · `buildTaskDependencyWaves`; CLI `waves` | `construido` (plan and rules) · **brecha declarada** (no executor runs the git commands — see G-10) |

@@ -40,6 +40,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { colors } from '../cli/ui/colors.js';
+import { INSTALL_COMMAND } from '../cli/packageIdentity.js';
 import type { CliIO } from '../cli/io.js';
 import { parseConstitution, principlesInForce, validateConstitution } from './constitution.js';
 import {
@@ -420,7 +421,7 @@ const checkCli = async (cwd: string): Promise<DoctorCheck> => {
         label: 'CLI alcanzable',
         status: 'warn',
         detail: `El CLI responde desde ${where || candidate} pero reporta la versión "${reported || '(vacía)'}", que es un marcador de desarrollo y no permite atribuir el artefacto.`,
-        fix: 'Instala una versión publicada y compruébala: `npx open-sdd@latest --version`.',
+        fix: `Instala una versión publicada y compruébala: \`${INSTALL_COMMAND} --version\`.`,
       };
     }
     return {
@@ -436,7 +437,7 @@ const checkCli = async (cwd: string): Promise<DoctorCheck> => {
     label: 'CLI alcanzable',
     status: 'fail',
     detail: `No se encontró ningún CLI ejecutable. Rutas probadas: ${candidates.length}. El hook de commit falla cerrado si el CLI no está: sin él no hay gate.`,
-    fix: 'Instala o compila el CLI: `npx open-sdd@latest --version` (o `npm --prefix tools/open-sdd run build` en un checkout).',
+    fix: `Instala o compila el CLI: \`${INSTALL_COMMAND} --version\` (o \`npm --prefix tools/open-sdd run build\` en un checkout).`,
   };
 };
 

@@ -28,8 +28,19 @@
  *
  * ── Selección de idioma ────────────────────────────────────────────────────────────────────────
  * Precedencia: `--lang` > `OPEN_SDD_LANG` > configuración adyacente a `rigor.json`
- * (`.sdd/settings/lang.json`, o un campo `lang` en el propio `rigor.json`) > `es` (comportamiento
- * actual). Un valor no soportado se REGISTRA en `rejected` en vez de ignorarse.
+ * (`.sdd/settings/lang.json`, o un campo `lang` en el propio `rigor.json`) > el idioma del ENTORNO
+ * (`LC_ALL`/`LC_MESSAGES`/`LANG`/`LANGUAGE`) > `es` como último recurso. El defecto NO está
+ * hardcodeado: en una máquina configurada en inglés el CLI arranca en inglés sin que nadie pase
+ * `--lang`. Un valor no soportado se REGISTRA en `rejected` en vez de ignorarse.
+ *
+ * Una locale distinta de `es`/`en` se RECHAZA por nombre en la puerta del CLI (`--lang ja` sale con
+ * código 2 y lista las locales traducidas): pedir un idioma que devolvería español en silencio es
+ * la mentira que este header prohíbe. `SUPPORTED_LOCALES` es la lista, y `localeRefusal` el texto.
+ *
+ * ── Superficie de máquina ──────────────────────────────────────────────────────────────────────
+ * Las claves JSON, los ids (`C1…C7`, `REQ-<AREA>-<NNN>`), los `ruleId` y los comandos dentro de un
+ * `fix` son inglés estable bajo CUALQUIER locale. El campo `detail` del sobre JSON también:
+ * `stableEnvelopeDetail` es la única forma de producirlo y nunca pasa por `t()`.
  */
 /**
  * Idiomas que ESTA capa sabe servir. El CLI instalador conoce más idiomas de plantillas
@@ -38,7 +49,13 @@
  * prohíbe.
  */
 export const SUPPORTED_LOCALES = ['es', 'en'];
+/**
+ * Último recurso, no la fuente del defecto: el idioma sale del entorno del proyecto/máquina y solo
+ * cae aquí cuando ninguna señal está disponible.
+ */
 export const DEFAULT_LOCALE = 'es';
+/** Variables de entorno que declaran el idioma de la máquina, en orden de precedencia. */
+export const ENVIRONMENT_LOCALE_KEYS = ['LC_ALL', 'LC_MESSAGES', 'LANG', 'LANGUAGE'];
 /** Superficies realmente traducidas por esta capa. */
 export const TRANSLATED_SURFACES = ['open-sdd tour', 'open-sdd context (render humano)'];
 /** Superficies que siguen en español a propósito. */
@@ -290,9 +307,22 @@ export const loadConfiguredLocale = async (cwd, sddDir = '.sdd') => {
     return {};
 };
 /**
- * Resolver el idioma. Precedencia: `--lang` > `OPEN_SDD_LANG` > configuración > `es`.
+ * Idioma declarado por el ENTORNO de la máquina (`LANG=en_US.UTF-8` → `en`). Se mira solo si el
+ * proyecto no lo declara: la configuración del proyecto manda sobre la máquina.
+ */
+export const detectEnvironmentLocale = (env = {}) => {
+    for (const key of ENVIRONMENT_LOCALE_KEYS) {
+        const normalized = normalizeLocale(env[key]);
+        if (normalized)
+            return { locale: normalized, key };
+    }
+    return undefined;
+};
+/**
+ * Resolver el idioma.
  *
- * Un valor no soportado NO corta la cascada: se registra en `rejected` y se sigue mirando la
+ * Precedencia: `--lang` > `OPEN_SDD_LANG` > configuración del proyecto > entorno de la máquina >
+ * `es`. Un valor no soportado NO corta la cascada: se registra en `rejected` y se sigue mirando la
  * siguiente fuente, porque un `--lang fr` mal tecleado no debe impedir que `OPEN_SDD_LANG=en` surta
  * efecto. Al final, el idioma es siempre uno soportado.
  */
@@ -321,6 +351,13 @@ export const resolveLocale = (input = {}) => {
             ...(input.configured?.path ? { configPath: input.configured.path } : {}),
         };
     }
+    // Solo se consulta el entorno cuando el llamante lo aporta: `resolveLocale({})` sin entorno
+    // conserva el contrato de «sin señales» y cae al último recurso.
+    if (input.env !== undefined) {
+        const fromEnvironment = detectEnvironmentLocale(input.env);
+        if (fromEnvironment)
+            return { locale: fromEnvironment.locale, source: 'environment', rejected };
+    }
     return { locale: DEFAULT_LOCALE, source: 'default', rejected };
 };
 /** Resolver + leer configuración + construir el traductor: la puerta que usan los comandos. */
@@ -339,3 +376,29 @@ export const rejectionsReport = (resolution) => resolution.rejected.length === 0
     : `i18n: idioma solicitado no soportado (${resolution.rejected
         .map((entry) => `"${entry.value}" desde ${entry.source}`)
         .join(', ')}); admitidos: ${SUPPORTED_LOCALES.join(', ')}. Se usa "${resolution.locale}".`;
+/** La lista de locales traducidas, entre backticks, para el mensaje de rechazo. */
+export const translatedLocalesList = () => SUPPORTED_LOCALES.map((locale) => `\`${locale}\``).join(', ');
+/**
+ * Texto del rechazo por nombre de una locale no traducida (W1, REQ-RQC-012). Nunca se acepta en
+ * silencio un idioma que devolvería español: se nombra el valor pedido y se listan las traducidas.
+ */
+export const localeRefusal = (value) => `unsupported locale \`${value}\`: translated console locales are ${translatedLocalesList()}; pass \`--lang ${SUPPORTED_LOCALES[0]}\` or \`--lang ${SUPPORTED_LOCALES[1]}\``;
+/**
+ * El idioma del campo `detail` del sobre JSON: SIEMPRE inglés, bajo cualquier locale. Es una
+ * constante, no una preferencia, porque el sobre es la superficie de máquina: `detail` no se pasa
+ * nunca por `t()` (REQ-RQC-012).
+ */
+export const ENVELOPE_DETAIL_LOCALE = 'en';
+/**
+ * `detail` estable en inglés para el sobre compartido de `cli/jsonOut.ts`. Los consumidores lo pasan
+ * como `detail` explícito para que el idioma de consola no se filtre a la superficie de máquina. El
+ * texto no depende del locale: el mismo comando produce la misma cadena en `es` y en `en`.
+ */
+export const stableEnvelopeDetail = (input) => {
+    const errors = input.errors ?? 0;
+    const warnings = input.warnings ?? 0;
+    const warningsPart = warnings > 0 ? `, ${warnings} warning(s)` : '';
+    return input.ok
+        ? `command "${input.command}" completed with ${errors} error(s)${warningsPart}`
+        : `command "${input.command}" failed with ${errors} error(s)${warningsPart}`;
+};

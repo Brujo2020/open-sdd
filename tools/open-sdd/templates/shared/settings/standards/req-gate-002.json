@@ -1,0 +1,39 @@
+{
+  "id": "REQ-GATE-002",
+  "title": "Every requirement has an EARS acceptance criterion",
+  "category": "requirements",
+  "severity": "warning",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "internal",
+  "source": ".sdd/settings/rules/requirements-review-gate.md#mechanical-checks",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "requirements-acceptance-criteria"
+    ]
+  },
+  "message": "la sección de requisito no contiene ningún criterio de aceptación conforme a EARS",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "añade al menos un criterio con una plantilla EARS y un único disparador"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si el requisito no es verificable, reformúlalo o retíralo antes de añadir un criterio"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/standards.ts#runStandard (structural:requirements-acceptance-criteria)",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

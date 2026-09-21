@@ -1,0 +1,39 @@
+{
+  "id": "REQ-EARS-007",
+  "title": "The response after `shall` is not empty",
+  "category": "requirements",
+  "severity": "error",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#one-template-per-requirement",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "ears-issue:EMPTY_RESPONSE"
+    ]
+  },
+  "message": "la respuesta tras `shall` está vacía: el requisito no dice qué debe ocurrir",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "escribe la respuesta observable que sigue a `shall`"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si nadie ha decidido la respuesta, anota la pregunta en vez de inventarla"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/ears.ts#validateEarsRequirement",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

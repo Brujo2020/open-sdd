@@ -32,16 +32,16 @@
 
 - id: CLM-002
   section: "§9.5 / Appendix A, Table 34"
-  statement_es: 'La cadena ejecutable enumerada tiene 14 comprobaciones: C1–C7 (núcleo) y O1–O7 (activables).'
-  statement_en: 'The enumerated executable chain has 14 checks: C1–C7 (core) and O1–O7 (activables).'
-  verifier: 'node --input-type=module -e "import {EXECUTABLE_CHAIN} from \"./tools/open-sdd/dist/core/gateCatalog.js\"; process.exit(EXECUTABLE_CHAIN.length===14?0:1)"'
+  statement_es: 'La cadena ejecutable enumerada tiene 15 comprobaciones: C1–C8 (núcleo; C8 es una extensión declarada más allá del artículo) y O1–O7 (activables).'
+  statement_en: 'The enumerated executable chain has 15 checks: C1–C8 (core; C8 is a declared extension beyond the paper) and O1–O7 (activables).'
+  verifier: 'node --input-type=module -e "import {EXECUTABLE_CHAIN} from \"./tools/open-sdd/dist/core/gateCatalog.js\"; process.exit(EXECUTABLE_CHAIN.length===15?0:1)"'
   expectation: pass
 
 - id: CLM-003
   section: "§9.5"
-  statement_es: 'El núcleo es constante y universal: C1–C7 en todo perfil; la parte activable se resuelve por perfil y por señales.'
-  statement_en: 'The core is constant and universal: C1–C7 in every profile; the activable part is resolved from profile and repository signals.'
-  verifier: 'test "$(node --input-type=module -e "import {resolveGateChain} from \"./tools/open-sdd/dist/core/gateCatalog.js\"; console.log(resolveGateChain(\"regulated\").core.join(\" \"))")" = "C1 C2 C3 C4 C5 C6 C7"'
+  statement_es: 'El núcleo es constante y universal: C1–C8 en todo perfil (C8 es nuestra extensión advisory); la parte activable se resuelve por perfil y por señales.'
+  statement_en: 'The core is constant and universal: C1–C8 in every profile (C8 is our advisory extension); the activable part is resolved from profile and repository signals.'
+  verifier: 'test "$(node --input-type=module -e "import {resolveGateChain} from \"./tools/open-sdd/dist/core/gateCatalog.js\"; console.log(resolveGateChain(\"regulated\").core.join(\" \"))")" = "C1 C2 C3 C4 C5 C6 C7 C8"'
   expectation: pass
 
 - id: CLM-004
@@ -53,16 +53,16 @@
 
 - id: CLM-005
   section: "§9.5"
-  statement_es: 'El perfil regulado declara 12 controles, ejecuta 11 y reporta 1 vacío (C7, activación sin medición).'
-  statement_en: 'The regulated profile declares 12 controls, executes 11 and reports 1 vacuous (C7, activation without measurement).'
-  verifier: 'node tools/open-sdd/dist/cli.js gates chain --profile regulated | grep -q "Declarados: 12" && node tools/open-sdd/dist/cli.js gates chain --profile regulated | grep -q "Ejecutables: 11" && node tools/open-sdd/dist/cli.js gates chain --profile regulated | grep -q "Vacíos: 1"'
+  statement_es: 'El perfil regulado declara 13 controles, ejecuta 12 y reporta 1 vacío (C7, activación sin medición).'
+  statement_en: 'The regulated profile declares 13 controls, executes 12 and reports 1 vacuous (C7, activation without measurement).'
+  verifier: 'node tools/open-sdd/dist/cli.js gates chain --profile regulated | grep -q "Declarados: 13" && node tools/open-sdd/dist/cli.js gates chain --profile regulated | grep -q "Ejecutables: 12" && node tools/open-sdd/dist/cli.js gates chain --profile regulated | grep -q "Vacíos: 1"'
   expectation: pass
 
 - id: CLM-006
   section: "§9.5"
-  statement_es: 'El perfil de equipo declara 9 controles (7 núcleo + O1 + O5).'
-  statement_en: 'The team profile declares 9 controls (7 core + O1 + O5).'
-  verifier: 'node tools/open-sdd/dist/cli.js gates chain --profile team | grep -q "Declarados: 9"'
+  statement_es: 'El perfil de equipo declara 10 controles (8 núcleo + O1 + O5).'
+  statement_en: 'The team profile declares 10 controls (8 core + O1 + O5).'
+  verifier: 'node tools/open-sdd/dist/cli.js gates chain --profile team | grep -q "Declarados: 10"'
   expectation: pass
 
 - id: CLM-007

@@ -1,3 +1,5 @@
+import { INSTALL_COMMAND } from '../cli/packageIdentity.js';
+
 export interface AgentLayoutDefaults {
   commandsDir: string;
   agentDir: string;
@@ -29,7 +31,7 @@ export interface AgentDefinition {
 }
 
 const makeUpgradeNotice = (flag: string): string =>
-  `This mode will be removed in a future release. Migrate now: npx open-sdd@latest ${flag}`;
+  `This mode will be removed in a future release. Migrate now: ${INSTALL_COMMAND} ${flag}`;
 
 export const agentDefinitions = {
   'claude-code': {

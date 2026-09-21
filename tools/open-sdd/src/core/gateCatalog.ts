@@ -427,6 +427,21 @@ export const EXECUTABLE_CHAIN: ExecutableGate[] = [
     description: 'Declared but vacuous: the reference gate returns success without inspecting anything. Activation and measurement are labelled separately, not merged.',
   },
   {
+    // EXTENSIÓN, no artículo: el catálogo del artículo termina en C7. C8 es nuestra y el informe
+    // normativo la declara como tal. Advisory hasta que un corpus mida su precisión (tenet 7); con
+    // `inspects: true` no es un control vacío, pero tampoco bloquea todavía.
+    id: 'C8',
+    name: 'Standards Conformance',
+    nameEn: 'Standards conformance',
+    command: 'sh-gate standards',
+    posture: 'advisory',
+    imposes: [],
+    tier: ['Structural'],
+    inspects: true,
+    requiresModel: false,
+    description: 'The machine-checkable standards catalogue runs over the declared artifacts: the prose rules under .sdd/settings/rules/ become checks, and every finding carries a remedy or a question. Advisory until a corpus is measured.',
+  },
+  {
     id: 'O1',
     name: 'Dependency Provenance (SLSA/SBOM)',
     nameEn: 'Dependency provenance',

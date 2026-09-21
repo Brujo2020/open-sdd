@@ -1,13 +1,13 @@
 {
   "name": "standards-engine",
-  "phase": "tasks-drafted",
+  "phase": "in-progress",
   "approvals": {
-    "requirements": false,
-    "design": false,
-    "tasks": false
+    "requirements": true,
+    "design": true,
+    "tasks": true
   },
   "language": "en",
   "created_at": "2026-09-21T00:00:00.000Z",
-  "updated_at": "2026-09-21T00:00:00.000Z",
+  "updated_at": "2026-09-21T18:00:00.000Z",
   "description": "W2 of docs/EVOLUTION-PLAN.md: turn the prose rules under .sdd/settings/rules/ into a machine-checkable standards catalogue wired into the gate chain (C1 requirements subset plus an advisory C8), where every finding carries a position, a graded remedy and its alternatives. Advisory until a corpus is measured (decision 3); no gate chain change lands before this spec is approved (decision 4)."
 }

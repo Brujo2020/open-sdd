@@ -233,7 +233,7 @@ describe('branchPolicy — el rol decide qué se exige', () => {
 
     expect(policy.role).toBe('main');
     expect(policy.required.join('\n')).toContain('solo fusiones');
-    expect(policy.gates).toEqual(['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']);
+    expect(policy.gates).toEqual(['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8']);
     expect(policy.nextStep).toBe('open-sdd gates run');
   });
 

@@ -255,10 +255,10 @@ describe('core/rigor — los tres niveles (§2.4)', () => {
     }
   });
 
-  it('no toca la cadena del paper: sigue resolviendo 7 / 9 / 12 controles', () => {
-    expect(resolveGateChain('solo', DEFAULT_SIGNALS).declared).toHaveLength(7);
-    expect(resolveGateChain('team', DEFAULT_SIGNALS).declared).toHaveLength(9);
-    expect(resolveGateChain('regulated', DEFAULT_SIGNALS).declared).toHaveLength(12);
+  it('no toca la cadena: sigue resolviendo 8 / 10 / 13 controles (el artículo 7 / 9 / 12 más nuestra C8)', () => {
+    expect(resolveGateChain('solo', DEFAULT_SIGNALS).declared).toHaveLength(8);
+    expect(resolveGateChain('team', DEFAULT_SIGNALS).declared).toHaveLength(10);
+    expect(resolveGateChain('regulated', DEFAULT_SIGNALS).declared).toHaveLength(13);
   });
 
   it('rigorRequires degrada la delta solo en greenfield (la tríada la sustituye)', () => {

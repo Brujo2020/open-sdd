@@ -22,7 +22,7 @@ const ALL_SIGNALS: RepoSignals = {
   hasLivingMemory: true,
 };
 
-const CORE = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
+const CORE = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8'];
 
 describe('core/gateCatalog — Table 33/34 catalog shape', () => {
   it('declares the 21 logical gates G1..G21', () => {
@@ -32,8 +32,8 @@ describe('core/gateCatalog — Table 33/34 catalog shape', () => {
     );
   });
 
-  it('declares the 14 executable chain entries C1-C7 and O1-O7', () => {
-    expect(EXECUTABLE_CHAIN).toHaveLength(14);
+  it('declares the 15 executable chain entries C1-C8 and O1-O7', () => {
+    expect(EXECUTABLE_CHAIN).toHaveLength(15);
     expect(EXECUTABLE_CHAIN.map((g) => g.id)).toEqual([
       ...CORE,
       'O1',
@@ -64,29 +64,29 @@ describe('core/gateCatalog — Table 33/34 catalog shape', () => {
 });
 
 describe('core/gateCatalog — resolveGateChain (§9.5)', () => {
-  it('solo resolves the constant core only (7 declared controls)', () => {
+  it('solo resolves the constant core only (8 declared controls, C8 included)', () => {
     const chain = resolveGateChain('solo', DEFAULT_SIGNALS);
     expect(chain.declared).toEqual(CORE);
-    expect(chain.declared).toHaveLength(7);
+    expect(chain.declared).toHaveLength(8);
     expect(chain.profileMandated).toEqual([]);
     expect(chain.signalActivated).toEqual([]);
     // C7 is declared but vacuous, so the executed set is the core minus C7.
-    expect(chain.executed).toEqual(['C1', 'C2', 'C3', 'C4', 'C5', 'C6']);
+    expect(chain.executed).toEqual(['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C8']);
     expect(chain.blocking).toEqual(['C2']);
-    expect(chain.advisory).toEqual(['C1', 'C3', 'C4', 'C5', 'C6']);
+    expect(chain.advisory).toEqual(['C1', 'C3', 'C4', 'C5', 'C6', 'C8']);
   });
 
-  it('team resolves 9 declared controls (core + O1 + O5)', () => {
+  it('team resolves 10 declared controls (core + O1 + O5)', () => {
     const chain = resolveGateChain('team', DEFAULT_SIGNALS);
-    expect(chain.declared).toHaveLength(9);
+    expect(chain.declared).toHaveLength(10);
     expect(chain.declared).toEqual([...CORE, 'O1', 'O5']);
     expect(chain.profileMandated.map((c) => c.id)).toEqual(['O1', 'O5']);
     expect(chain.signalActivated).toEqual([]);
   });
 
-  it('regulated resolves 12 declared controls (core + O1..O5) with no signals', () => {
+  it('regulated resolves 13 declared controls (core + O1..O5) with no signals', () => {
     const chain = resolveGateChain('regulated', DEFAULT_SIGNALS);
-    expect(chain.declared).toHaveLength(12);
+    expect(chain.declared).toHaveLength(13);
     expect(chain.declared).toEqual([...CORE, 'O1', 'O2', 'O3', 'O4', 'O5']);
     expect(chain.profileMandated.map((c) => c.id)).toEqual(['O1', 'O2', 'O3', 'O4', 'O5']);
     expect(chain.signalActivated).toEqual([]);
@@ -94,9 +94,9 @@ describe('core/gateCatalog — resolveGateChain (§9.5)', () => {
 
   it('signals never activate an opt-in control at solo, even with every signal set', () => {
     const chain = resolveGateChain('solo', ALL_SIGNALS);
-    expect(chain.declared).toHaveLength(7);
+    expect(chain.declared).toHaveLength(8);
     expect(chain.signalActivated).toEqual([]);
-    expect(chain.executed.length).toBeLessThanOrEqual(7);
+    expect(chain.executed.length).toBeLessThanOrEqual(8);
   });
 
   it('signals activate opt-in controls at team, citing the signal that justified each', () => {
@@ -110,20 +110,20 @@ describe('core/gateCatalog — resolveGateChain (§9.5)', () => {
       expect(control.signal).toBeTruthy();
       expect(control.reason.length).toBeGreaterThan(0);
     }
-    expect(chain.declared).toHaveLength(14);
+    expect(chain.declared).toHaveLength(15);
   });
 
   it('signals activate only the non-mandated opt-ins at regulated (O6, O7)', () => {
     const chain = resolveGateChain('regulated', ALL_SIGNALS);
     expect(chain.signalActivated.map((c) => c.id).sort()).toEqual(['O6', 'O7']);
-    expect(chain.declared).toHaveLength(14);
+    expect(chain.declared).toHaveLength(15);
   });
 
-  it('reports the paper measured counts 7 / 9 / 12 with default signals', () => {
+  it('reports the measured counts 8 / 10 / 13 (the paper 7 / 9 / 12 plus our C8) with default signals', () => {
     const counts = (['solo', 'team', 'regulated'] as const).map(
       (p) => resolveGateChain(p, DEFAULT_SIGNALS).declared.length,
     );
-    expect(counts).toEqual([7, 9, 12]);
+    expect(counts).toEqual([8, 10, 13]);
   });
 });
 
@@ -137,7 +137,7 @@ describe('core/gateCatalog — residue (Table 36) computed by subtraction', () =
     expect(summary.logical).toBe(21);
     expect(summary.covered).toBe(16);
     expect(summary.residue).toBe(5);
-    expect(summary.executable).toBe(13);
+    expect(summary.executable).toBe(14);
     expect(summary.vacuous).toBe(1);
   });
 

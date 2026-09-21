@@ -2,8 +2,53 @@ import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { colors } from './colors.js';
 
+/**
+ * ¿Se puede preguntar? Un CLI de gobernanza corre en CI: un prompt sin escapatoria es un defecto,
+ * y un fallo de prompt que no nombra la bandera es un callejón sin salida. Por eso:
+ *
+ *   `--no-input`            (`setNonInteractive`) desactiva los prompts en esta ejecución.
+ *   `NONINTERACTIVE=1`      lo mismo, desde el entorno.
+ *   `OPEN_SDD_PROMPT=0`     lo mismo, desde el entorno.
+ *
+ * Y cuando un prompt no puede ejecutarse, el error NOMBRA las dos salidas (`--yes` y `--no-input`)
+ * en vez del antiguo `TTY required for interactive prompts`, que no decía qué hacer.
+ */
+let promptDisabled = false;
+
+/** Desactivar (o reactivar) los prompts en este proceso. Lo llama `src/index.ts` con `--no-input`. */
+export const setNonInteractive = (value = true): void => {
+  promptDisabled = value;
+};
+
+export const isPromptDisabled = (): boolean => promptDisabled;
+
+/** El motivo, ya nombrado, por el que el entorno prohíbe preguntar; `null` si no lo prohíbe. */
+export const nonInteractiveEnvReason = (env: Record<string, string | undefined> = process.env): string | null => {
+  if (env.NONINTERACTIVE === '1') return '`NONINTERACTIVE=1`';
+  if (env.OPEN_SDD_PROMPT === '0') return '`OPEN_SDD_PROMPT=0`';
+  return null;
+};
+
+/** El motivo por el que no se puede preguntar (bandera o entorno); `null` si sí se puede. */
+export const promptsBlocked = (env: Record<string, string | undefined> = process.env): string | null => {
+  if (promptDisabled) return '`--no-input`';
+  return nonInteractiveEnvReason(env);
+};
+
 export const isInteractive = (): boolean => {
+  if (promptsBlocked() !== null) return false;
   return !!(input.isTTY && output.isTTY);
+};
+
+const PROMPT_ESCAPE = 'pass `--yes` to accept the defaults, or `--no-input` to run without prompting';
+
+/** Lanza un error accionable. Nunca el mensaje desnudo «TTY required». */
+const requireInteractive = (): void => {
+  const reason = promptsBlocked();
+  if (reason !== null) {
+    throw new Error(`interactive prompts are disabled by ${reason}: ${PROMPT_ESCAPE}`);
+  }
+  throw new Error(`no TTY for an interactive prompt: ${PROMPT_ESCAPE}`);
 };
 
 export type SelectOption<T> = {
@@ -17,7 +62,7 @@ export const promptSelect = async <T>(
   options: SelectOption<T>[],
   defaultIndex = 0,
 ): Promise<T> => {
-  if (!isInteractive()) throw new Error('TTY required for interactive prompts');
+  requireInteractive();
   const rl = readline.createInterface({ input, output });
   try {
     options.forEach((opt, idx) => {
@@ -49,7 +94,7 @@ export const promptChoice = async <T>(
   options: SelectOption<T>[],
   defaultIndex = 0,
 ): Promise<T> => {
-  if (!isInteractive()) throw new Error('TTY required for interactive prompts');
+  requireInteractive();
   const rl = readline.createInterface({ input, output });
   try {
     output.write(`${colors.cyan(message)}\n`);
@@ -78,7 +123,7 @@ export const promptChoice = async <T>(
 };
 
 export const promptConfirm = async (message: string, defaultYes = true): Promise<boolean> => {
-  if (!isInteractive()) throw new Error('TTY required for interactive prompts');
+  requireInteractive();
   const rl = readline.createInterface({ input, output });
   try {
     const suffix = defaultYes ? '[Y/n]' : '[y/N]';
@@ -94,4 +139,3 @@ export const promptConfirm = async (message: string, defaultYes = true): Promise
     rl.close();
   }
 };
-

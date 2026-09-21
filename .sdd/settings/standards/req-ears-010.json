@@ -1,0 +1,40 @@
+{
+  "id": "REQ-EARS-010",
+  "title": "EARS trigger keywords use their canonical form",
+  "category": "requirements",
+  "severity": "info",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#primary-ears-patterns",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "ears-trigger-casing"
+    ]
+  },
+  "message": "la palabra clave EARS no está en su forma canónica",
+  "remedy": {
+    "autoFixable": true,
+    "grades": [
+      {
+        "grade": "machine-applicable",
+        "text": "escribe la palabra clave en mayúsculas: `WHEN`, `WHILE`, `WHERE`, `IF`",
+        "note": "cambio ortográfico: no altera el significado ni la detección"
+      },
+      {
+        "grade": "maybe-incorrect",
+        "text": "si el enunciado no empieza por un disparador, reescríbelo con la plantilla ubicua"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/standards.ts#runStandard (structural:ears-trigger-casing)",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

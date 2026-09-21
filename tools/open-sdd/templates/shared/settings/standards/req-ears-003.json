@@ -1,0 +1,39 @@
+{
+  "id": "REQ-EARS-003",
+  "title": "Exactly one EARS template per requirement",
+  "category": "requirements",
+  "severity": "error",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#one-template-per-requirement",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "ears-issue:MULTIPLE_TEMPLATES"
+    ]
+  },
+  "message": "hay más de una plantilla EARS en la condición de disparo: exactamente una por requisito funcional",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "separa cada disparador en su propio requisito"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si los disparadores describen el mismo suceso, fusiónalos en una única condición compuesta con `and`"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/ears.ts#validateEarsRequirement",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

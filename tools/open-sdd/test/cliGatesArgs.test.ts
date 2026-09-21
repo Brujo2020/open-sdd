@@ -123,7 +123,7 @@ describe('cli `gates run` — a value flag is never a positional gate id', () =>
     const cwd = await makeChangeRepo();
     const { code, out } = await run(['gates', 'run', '--base', 'main'], cwd);
 
-    expect(controlCount(out)).toBe(7);
+    expect(controlCount(out)).toBe(8);
     expect(gateIds(out)).toEqual(expect.arrayContaining(['C1', 'C2', 'C3']));
     expect(out).toContain('modo: diff contra main, 1 fichero(s)');
     // The AWS example key is on the change, so C2 must fail: the diff was judged, not skipped.
@@ -139,7 +139,7 @@ describe('cli `gates run` — a value flag is never a positional gate id', () =>
     const cwd = await makeChangeRepo();
     const { code, out } = await run(['gates', 'run', '--base=main'], cwd);
 
-    expect(controlCount(out)).toBe(7);
+    expect(controlCount(out)).toBe(8);
     expect(gateIds(out)).toEqual(expect.arrayContaining(['C1', 'C2', 'C3']));
     expect(out).toContain('modo: diff contra main, 1 fichero(s)');
     expect(out).toMatch(/C2\s+Security Baseline\s+fail/);
@@ -159,19 +159,19 @@ describe('cli `gates run` — a value flag is never a positional gate id', () =>
     const cwd = await makeChangeRepo();
     const { out } = await run(['gates', 'run', '--profile', 'team'], cwd);
 
-    expect(controlCount(out)).toBe(9);
+    expect(controlCount(out)).toBe(10);
     expect(out).toContain('perfil team');
     // The old defect resolved the chain to one control named `team`.
     expect(out).not.toMatch(/team\s+self-authorized/);
     expect(out).not.toContain('Auto-autorizados por sensor no disponible: team');
   });
 
-  it('a bare `gates run` is unchanged: the 7 resolvable controls', async () => {
+  it('a bare `gates run` is unchanged: the 8 resolvable controls', async () => {
     const cwd = await makeChangeRepo();
     const { out } = await run(['gates', 'run'], cwd);
 
-    expect(controlCount(out)).toBe(7);
-    expect(gateIds(out)).toEqual(['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']);
+    expect(controlCount(out)).toBe(8);
+    expect(gateIds(out)).toEqual(['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8']);
     expect(out).toContain('modo: controles independientes del diff');
   });
 

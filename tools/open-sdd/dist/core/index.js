@@ -58,3 +58,9 @@ export * from './integrations.js';
 export * from './importers.js';
 // The DEFAULT adoption surface: the host prompt templates, installed without MCP or network.
 export * from './commandTemplates.js';
+// Standards engine (W2): the machine-checkable catalogue, its types and its runner.
+export * from './standardsTypes.js';
+export * from './standards.js';
+export * from './standardsRender.js';
+// Reversibility: the receipt of what this tool wrote, so an install can be undone.
+export * from './receipt.js';

@@ -17,6 +17,7 @@ import { applyDefaultFail } from './enforcement.js';
 import { applySecurityAllowlist } from './securityAllowlist.js';
 import { evaluateTriad, checkEvidenceLock } from './triad.js';
 import { validateEarsRequirement } from './ears.js';
+import { STANDARDS_DIR, appliesToArtifact, discoverArtifacts, isBlocking, loadStandards, runStandard } from './standards.js';
 // --- secret & destructive-command detection (C2 / G5) ----------------------------------------
 const SECRET_PATTERNS = [
     { id: 'aws-access-key', re: /\bAKIA[0-9A-Z]{16}\b/ },
@@ -140,8 +141,29 @@ export const runGate = async (gateId, ctx, regime = 'flexible') => {
                     .map((l) => l.trim())
                 : [];
             const bad = reqs.map(validateEarsRequirement).filter((v) => !v.conforms);
+            // El subconjunto de REQUISITOS del catálogo corre dentro de C1 (REQ-STD-006). Es advisory: sus
+            // hallazgos viajan en el detalle y la evidencia, pero no cambian el veredicto de C1 mientras
+            // ningún estándar esté calibrado — el mismo trato que C8, y por la misma razón.
+            let standardFindings = [];
+            try {
+                const { entries } = await loadStandards(ctx.cwd);
+                if (reqText) {
+                    const relative = path.join(ctx.sddDir, 'specs', ctx.feature, 'requirements.md').split(path.sep).join('/');
+                    standardFindings = entries
+                        .filter((entry) => entry.category === 'requirements' && appliesToArtifact(entry, relative))
+                        .flatMap((entry) => runStandard(entry, { file: relative, text: reqText }));
+                }
+            }
+            catch {
+                standardFindings = [];
+            }
             const fired = !triad.complete || bad.length > 0;
-            return finalize(true, fired, `${triad.detail}${bad.length > 0 ? ` ${bad.length} requisito(s) no conformes a EARS.` : ''}`, bad.slice(0, 5).map((b) => `${b.pattern ?? 'sin-patrón'}: ${b.issues.map((i) => i.code).join(',')}`));
+            return finalize(true, fired, `${triad.detail}${bad.length > 0 ? ` ${bad.length} requisito(s) no conformes a EARS.` : ''}${standardFindings.length > 0
+                ? ` Además, el catálogo de estándares reporta ${standardFindings.length} hallazgo(s) advisory (no bloquean sin corpus medido).`
+                : ''}`, [
+                ...bad.slice(0, 5).map((b) => `${b.pattern ?? 'sin-patrón'}: ${b.issues.map((i) => i.code).join(',')}`),
+                ...standardFindings.slice(0, 5).map((finding) => `${finding.standardId} ${finding.file}:${finding.line}`),
+            ]);
         }
         case 'C2': {
             const files = [];
@@ -245,6 +267,50 @@ export const runGate = async (gateId, ctx, regime = 'flexible') => {
         case 'C7':
             // Declared but vacuous in the reference implementation, and we do not launder that.
             return finalize(true, false, 'Activación sin medición: el gate no inspecciona diff ni código, así que no acredita disciplina alguna.');
+        case 'C8': {
+            // C8 es una EXTENSIÓN nuestra: el catálogo del artículo termina en C7, y eso lo declara el
+            // informe normativo. Arranca advisory de verdad: un hallazgo de un estándar sin corpus medido
+            // se reporta pero no tumba la cadena; solo un estándar calibrado (`isBlocking`) la hace fallar.
+            // Es la lección de C4 aplicada antes de repetirla.
+            let loaded;
+            try {
+                loaded = await loadStandards(ctx.cwd);
+            }
+            catch (error) {
+                return finalize(true, false, `el catálogo de estándares no se pudo leer (${String(error)}): el control no inspecciona nada y lo dice.`);
+            }
+            const { entries, rejected } = loaded;
+            if (entries.length === 0) {
+                return finalize(false, false, `No hay catálogo en ${STANDARDS_DIR}: el control no inspecciona nada y lo dice.`);
+            }
+            const artifacts = await discoverArtifacts(ctx.cwd, entries);
+            const findings = artifacts.flatMap((artifact) => entries
+                .filter((entry) => appliesToArtifact(entry, artifact.file))
+                .flatMap((entry) => runStandard(entry, artifact)));
+            const blockingIds = new Set(entries.filter((entry) => isBlocking(entry)).map((entry) => entry.id));
+            const blocking = findings.filter((finding) => blockingIds.has(finding.standardId));
+            const verdict = applyDefaultFail({
+                gateId,
+                posture,
+                sensorAvailable: true,
+                fired: blocking.length > 0,
+                hardControl: HARD_CONTROL_BY_GATE[gateId],
+                inspects: true,
+            }, regime);
+            const rejectedNote = rejected.length > 0 ? ` ${rejected.length} entrada(s) rechazada(s) por nombre.` : '';
+            // El detalle se compone aquí, sin el prefijo de `finalize`: decir «no encontró violación»
+            // junto a doce hallazgos sería la clase de contradicción que este proyecto quita.
+            const detail = findings.length === 0
+                ? `${artifacts.length} artefacto(s) inspeccionado(s) por ${entries.length} estándar(es): sin hallazgos.${rejectedNote}`
+                : `${findings.length} hallazgo(s) de ${entries.length} estándar(es) sobre ${artifacts.length} artefacto(s): ${blocking.length} bloqueante(s), ${findings.length - blocking.length} advisory (no bloquean hasta que un corpus mida su precisión).${rejectedNote}`;
+            return {
+                gateId,
+                outcome: verdict.outcome,
+                detail,
+                authority: gateId,
+                evidence: findings.slice(0, 8).map((finding) => `${finding.standardId} ${finding.file}:${finding.line} — ${finding.message}`),
+            };
+        }
         case 'O1': {
             const manifest = (await readIfExists(path.join(ctx.cwd, 'package.json'))) !== null;
             const lock = (await readIfExists(path.join(ctx.cwd, 'tools/open-sdd/package-lock.json'))) !== null;

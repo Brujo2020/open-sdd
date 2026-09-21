@@ -1,7 +1,6 @@
 import path from 'node:path';
 import { stat } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import { agentList, getAgentDefinition } from './agents/registry.js';
+import { getAgentDefinition } from './agents/registry.js';
 import { runMcpServer } from './mcp/server.js';
 import { handleDoctorCommand } from './core/doctor.js';
 import { parseArgs } from './cli/args.js';
@@ -13,15 +12,18 @@ import { buildFileOperations } from './plan/fileOperations.js';
 import { ensureAgentSelection, printCompletionGuide } from './cli/agents.js';
 import { determineCategoryPolicies, printSummary, summarizeCategories } from './cli/policies.js';
 import { defaultIO } from './cli/io.js';
-import { colors, formatBox, formatError, formatHeading, formatSuccess, formatWarning } from './cli/ui/colors.js';
-import { isInteractive, promptChoice, promptConfirm } from './cli/ui/prompt.js';
+import { colors, formatBox, formatError, formatHeading, formatSuccess, formatWarning, setColorMode, } from './cli/ui/colors.js';
+import { isInteractive, promptChoice, promptConfirm, setNonInteractive } from './cli/ui/prompt.js';
 import { handleStatusCommand } from './cli/commands/status.js';
 import { handleInitCommand, handleIntegrateCommand, handleImportCommand } from './cli/commands/init.js';
 import { handleAuditBundleCommand, handleAuditCommand } from './cli/commands/audit.js';
 import { handleGapCommand } from './cli/commands/gap.js';
 import { handleGetspecsCommand } from './cli/commands/getspecs.js';
 import { handleVerifyCommand } from './cli/commands/verify.js';
-import { handleHelpCommand } from './cli/commands/help.js';
+import { handleUninstallCommand } from './cli/commands/uninstall.js';
+import { handleStandardsCommand } from './cli/commands/standards.js';
+import { handleRequirementsCommand } from './cli/commands/requirements.js';
+import { EXIT, KNOWN_COMMANDS, STRICT_SUBCOMMANDS, handleHelpCommand, renderCommandHelp, renderExplain, renderFullHelp, suggestCommands, } from './cli/commands/help.js';
 import { handleImplCommand } from './cli/commands/impl.js';
 import { handleGatesCommand, handleGovernCommand, handleAssureCommand, handleWavesCommand, handleFloorCommand, } from './cli/commands/paper.js';
 import { handleDeltaCommand, handleBrownfieldCommand } from './cli/commands/brownfield.js';
@@ -32,140 +34,20 @@ import { handleBackupCommand } from './cli/commands/backup.js';
 import { handleBiographyCommand } from './cli/commands/biography.js';
 import { handleTemplatesCommand } from './cli/commands/templates.js';
 import { SCORE_FOOTER_FLAG, emitScoreFooter } from './cli/jsonOut.js';
+import { PACKAGE_NAME, VERSION, INSTALL_COMMAND } from './cli/packageIdentity.js';
+import { localeRefusal, normalizeLocale, parseLangFlag } from './cli/i18n.js';
 import { computeSddScore, explainNextAction, renderScoreFooter } from './core/sddScore.js';
 export * from './core/index.js';
 /**
- * Version of the package the user actually installed.
- *
- * The published artifact ships `tools/open-sdd/dist` and `templates` but NOT the workspace manifest,
- * so the previous `require('../package.json')` threw inside an installed package and `--version`
- * printed `vdev`. Three levels up from `dist/cli.js` is the repository root in a checkout and the
- * package root once installed, which is exactly the manifest that carries the released version.
+ * El `--help` completo y la ayuda por comando viven en UNA tabla (`cli/commands/help.ts`): este
+ * archivo solo la proyecta. El comando de instalación que se anuncia se deriva del `package.json`
+ * de la raíz (`cli/packageIdentity.ts`), nunca se escribe a mano.
  */
-const readCliVersion = () => {
-    const require = createRequire(import.meta.url);
-    for (const candidate of ['../../../package.json', '../package.json']) {
-        try {
-            const pkg = require(candidate);
-            if (typeof pkg?.version === 'string' && pkg.version.length > 0)
-                return pkg.version;
-        }
-        catch {
-            // try the next candidate
-        }
-    }
-    return 'dev';
-};
-const agentKeys = agentList;
-const aliasFlags = Array.from(new Set(agentKeys.flatMap((key) => getAgentDefinition(key).aliasFlags)));
-const agentAliasLine = aliasFlags.length > 0 ? `  ${aliasFlags.join(' | ')}  Agent alias flags\n` : '';
-const helpText = `Usage: open-sdd [options] (alias: open-sdd)
-
-Options:
-  --agent <${agentKeys.join('|')}>  Select agent
-${agentAliasLine}  --lang <ja|en|zh-TW|zh|es|pt|de|fr|ru|it|ko|ar|el>  Language
-  --os <auto|mac|windows|linux>               Target OS (auto uses runtime)
-  --sdd-dir <path>                            SDD root dir (default .sdd or .kiro)
-  --kiro-dir <path>                           Alias for --sdd-dir
-  --overwrite <prompt|skip|force>             Overwrite policy (default: prompt)
-                                              prompt: ask for each file
-                                              skip: never overwrite
-                                              force: always overwrite
-  --backup[=<dir>]                            Enable backup, optional dir
-  --profile <full|minimal>                    Select template profile (default: full)
-  --manifest <path>                           Manifest JSON path for planning
-  --dry-run                                   Print plan only
-  --yes, -y                                   Skip prompts (prompt -> force)
-  -h, --help                                  Show help
-  -v, --version                               Show version
-
-Quick Examples:
-  npx open-sdd@latest                         Install Claude Code skills (default)
-  npx open-sdd@latest --cursor-skills         Install Cursor IDE skills
-  npx open-sdd@latest --antigravity           Install Google Antigravity skills
-  npx open-sdd@latest --copilot-skills        Install GitHub Copilot skills
-  npx open-sdd@latest --lang es -y            Install in Spanish without prompts
-
-Command templates (the DEFAULT integration: 22 workflows, no MCP and no network):
-  templates [--json] [--host <id>]            List the 22 templates, what each one writes, and where each host reads them
-  npx open-sdd@latest init . --write          Install them as the host's own chat commands (plan only without --write)
-    MCP is opt-in (--mcp); the default path needs neither MCP nor the network.
-
-In-Chat Skills (The Apple-grade Experience):
-  /sdd-help                                   Interactive guide with real-world examples
-  /sdd-getspecs                               Bootstrap existing repository (Brownfield)
-  /sdd-discovery <idea>                       Discover and structure new initiatives
-  /sdd-spec-quick <feature> --auto            One-shot spec creation & approval
-  /sdd-impl <feature>                         Autonomous TDD implementation with review
-  /sdd-validate-impl <feature>                Standalone integration verification gate
-  /sdd-audit <feature>                        EU AI Act / NIST compliance audit report
-  /sdd-spec-status <feature>                  Show real-time progress and next actions
-
-Zero-Trust console (reference architecture):
-  gates [chain|crosswalk|list|enforcement|run]  Resolve and run the gate chain
-  govern [invariants|conformance|hitl|rigor|constitution|appeal|meta-eval|budget|discipline]  Invariants, conformance, rigor and the constitution draft/ratify
-  assure [threats|lab|claims|skills|memory]    OWASP/ATLAS threats, claims registry, skills and memory
-  waves <feature>                             Transactional wave plan with git commands
-  floor [status|install] [target] [--ci]       Enforcement floor: commit hook + PR gate matrix
-  audit [bundle|sarif] [feature] [--out <dir>] [--json] [--sarif <path>]  Audit report; evidence bundle with a sha256 per artifact; SARIF 2.1.0 for code scanning
-  doctor [--json] [--fix] [target]             Self-diagnosis: Node, CLI, commit gate, stop hooks, rigor, constitution, specs
-  mcp                                          Model Context Protocol over stdio (a server, not a one-shot command)
-  help [command]                               This help, or the help of one command
-  init [target] [--agent <id>] [--level <l>] [--skills] [--mcp] [--write] [--json]  One-shot project bootstrap; "init <feature>" still creates a spec
-  status [feature] [--check] [--quiet] [--json] [--celebrations]  Whole state on one screen, with the next command to run
-Brownfield (existing code that is the de facto source of truth):
-  brownfield [survey|bootstrap|constitution|templates|specify|requirements|clarify|converge|analyze|impact|contracts|reuse|forecast|repair]  The brownfield console
-  brownfield survey [target]                    Detect the stack, boundaries and evidence
-  brownfield bootstrap [target] [--focus F] [--write]  One entry point: recon + constitution + module map + code intelligence + steps
-  brownfield constitution [target] [--write] [--draft]  Reverse-engineer the descriptive constitution
-  brownfield templates [target] [--write] [--json]  Brownfield requirement/design/task templates
-  brownfield specify <feature> "<descripción>" [--area A] [--write] [--json]  Derive EARS requirements from a description
-  brownfield requirements <feature> [--suggest] [--apply <i>] [--write] [--json]  EARS assistant over requirements.md
-  brownfield clarify <feature> [--max N] [--write] [--json]  Clarifying questions before specifying
-  brownfield converge <feature> [--write] [--json]  Convergence of the delta against the base
-  brownfield analyze <feature> [--base R] [--json]  Change impact of a feature
-  brownfield impact <feature> [--base R]        Dependents, breaking changes, migrations, public API surface
-  brownfield contracts <feature> [--write] [--verify]  The regression oracle: which tests protect the change
-  brownfield reuse <feature> [--symbols A,B]    Search for existing symbols before creating new ones
-  brownfield forecast "<descripción>" [--symbols A,B] [--json]  Expected blast radius before writing code
-  brownfield repair <feature> --target <artefacto> [--write] [--json]  Repair a failing artifact with evidence
-  delta [init|validate|status|render|merge]  The contract of change (brownfield: the delta, not the system)
-  delta init <feature> "<title>"                Scaffold a delta spec (ADDED/MODIFIED/REMOVED/RENAMED)
-  delta validate <feature>                      Validate ids, EARS, targets, contracts and traceability
-  delta status <feature>                        Change counts, strangulation progress, traceability
-  delta render <feature>                        Render the delta spec
-  delta merge <feature> [--write]               Merge the delta into the base spec
-
-Experience layer (bilingual: --lang es|en, or OPEN_SDD_LANG):
-  tour [target] [--write] [--lang es|en] [--json]  Guided first run: recon, constitution draft, check, status, delta
-  context [feature] [--lang es|en] [--json]        The context pack the MCP server serves, in the terminal
-
-Adoption (the integration matrix and the importers):
-  integrate [host] [--write] [--json] [--dry-run]  Register the MCP server, install its skills and its Stop hook
-  integrate --list                                 The whole matrix: skills layout, invocation syntax, MCP path, verified?
-  import [kiro|spec-kit|cc-sdd] [--write] [--json] Map an incumbent's specs into .sdd (a mapping, never a promise)
-  hosts: claude-code, cursor, copilot, codex, gemini-cli, windsurf, opencode, antigravity, zed, cline
-
-Daily drivers (read-only reports: none of these runs the gate chain):
-  gitflow [--level <l>] [--greenfield] [--json]  The branch's role and what that role requires
-  progress [--json] [--limit N]                 The append-only progress ledger
-  progress record --kind <tipo> --summary "<una línea>" --score <0..100> --phase <1|2|3> [--evidence <p>] [--json]  Record a milestone
-  backup [create|verify|restore]  The restorable backup of .sdd/ with a verifiable manifest
-  backup create [--out <dir>] [--force] [--json]  A restorable copy of .sdd/ with a sha256 per file
-  backup verify <archive> [--json]              Recompute every sha256 against the manifest
-  backup restore <archive> [--write] [--only <ruta>] [--json]  Restore; without --write it is a dry run
-  biography <feature> [--limit N] [--json]      The rhythm of a living specification (git, amendments, ratifications)
-  gap <feature> [--json]                        Blast radius and gap analysis
-  getspecs [focus] [--json]                     Reverse-engineer steering + roadmap + spec seeds
-  verify <feature> [--json]                     Standalone integration verification gate
-  impl <feature> [tasks] [--review required|inline|off]  Autonomous implementation with review
-
-Score (one number, one door):
-  open-sdd                                    Inspect the repository: composite SDD score, phase and the ONE next action
-  --no-footer                                 Suppress the score footer on any command (scripts)
-  --json | --quiet                            Also suppress the footer: machine and one-line output stay intact
-
-Note: In non-TTY environments, prompt mode falls back to skip.`;
+export { PACKAGE_NAME, VERSION, INSTALL_COMMAND };
+/**
+ * El comando de instalación y la versión se derivan de `cli/packageIdentity.ts`; la ayuda de
+ * `cli/commands/help.ts`. Aquí no queda ninguna lista de comandos escrita a mano.
+ */
 const resolveManifestPath = async (resolvedAgent, argsProfile, manifestArg, templatesBase) => {
     if (manifestArg)
         return manifestArg;
@@ -217,8 +99,7 @@ const createConflictHandler = (summaries, resolvedOverwrite) => {
     };
 };
 const showVersion = (io) => {
-    const version = readCliVersion();
-    io.log(`open-sdd v${version}`);
+    io.log(`open-sdd v${VERSION}`);
 };
 const handleDryRun = async (manifestPath, resolvedConfig, io, execOpts) => {
     try {
@@ -239,9 +120,8 @@ const handleDryRun = async (manifestPath, resolvedConfig, io, execOpts) => {
 const runPlanExecution = async (manifestPath, resolvedConfig, io, execOpts) => {
     try {
         const agentDef = getAgentDefinition(resolvedConfig.agent);
-        const version = readCliVersion();
         io.log('');
-        io.log(formatBox(`open-sdd v${version} / ${agentDef.label}`));
+        io.log(formatBox(`open-sdd v${VERSION} / ${agentDef.label}`));
         const plan = await planFromFile(manifestPath, resolvedConfig);
         const operations = await buildFileOperations(plan, resolvedConfig, execOpts);
         const summaries = await summarizeCategories(operations);
@@ -406,16 +286,166 @@ const dispatchSubcommand = async (cmd, subArgv, io, targetCwd) => {
     if (cmd === 'templates') {
         return handleTemplatesCommand(subArgv, io, targetCwd);
     }
+    // El motor de estándares (W2): el catálogo se lista, se muestra, se comprueba y se repara.
+    if (cmd === 'standards') {
+        return handleStandardsCommand(subArgv, io, targetCwd);
+    }
+    // El coach de requisitos (W3): la revisión de calidad, el checklist ejecutable y la reparación.
+    // `review` es la misma puerta con el subcomando delante, para que `review <feature> --base <ref>`
+    // y `requirements review <feature>` compartan una sola implementación.
+    if (cmd === 'requirements') {
+        return handleRequirementsCommand(['requirements', ...subArgv], io, targetCwd);
+    }
+    if (cmd === 'review') {
+        return handleRequirementsCommand(['review', ...subArgv], io, targetCwd);
+    }
+    // Reversibilidad (tenet 12): la salida de una herramienta invasiva. `restore` es el mismo
+    // comando visto desde un recibo concreto, y el módulo lo distingue por su primer argumento.
+    if (cmd === 'uninstall') {
+        return handleUninstallCommand(subArgv, io, targetCwd);
+    }
+    if (cmd === 'restore') {
+        return handleUninstallCommand(['restore', ...subArgv], io, targetCwd);
+    }
+    // `explain <code>`: cada código de gate resuelve offline contra la misma tabla que `gates list`.
+    if (cmd === 'explain') {
+        const code = subArgv.find((arg) => !arg.startsWith('-'));
+        if (!code) {
+            io.error(formatError('error[usage]: `explain` needs a gate code'));
+            io.error(`  = help: run \`open-sdd gates list\`, or \`open-sdd explain C1\``);
+            return EXIT.USAGE;
+        }
+        const explained = renderExplain(code);
+        if (!explained.ok) {
+            io.error(formatError(explained.text));
+            for (const suggestion of explained.suggestions) {
+                io.error(`  = help: did you mean \`${suggestion}\`? Run \`open-sdd explain ${suggestion}\``);
+            }
+            io.error('  = help: run `open-sdd gates list` for every code');
+            return EXIT.USAGE;
+        }
+        io.log(explained.text);
+        return EXIT.PASSED;
+    }
     return undefined;
 };
-export const runCli = async (argv, runtime = { platform: process.platform, env: process.env }, io = defaultIO, loadedConfig = {}, execOpts) => {
+// ---------------------------------------------------------------------------------------------
+// Contrato de consola: banderas globales, sugerencias y códigos de salida
+// ---------------------------------------------------------------------------------------------
+const COLOR_FLAG = '--color';
+const NO_INPUT_FLAG = '--no-input';
+const COLOR_MODES = ['auto', 'always', 'never'];
+const isColorMode = (value) => COLOR_MODES.includes(value);
+/**
+ * Extraer las banderas GLOBALES antes de despachar. `--color=auto|always|never` y `--no-input` son
+ * del contrato de consola, no de un comando: se consumen aquí para que ningún comando tenga que
+ * conocerlas y para que `parseArgs` no las lea como desconocidas.
+ */
+const extractGlobalFlags = (argv) => {
+    const rest = [];
+    let color;
+    let noInput = false;
+    let colorError;
+    for (let i = 0; i < argv.length; i += 1) {
+        const token = argv[i];
+        if (token === NO_INPUT_FLAG) {
+            noInput = true;
+            continue;
+        }
+        if (token === COLOR_FLAG) {
+            const next = argv[i + 1];
+            if (next !== undefined && isColorMode(next)) {
+                color = next;
+                i += 1;
+            }
+            else {
+                colorError =
+                    next === undefined
+                        ? `\`${COLOR_FLAG}\` needs a value: auto, always or never`
+                        : `invalid value \`${next}\` for \`${COLOR_FLAG}\`: use auto, always or never`;
+            }
+            continue;
+        }
+        if (token.startsWith(`${COLOR_FLAG}=`)) {
+            const value = token.slice(COLOR_FLAG.length + 1);
+            if (isColorMode(value))
+                color = value;
+            else
+                colorError = `invalid value \`${value}\` for \`${COLOR_FLAG}\`: use auto, always or never`;
+            continue;
+        }
+        rest.push(token);
+    }
+    return { argv: rest, color, noInput, colorError };
+};
+/**
+ * Diagnóstico de uso. Rustc-shaped, en una sola forma: `error[usage]`, una línea `= help:` con el
+ * comando que resuelve, y SIEMPRE el puntero a `--help`. Nunca un callejón sin salida.
+ */
+const emitUsageError = (io, message, suggestions, runFor) => {
+    io.error(formatError(`error[usage]: ${message}`));
+    for (const suggestion of suggestions) {
+        io.error(`  = help: did you mean \`${suggestion}\`? Run \`${runFor(suggestion)}\``);
+    }
+    io.error('  = help: run `open-sdd --help` to list every command, or `open-sdd help exit-codes`');
+};
+/**
+ * Un subcomando desconocido es un error de USO (2), nunca un fallo de gobernanza (1) y nunca el
+ * camino de instalación. Solo se valida el primer posicional de los comandos cuyo primer posicional
+ * ES un subcomando (`STRICT_SUBCOMMANDS`): `audit <feature>` o `progress` sin subcomando siguen
+ * siendo válidos.
+ */
+const validateSubcommand = (cmd, subArgv) => {
+    const known = STRICT_SUBCOMMANDS[cmd];
+    if (!known)
+        return null;
+    const first = subArgv[0];
+    if (first === undefined || first.startsWith('-'))
+        return null;
+    if (known.includes(first))
+        return null;
+    return {
+        message: `unknown subcommand \`${first}\` for \`${cmd}\``,
+        suggestions: suggestCommands(first, known),
+        runFor: (suggestion) => `open-sdd ${cmd} ${suggestion}`,
+    };
+};
+export const runCli = async (rawArgv, runtime = { platform: process.platform, env: process.env }, io = defaultIO, loadedConfig = {}, execOpts) => {
+    const global = extractGlobalFlags(rawArgv);
+    // Se fija por invocación (no se acumula): una llamada con `--color=never` no debe teñir la
+    // siguiente, y `--no-input` no debe sobrevivir a su ejecución.
+    setColorMode(global.color ?? 'auto');
+    setNonInteractive(global.noInput);
+    if (global.colorError !== undefined) {
+        emitUsageError(io, global.colorError, [], () => 'open-sdd --help');
+        return EXIT.USAGE;
+    }
+    const argv = global.argv;
+    // La ayuda va primero: `--help` con un comando delante devuelve la ayuda DE ESE comando desde la
+    // MISMA tabla que el índice (`init --help`, `doctor --help`, `integrate --help`).
     if (argv.includes('--help') || argv.includes('-h')) {
-        io.log(helpText);
-        return 0;
+        const first = argv[0];
+        if (first && !first.startsWith('-')) {
+            const commandHelp = renderCommandHelp(first.toLowerCase());
+            if (commandHelp) {
+                io.log(commandHelp);
+                return EXIT.PASSED;
+            }
+        }
+        io.log(renderFullHelp());
+        return EXIT.PASSED;
     }
     if (argv.includes('--version') || argv.includes('-v')) {
         showVersion(io);
-        return 0;
+        return EXIT.PASSED;
+    }
+    // Locales honestas (REQ-RQC-012): un idioma sin traducción se RECHAZA por nombre y se listan las
+    // traducidas. Nunca se acepta en silencio para devolver español.
+    const requestedLang = parseLangFlag(argv);
+    if (requestedLang !== undefined && requestedLang.length > 0 && normalizeLocale(requestedLang) === undefined) {
+        io.error(formatError(`error[usage]: ${localeRefusal(requestedLang)}`));
+        io.error(`  = help: run \`open-sdd --help\` to see the translated locales, or \`open-sdd help formatting\``);
+        return EXIT.USAGE;
     }
     // La puerta. `--no-footer` a solas sigue siendo la puerta (el pie ES la salida de la puerta).
     if (argv.length === 0 || (argv.length === 1 && argv[0] === SCORE_FOOTER_FLAG)) {
@@ -427,21 +457,45 @@ export const runCli = async (argv, runtime = { platform: process.platform, env: 
         const cmd = firstArg.toLowerCase();
         const subArgv = argv.slice(1);
         const targetCwd = execOpts?.cwd ?? process.cwd();
+        const usageIssue = validateSubcommand(cmd, subArgv);
+        if (usageIssue) {
+            emitUsageError(io, usageIssue.message, usageIssue.suggestions, usageIssue.runFor);
+            return EXIT.USAGE;
+        }
         const code = await dispatchSubcommand(cmd, subArgv, io, targetCwd);
         if (code !== undefined) {
             // El pie de puntuación se emite aquí, en el despachador, y en ningún otro sitio: ningún
-            // comando tiene que acordarse. `--json`, `--quiet` y `--no-footer` lo suprimen. Cuando el
-            // comando acaba de ejecutar la cadena, el pie declara los gates NO MEDIDOS en vez de arriesgar
-            // un «gates OK» que el propio comando desmiente.
+            // comando tiene que acordarse. `--json`, `--quiet` y `--no-footer` lo suprimen.
             //
-            // El pie NO se reescribe con `renderCelebrationFooter`/`levelFor` (`core/celebrate.ts`): ese
-            // render tiene OTRA forma (`nivel X · fase N/3 · score N/100 · racha: …`), la racha la aporta
-            // el trinquete —que aquí no se ejecuta— y sustituir la línea `SDD n% · Fase n · …` rompería un
-            // contrato ya fijado por `cliJsonOut`/`cliSddScore`. La celebración vive donde SÍ hay veredicto
-            // medido: `status --check` la imprime antes de este pie.
-            await emitScoreFooter(argv, io, targetCwd, runsGateChain(cmd, subArgv) ? { gateContext: 'external' } : {});
+            // Un fallo NUNCA termina en una línea que parezca un éxito: con un código distinto de 0 el pie
+            // se SUPRIME. Antes, `gates chainn` salía con 1 y acto seguido imprimía la puerta de puntuación
+            // terminando en «gates OK», que es la última línea que leía el usuario.
+            //
+            // La única excepción es un comando que ejecuta SU PROPIA cadena (`gates run`, `audit
+            // bundle|sarif`): ahí el pie NO reproduce el veredicto, declara el componente de gates como «no
+            // medido en esta ejecución», y esa línea es honesta aunque el comando falle —de hecho es
+            // justamente cuando importa—. Un comando así nunca puede imprimir «gates OK» tras un fallo.
+            const runsChain = runsGateChain(cmd, subArgv);
+            if (code === EXIT.PASSED || runsChain) {
+                // El pie NO se reescribe con `renderCelebrationFooter`/`levelFor` (`core/celebrate.ts`): ese
+                // render tiene OTRA forma (`nivel X · fase N/3 · score N/100 · racha: …`), la racha la aporta
+                // el trinquete —que aquí no se ejecuta— y sustituir la línea `SDD n% · Fase n · …` rompería un
+                // contrato ya fijado por `cliJsonOut`/`cliSddScore`. La celebración vive donde SÍ hay veredicto
+                // medido: `status --check` la imprime antes de este pie.
+                await emitScoreFooter(argv, io, targetCwd, runsChain ? { gateContext: 'external' } : {});
+            }
             return code;
         }
+        // Un comando de la tabla sin despacho es un defecto NUESTRO (4), no del usuario.
+        if (KNOWN_COMMANDS.has(cmd)) {
+            io.error(formatError(`error[tool]: \`${cmd}\` is routed in the help table but has no handler: this is a bug in open-sdd`));
+            io.error('  = help: report it at https://github.com/Brujo2020/open-sdd/issues');
+            return EXIT.TOOL_BUG;
+        }
+        // Comando desconocido: error de uso (2) con la sugerencia más cercana y el puntero a `--help`.
+        // Nunca cae al camino de instalación (que exige banderas, no un posicional).
+        emitUsageError(io, `unknown command \`${firstArg}\``, suggestCommands(cmd, KNOWN_COMMANDS), (suggestion) => `open-sdd help ${suggestion}`);
+        return EXIT.USAGE;
     }
     let parsedArgs;
     try {
@@ -452,7 +506,7 @@ export const runCli = async (argv, runtime = { platform: process.platform, env: 
     catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         io.error(formatError(`Error: ${msg}`));
-        return 1;
+        return EXIT.GATE_FAILED;
     }
     parsedArgs.agent = await ensureAgentSelection(parsedArgs.agent ?? loadedConfig.agent, io);
     if (parsedArgs.agent === 'codex') {
@@ -461,9 +515,9 @@ export const runCli = async (argv, runtime = { platform: process.platform, env: 
         io.log('');
         io.log(`  Codex no longer loads ${colors.dim('.codex/prompts/')}. Use Skills instead:`);
         io.log('');
-        io.log(`  ${colors.bold('npx open-sdd@latest --codex-skills')}`);
+        io.log(`  ${colors.bold(`${INSTALL_COMMAND} --codex-skills`)}`);
         io.log('');
-        return 1;
+        return EXIT.GATE_FAILED;
     }
     const resolved = mergeConfigAndArgs(parsedArgs, loadedConfig, runtime);
     const templatesBase = execOpts?.templatesRoot ? path.join(execOpts.templatesRoot, 'templates') : 'templates';

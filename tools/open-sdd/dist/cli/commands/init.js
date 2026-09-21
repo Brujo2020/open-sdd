@@ -29,6 +29,7 @@ import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { colors } from '../ui/colors.js';
+import { INSTALL_COMMAND } from '../packageIdentity.js';
 import { agentList, getAgentDefinition } from '../../agents/registry.js';
 import { DEFAULT_RIGOR_LEVEL, RIGOR_LEVELS, constitutionRequired, effectiveGates, isRigorLevel, } from '../../core/rigor.js';
 import { initSpec, resolveSddDir } from '../../core/specManager.js';
@@ -536,7 +537,7 @@ export const installAgentSkillSet = async (root, agent, lang) => {
     if (cliPath === null) {
         return {
             action: 'keep',
-            failure: 'no se encontró el instalador (CLI) alcanzable: la instalación del agente NO se ha ejecutado. Instálalo con `npx open-sdd@latest --version` o compílalo con `npm --prefix tools/open-sdd run build`.',
+            failure: `no se encontró el instalador (CLI) alcanzable: la instalación del agente NO se ha ejecutado. Instálalo con \`${INSTALL_COMMAND} --version\` o compílalo con \`npm --prefix tools/open-sdd run build\`.`,
         };
     }
     const definition = getAgentDefinition(agent);

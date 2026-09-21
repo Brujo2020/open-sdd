@@ -1,4 +1,5 @@
-const makeUpgradeNotice = (flag) => `This mode will be removed in a future release. Migrate now: npx open-sdd@latest ${flag}`;
+import { INSTALL_COMMAND } from '../cli/packageIdentity.js';
+const makeUpgradeNotice = (flag) => `This mode will be removed in a future release. Migrate now: ${INSTALL_COMMAND} ${flag}`;
 export const agentDefinitions = {
     'claude-code': {
         label: 'Claude Code',

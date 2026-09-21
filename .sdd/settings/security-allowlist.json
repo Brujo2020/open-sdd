@@ -228,6 +228,26 @@
       "owner": "mantenimiento (catalogo de requisitos)",
       "actor": "spec:tool-maturity",
       "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreRequirementsCoach.test.ts",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "FIXTURE del check AI-002: el test ejercita que una instruccion dirigida a un agente dentro de una spec se reporte como hallazgo y se escale a una persona, en vez de obedecerse. El literal es el objeto de la prueba, no una instruccion dirigida a un modelo; se declara con motivo, dueno y caducidad en vez de silenciarse, y no se repite aqui para no reintroducirlo en el indice.",
+      "owner": "mantenimiento (tests del coach de requisitos)",
+      "actor": "spec:requirements-coach",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreRequirementsDeadEnds.test.ts",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "FIXTURE del contrato de no-callejon-sin-salida: comprueba que un hallazgo de inyeccion viaja con un remedio o una pregunta en vez de morir. El literal es el objeto de la prueba, no una instruccion dirigida a un modelo; se declara con motivo, dueno y caducidad.",
+      "owner": "mantenimiento (tests del coach de requisitos)",
+      "actor": "spec:requirements-coach",
+      "expires": "2027-03-31"
     }
   ]
 }

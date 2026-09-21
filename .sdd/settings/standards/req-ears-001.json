@@ -1,0 +1,39 @@
+{
+  "id": "REQ-EARS-001",
+  "title": "No requirement without the `shall` operator",
+  "category": "requirements",
+  "severity": "error",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#one-template-per-requirement",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "ears-issue:NO_SHALL"
+    ]
+  },
+  "message": "un requisito sin el operador `shall` no es comprobable",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "reescribe el enunciado como `<disparador>, <sistema> shall <respuesta>` con una única condición de disparo"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si el enunciado no expresa una obligación, retíralo en vez de añadir `shall`"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/ears.ts#validateEarsRequirement",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

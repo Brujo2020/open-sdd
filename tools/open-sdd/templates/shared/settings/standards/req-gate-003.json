@@ -1,0 +1,41 @@
+{
+  "id": "REQ-GATE-003",
+  "title": "Requirements avoid implementation language",
+  "category": "requirements",
+  "severity": "info",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "internal",
+  "source": ".sdd/settings/rules/requirements-review-gate.md#mechanical-checks",
+  "detect": {
+    "kind": "regex",
+    "patterns": [
+      "\\b(?:PostgreSQL|Postgres|MySQL|MariaDB|MongoDB|SQLite|Redis|Elasticsearch|Kafka|RabbitMQ|Memcached)\\b",
+      "\\b(?:React|Angular|Vue(?:\\.js)?|Svelte|Django|Flask|Rails|Laravel|Spring\\s+Boot|Express(?:\\.js)?|Next\\.js|NestJS)\\b",
+      "\\b(?:Kubernetes|Docker|Terraform|Ansible|AWS|Azure|GCP)\\b"
+    ]
+  },
+  "message": "el requisito nombra una tecnología concreta que pertenece a `plan.md`, no a `requirements.md`",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "sustituye el nombre del producto por la capacidad observable que el requisito exige"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si la tecnología es una restricción de alcance, muévela a `plan.md` o declara la excepción con motivo"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/standards.ts#runStandard (regex)",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}
