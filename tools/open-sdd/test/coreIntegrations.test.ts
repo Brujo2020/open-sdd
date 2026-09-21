@@ -11,15 +11,19 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   HOST_INTEGRATIONS,
   detectIntegration,
   integrationById,
   mcpRegistration,
 } from '../src/core/integrations.js';
-import { handleIntegrateCommand, planIntegrate } from '../src/cli/commands/init.js';
+import { handleIntegrateCommand, mergeMcpConfig, planIntegrate } from '../src/cli/commands/init.js';
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 const tempDirs: string[] = [];
 
@@ -293,9 +297,20 @@ describe('integrations — MCP registration is real or declared unverified', () 
     expect(notes).toContain('docs/mcp.md');
   });
 
-  it('every host in the shipped matrix carries a verified MCP shape', () => {
-    const unverified = HOST_INTEGRATIONS.filter((host) => !host.mcp.verified).map((host) => host.id);
-    expect(unverified).toEqual([]);
+  it('every host in the shipped matrix is verified, or is a declared fork that names the datum it lacks', () => {
+    // La regla no se relaja: un anfitrion sin verificar solo se admite si es un FORK declarado de una
+    // fila verificada y dice exactamente que dato le falta. «No lo sabemos» sin mas sigue siendo rojo.
+    const unverified = HOST_INTEGRATIONS.filter((host) => !host.mcp.verified);
+    expect(unverified.map((host) => host.id)).toEqual([]);
+    for (const host of unverified) {
+      expect(host.forkOf, `${host.id}: sin verificar y sin declarar su padre`).toBeTruthy();
+      const parent = integrationById(host.forkOf as string);
+      expect(parent, `${host.id}: el padre ${host.forkOf} no existe`).toBeDefined();
+      expect(parent?.mcp.verified, `${host.id}: el padre ${host.forkOf} no esta verificado`).toBe(true);
+      // Un rechazo accionable nombra el dato que lo convertiria en verificable.
+      expect(host.notes.join('\n'), `${host.id}: no nombra el dato que falta`).toMatch(/DATO QUE FALTA/);
+      expect(host.notes.join('\n'), `${host.id}: el dato que falta no esta concretado`).toMatch(/extension id|identificador de la extension/i);
+    }
     // A docUrl, when present, is the page a reader can re-fetch; it must be a real https URL.
     for (const host of HOST_INTEGRATIONS.filter((entry) => entry.mcp.docUrl !== undefined)) {
       expect(host.mcp.docUrl, `docUrl of ${host.id}`).toMatch(/^https:\/\/\S+$/);
@@ -417,5 +432,122 @@ describe('integrations --write — merge, never clobber, and idempotent', () => 
 
     expect(await handleIntegrateCommand(['cursor', '--write', '--dry-run'], makeIO().io, dir)).toBe(0);
     expect(await exists(path.join(dir, '.cursor', 'mcp.json'))).toBe(false);
+  });
+});
+
+
+describe('Continue.dev — a YAML block the tool OWNS, never a YAML file it parses', () => {
+  it('emits the documented LIST shape, not a map, and in the file Continue reads', () => {
+    const registration = mcpRegistration('continue-dev', { cliPath: '/opt/cli.js' });
+    expect(registration.verified).toBe(true);
+    expect(registration.format).toBe('yaml');
+    expect(registration.path).toBe('.continue/mcpServers/open-sdd.yaml');
+    // `mcpServers` es una LISTA aqui: `- name:` y no `{ "name": {} }`. Es la diferencia que hace que
+    // copiar el snippet de otro anfitrion no funcione.
+    expect(registration.content).toContain('mcpServers:\n  - name: open-sdd');
+    expect(registration.content).toContain('    type: stdio');
+    expect(registration.content).toContain('    command: node');
+    expect(registration.content).toContain('      - /opt/cli.js');
+  });
+
+  it('creates it, keeps it byte-identical, and CONSERVES a file whose content is not ours', async () => {
+    const dir = await makeRoot();
+    const host = integrationById('continue-dev')!;
+
+    const created = await mergeMcpConfig(host, '/opt/cli.js', dir);
+    expect(created.action).toBe('create');
+
+    await mkdir(path.join(dir, '.continue', 'mcpServers'), { recursive: true });
+    await writeFile(path.join(dir, '.continue', 'mcpServers', 'open-sdd.yaml'), created.content, 'utf8');
+    const again = await mergeMcpConfig(host, '/opt/cli.js', dir);
+    expect(again.action).toBe('keep');
+    expect(again.reason).toContain('byte a byte');
+
+    // Un fichero con NUESTRO nombre y contenido de otra persona no se toca: no hay parser YAML aqui,
+    // y por tanto ningun YAML que no hayamos escrito puede ser reescrito por nosotros.
+    await writeFile(path.join(dir, '.continue', 'mcpServers', 'open-sdd.yaml'), 'name: mio\n', 'utf8');
+    const foreign = await mergeMcpConfig(host, '/opt/cli.js', dir);
+    expect(foreign.action).toBe('keep');
+    expect(foreign.reason).toContain('CONSERVA');
+    expect(await readFile(path.join(dir, '.continue', 'mcpServers', 'open-sdd.yaml'), 'utf8')).toBe('name: mio\n');
+  });
+});
+
+describe('cross-tool skills — ONE neutral tree for every host that reads `.agents/skills/`', () => {
+  const manifestPath = path.join(repoRoot, 'tools/open-sdd/templates/manifests/agents-skills.json');
+  const sharedTree = path.join(repoRoot, 'tools/open-sdd/templates/agents/_shared/skills');
+
+  it('the shared tree ships the 21 skills, and the manifest installs IT rather than a per-host copy', () => {
+    const skills = readdirSync(sharedTree, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+    expect(skills.length).toBe(21);
+    for (const skill of skills) {
+      expect(existsSync(path.join(sharedTree, skill.name, 'SKILL.md')), `${skill.name} sin SKILL.md`).toBe(true);
+    }
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+      artifacts: { id: string; source: { fromDir?: string }; when: { agent: string } }[];
+    };
+    const artefact = manifest.artifacts.find((item) => item.id === 'skills');
+    // Si alguien vuelve a apuntar el manifiesto a `{{AGENT}}`, cada anfitrion nuevo volveria a exigir
+    // su propia copia de 21 ficheros: exactamente la duplicacion que este arbol existe para borrar.
+    expect(artefact?.source.fromDir).toBe('templates/agents/_shared/skills');
+    expect(manifest.artifacts.every((item) => item.when.agent === 'agents-skills')).toBe(true);
+    expect(manifest.artifacts.some((item) => JSON.stringify(item.source).includes('{{AGENT}}'))).toBe(false);
+  });
+
+  it('every host mapped to the shared installer documents reading `.agents/skills/`', () => {
+    const source = readFileSync(path.join(repoRoot, 'tools/open-sdd/src/cli/commands/init.ts'), 'utf8');
+    const start = source.indexOf('const HOST_SKILL_AGENT');
+    const block = source.slice(start, source.indexOf('};', start));
+    // Las claves del mapa van entrecomilladas o no segun sean identificadores validos: se aceptan las dos.
+    const mapped = [...block.matchAll(/^\s*'?([a-z0-9-]+)'?:\s*'agents-skills',/gm)].map((match) => match[1]);
+    expect(mapped.length).toBeGreaterThanOrEqual(10);
+
+    // Un mapeo sin evidencia seria escribir en una ruta que el anfitrion puede no leer.
+    for (const id of mapped) {
+      const host = HOST_INTEGRATIONS.find((entry) => entry.id === id);
+      expect(host, `${id}: mapeado al arbol compartido sin fila en la matriz`).toBeDefined();
+      expect(host?.notes.join('\n'), `${id}: no documenta leer .agents/skills/`).toContain('.agents/skills');
+    }
+    // Y los que NO lo documentan no estan mapeados: Trae lo tiene APAGADO por defecto.
+    expect(mapped).not.toContain('trae');
+    expect(mapped).not.toContain('qoder');
+  });
+
+
+  it('the four hosts that do NOT read the cross-tool path get their own manifest, never their own tree', async () => {
+    const manifestsDir = path.join(repoRoot, 'tools/open-sdd', 'templates', 'manifests');
+    const own = ['trae-skills', 'qoder-skills', 'zcode-skills', 'codebuddy-skills'];
+    for (const id of own) {
+      const manifest = JSON.parse(readFileSync(path.join(manifestsDir, `${id}.json`), 'utf8')) as {
+        artifacts: { id: string; source: { fromDir?: string }; when: { agent: string } }[];
+      };
+      expect(manifest.artifacts.find((item) => item.id === 'skills')?.source.fromDir).toBe(
+        'templates/agents/_shared/skills',
+      );
+      // Un manifiesto propio NO puede traer un arbol propio: eso reintroduciria la duplicacion.
+      expect(existsSync(path.join(repoRoot, 'tools/open-sdd', 'templates', 'agents', id))).toBe(false);
+    }
+
+    // Y funciona de punta a punta, cada uno en SU layout documentado.
+    const dir = await makeRoot();
+    const ctx = makeIO();
+    expect(await handleIntegrateCommand(['trae', '--write'], ctx.io, dir)).toBe(0);
+    expect(readdirSync(path.join(dir, '.trae', 'skills'), { withFileTypes: true }).length).toBe(21);
+    expect(existsSync(path.join(dir, '.trae', 'mcp.json'))).toBe(true);
+  });
+
+  it('installing for one of them writes the shared tree AND that host own MCP config', async () => {
+    const dir = await makeRoot();
+    const ctx = makeIO();
+    expect(await handleIntegrateCommand(['roo-code', '--write'], ctx.io, dir)).toBe(0);
+
+    const installed = readdirSync(path.join(dir, '.agents', 'skills'), { withFileTypes: true });
+    expect(installed.length).toBe(21);
+    expect(existsSync(path.join(dir, '.agents', 'skills', 'sdd-brownfield', 'SKILL.md'))).toBe(true);
+    expect(existsSync(path.join(dir, 'AGENTS.md'))).toBe(true);
+    // El MCP del anfitrion va a SU fichero, no al compartido.
+    expect(existsSync(path.join(dir, '.roo', 'mcp.json'))).toBe(true);
+    // Y el informe dice donde escribe y por que, en vez de anunciar `.roo/skills/` y escribir otro sitio.
+    expect(ctx.text()).toContain('la ruta transversal que Roo Code lee además de');
   });
 });

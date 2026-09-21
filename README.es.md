@@ -95,7 +95,7 @@ Cualitativo, a partir de la documentación pública de las alternativas. Esto **
 | | esta herramienta | spec-kit | Kiro | paquetes de skills solo-prompt |
 |---|---|---|---|---|
 | Naturaleza | CLI + motor MCP | toolkit de prompts/skills | SDD dentro de un IDE | prompts y skills |
-| Integración con el anfitrión | servidor MCP; 29 definiciones de agente, 22 convenciones de comando (19 verificadas, 3 rechazadas por su nombre), 25 registros MCP verificados; las 22 plantillas de comando son el camino por defecto sin MCP | amplia superficie de instalación e integración | su propio IDE | el chat del anfitrión |
+| Integración con el anfitrión | servidor MCP; 35 definiciones de agente, 32 convenciones de comando (20 verificadas, 12 rechazadas con la URL que falló) más un fork declarado, 26 registros MCP verificados; las 22 plantillas de comando son el camino por defecto sin MCP | amplia superficie de instalación e integración | su propio IDE | el chat del anfitrión |
 | Specs para código existente | specs delta + constitución reversa | flujo de specs; hay una extensión de bootstrap brownfield propuesta (#1436) | flujo de specs en el IDE | solo documentos |
 | Enforcement | gates ejecutables, códigos de salida, hook de commit + checks de PR | prompts y revisión | flujo guiado por el IDE | ninguno |
 | Evidencia / auditoría | paquete de auditoría, sha256 por artefacto, SARIF | los propios documentos | artefactos del IDE | ninguno |

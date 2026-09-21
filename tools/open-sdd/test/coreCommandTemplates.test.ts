@@ -18,6 +18,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runCli } from '../src/index.js';
@@ -327,17 +328,56 @@ describe('command templates — host conventions are declared, verified or refus
       'zcode',
     ]);
     // Every verified convention cites the page it was read from (or the layout the installer ships).
-    for (const id of verified) expect(commandHostById(id)?.docUrl, id).toBeTruthy();
+    for (const id of verified) {
+      const host = commandHostById(id)!;
+      expect(host.docUrl ?? host.sourceArtifact, `${id}: verificado sin documento ni artefacto`).toBeTruthy();
+    }
   });
 
   it('the unverified hosts are marked and name why they are unverified', () => {
     const unverified = HOST_COMMAND_TEMPLATES.filter((host) => !host.verified).map((host) => host.id).sort();
-    expect(unverified).toEqual(['cline', 'codex', 'zed']);
+    expect(unverified).toEqual([
+      'aider',
+      'amp',
+      'cline',
+      'codex',
+      'continue-dev',
+      'crush',
+      'dsh',
+      'goose',
+      'kimi-code',
+      'openhands',
+      'warp',
+      'zed',
+    ]);
     for (const id of unverified) {
       const host = commandHostById(id)!;
       expect(host.evidence, id).toMatch(/NOT VERIFIED|no documented|no tiene/i);
       // An honest dead end must name the URL(s) that were tried, not just assert a gap.
       expect(host.evidence, `${id}: evidence names the docs it read`).toMatch(/https:\/\//);
+    }
+  });
+
+  it('an internal fork declares its parent, and verification is earned with its own artifact', () => {
+    const forks = HOST_COMMAND_TEMPLATES.filter((host) => host.forkOf !== undefined);
+    // Ninguna fila de fork vive ya en la matriz publica: la capacidad se conserva y este invariante
+    // se aplica a la primera que aparezca, porque es lo que impide que 'es un fork' sea una excusa.
+    expect(Array.isArray(forks)).toBe(true);
+    for (const fork of forks) {
+      const parent = commandHostById(fork.forkOf as string);
+      // El padre tiene que existir y ser una fila con veredicto propio (verificada o rechazada).
+      expect(parent, `${fork.id}: parent ${fork.forkOf} does not exist`).toBeDefined();
+      // Y un fork NUNCA puede estar mas verificado que su padre. Aqui el padre (cline) esta RECHAZADO
+      // porque Cline no documenta directorio de comandos de proyecto: el fork hereda esa AUSENCIA, y
+      // declararlo verificado seria afirmar algo que su propio padre desmiente.
+      // Un fork PUEDE estar mas verificado que su padre, pero solo citando SU PROPIO artefacto:
+      // que el padre lo este no dice nada del fork, y creerlo es como se escribe una ruta a ciegas.
+      if (fork.verified && !parent?.verified) {
+        expect(fork.sourceArtifact, `${fork.id}: verificado por herencia y sin artefacto propio`).toBeTruthy();
+      }
+      // Lo heredado tiene que decirse: una fila de fork no puede parecer una convencion propia.
+      expect(fork.evidence).toMatch(/FORK|fork/i);
+      expect(fork.docUrl).toBe(parent?.docUrl);
     }
   });
 

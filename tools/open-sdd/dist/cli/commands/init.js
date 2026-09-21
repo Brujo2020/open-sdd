@@ -873,6 +873,26 @@ const HOST_SKILL_AGENT = {
     windsurf: 'windsurf-skills',
     opencode: 'opencode-skills',
     antigravity: 'antigravity-skills',
+    // Estos anfitriones leen `.agents/skills/` —la convención transversal que la investigación
+    // confirmó en cada uno de ellos— así que los sirve UN árbol neutral en vez de una copia por
+    // anfitrión. Cada fila de `integrations.ts` nombra la URL donde se leyó esa ruta.
+    'factory-droid': 'agents-skills',
+    'roo-code': 'agents-skills',
+    'kilo-code': 'agents-skills',
+    junie: 'agents-skills',
+    mimocode: 'agents-skills',
+    crush: 'agents-skills',
+    amp: 'agents-skills',
+    'kimi-code': 'agents-skills',
+    warp: 'agents-skills',
+    devin: 'agents-skills',
+    // Estos cuatro NO leen la ruta transversal (Trae la tiene apagada por defecto; Qoder, ZCode y
+    // CodeBuddy usan la suya), asi que tienen manifiesto propio — pero siguen apuntando al MISMO arbol
+    // neutral: un manifiesto por anfitrion, nunca una copia de 21 ficheros por anfitrion.
+    trae: 'trae-skills',
+    qoder: 'qoder-skills',
+    zcode: 'zcode-skills',
+    codebuddy: 'codebuddy-skills',
 };
 /** `~/x`, `%USERPROFILE%\x` y `%APPDATA%\x` son rutas reales que hay que expandir antes de escribir. */
 const expandConfigPath = (declared, cwd) => {
@@ -978,6 +998,29 @@ export const mergeMcpConfig = async (host, cliPath, cwd) => {
             };
         }
     }
+    if (registration.format === 'yaml') {
+        // Continue's convention is ONE standalone YAML block per server inside `.continue/mcpServers/`, so
+        // the file is OURS and there is nothing of the user's inside it to preserve. That is the only case
+        // where refusing costs nothing: identical -> keep; anything else -> refuse, because a file with our
+        // name and someone else's content is a file we must not overwrite. No YAML parser is involved, so
+        // no YAML we did not write can ever be rewritten by us.
+        if (existing === registration.content) {
+            return {
+                ...base,
+                action: 'keep',
+                resolvedPath,
+                content: existing,
+                reason: 'el bloque YAML del servidor open-sdd ya está registrado byte a byte: no se toca.',
+            };
+        }
+        return {
+            ...base,
+            action: 'keep',
+            resolvedPath,
+            content: registration.content,
+            reason: 'el archivo existe con contenido distinto al nuestro: se CONSERVA y no se reescribe (puede ser un archivo de una persona con el mismo nombre). Compara el bloque impreso y mézclalo a mano.',
+        };
+    }
     if (CODEX_TABLE.test(existing)) {
         return {
             ...base,
@@ -1052,13 +1095,17 @@ export const planIntegrate = async (input) => {
         const skillsDir = definition.layout.commandsDir;
         const present = await exists(path.join(cwd, skillsDir));
         const alias = definition.aliasFlags[0] ?? `--${agent}`;
+        // Cuando el instalador es el árbol transversal, el destino NO es el layout propio del anfitrión, y
+        // el informe tiene que decir dónde escribe y por qué: si no, un plan que anuncia `.roo/skills/` y
+        // escribe `.agents/skills/` es exactamente la clase de desmentido que este proyecto persigue.
+        const shared = agent === 'agents-skills' ? ` en \`${skillsDir}\`, la ruta transversal que ${host.label} lee además de \`${host.skills.layout}\`` : '';
         artifacts.push({
             kind: 'agent-skills',
             path: skillsDir,
             action: present ? 'update' : 'create',
             reason: present
-                ? `el conjunto ya está presente: el instalador existente completa lo ausente y NO sobrescribe lo editado (\`open-sdd ${alias} --lang ${language} --overwrite=prompt\`)`
-                : `instalación delegada al instalador existente: \`open-sdd ${alias} --lang ${language} --overwrite=prompt\``,
+                ? `el conjunto ya está presente${shared}: el instalador existente completa lo ausente y NO sobrescribe lo editado (\`open-sdd ${alias} --lang ${language} --overwrite=prompt\`)`
+                : `instalación delegada al instalador existente${shared}: \`open-sdd ${alias} --lang ${language} --overwrite=prompt\``,
             verified: true,
         });
     }
@@ -1068,12 +1115,15 @@ export const planIntegrate = async (input) => {
         // Si el layout está documentado se declara la brecha de instalación; si no, se declara que no hay
         // layout que escribir.
         const layoutDocumented = !/^\s*(IFLOW\.md|AGENTS\.md|\(|$)/.test(host.skills.layout);
+        // Un fork HEREDA el layout de su padre; no es lo mismo que haberlo verificado en su propia
+        // documentacion, y el mensaje no puede confundir las dos cosas.
+        const origin = host.forkOf !== undefined ? `HEREDADO de ${host.forkOf}` : 'VERIFICADO';
         artifacts.push({
             kind: 'agent-skills',
             path: host.skills.layout,
             action: 'keep',
             reason: layoutDocumented
-                ? `${host.label} tiene layout de skills VERIFICADO (${host.skills.layout}) pero esta versión no trae su instalador: brecha declarada G-35. No se escribe a medias.`
+                ? `${host.label} tiene layout de skills ${origin} (${host.skills.layout}) pero esta versión no trae su instalador: brecha declarada G-35. No se escribe a medias.`
                 : `${host.label} no documenta un layout de Agent Skills (modo ${host.skills.mode}): open-sdd no inventa uno.`,
             verified: false,
         });

@@ -554,6 +554,86 @@ export const agentDefinitions = {
             steeringCustom: '`/sdd-constitution <amendment>`',
         },
     },
+    'agents-skills': {
+        label: 'Cross-tool Agent Skills',
+        description: 'Installs the 22 sdd skills ONCE in `.agents/skills/sdd-*/`, the cross-tool path that this project verified for Roo Code, Kilo Code, Junie, MiMoCode, Crush, Amp, Kimi Code, Warp, Devin, Factory Droid, Augment, Goose, OpenHands and DeepSeek Harness — one neutral tree instead of one copy per host — plus shared settings in `{{SDD_DIR}}/settings/` and an AGENTS.md quickstart.',
+        aliasFlags: ['--agents-skills'],
+        layout: {
+            commandsDir: '.agents/skills',
+            agentDir: '.agents',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-spec-quick <what-to-build>`',
+            steering: '`/sdd-steering`',
+            steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
+        },
+        manifestId: 'agents-skills',
+    },
+    'trae-skills': {
+        label: 'Trae Skills',
+        description: 'Installs the 22 sdd skills in `.trae/skills/sdd-*/` from the SHARED neutral tree (Trae also documents `.agents/skills/`, but ships it OFF by default, so its own directory is the one that works), plus shared settings in `{{SDD_DIR}}/settings/`.',
+        aliasFlags: ['--trae-skills'],
+        layout: {
+            commandsDir: '.trae/skills',
+            agentDir: '.trae',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-spec-quick <what-to-build>`',
+            steering: '`/sdd-steering`',
+            steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
+        },
+        manifestId: 'trae-skills',
+    },
+    'qoder-skills': {
+        label: 'Qoder Skills',
+        description: 'Installs the 22 sdd skills in `.qoder/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. Rules live in `.qoder/rules/` with a documented 100,000-character budget.',
+        aliasFlags: ['--qoder-skills', '--lingma-skills'],
+        layout: {
+            commandsDir: '.qoder/skills',
+            agentDir: '.qoder',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-spec-quick <what-to-build>`',
+            steering: '`/sdd-steering`',
+            steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
+        },
+        manifestId: 'qoder-skills',
+    },
+    'zcode-skills': {
+        label: 'ZCode Skills',
+        description: 'Installs the 22 sdd skills in `.zcode/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. The project path is SOURCE-VERIFIED (the vendor resolver computes it; its docs state only the user scope).',
+        aliasFlags: ['--zcode-skills'],
+        layout: {
+            commandsDir: '.zcode/skills',
+            agentDir: '.zcode',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-spec-quick <what-to-build>`',
+            steering: '`/sdd-steering`',
+            steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
+        },
+        manifestId: 'zcode-skills',
+    },
+    'codebuddy-skills': {
+        label: 'CodeBuddy Skills',
+        description: 'Installs the 22 sdd skills in `.codebuddy/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. Native instructions live in CODEBUDDY.md.',
+        aliasFlags: ['--codebuddy-skills'],
+        layout: {
+            commandsDir: '.codebuddy/skills',
+            agentDir: '.codebuddy',
+            docFile: 'CODEBUDDY.md',
+        },
+        commands: {
+            spec: '`/sdd-spec-quick <what-to-build>`',
+            steering: '`/sdd-steering`',
+            steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
+        },
+        manifestId: 'codebuddy-skills',
+    },
 };
 export const getAgentDefinition = (agent) => {
     const definition = agentDefinitions[agent];

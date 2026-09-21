@@ -89,7 +89,7 @@ Qualitative, from the alternatives' public documentation. This is **not a benchm
 | | this tool | spec-kit | Kiro | prompt-only skill packs |
 |---|---|---|---|---|
 | Nature | CLI + MCP engine | prompt/skill toolkit | SDD inside one IDE | prompts and skills |
-| Host integration | MCP server; 29 agent definitions, 22 command conventions (19 verified, 3 refused by name), 25 verified MCP registrations; the 22 prompt templates are the no-MCP default | broad install and integration surface | its own IDE | the host's chat |
+| Host integration | MCP server; 35 agent definitions, 32 command conventions (20 verified, 12 refused with the URL that failed) plus a declared fork, 26 verified MCP registrations; the 22 prompt templates are the no-MCP default | broad install and integration surface | its own IDE | the host's chat |
 | Specs for existing code | delta specs + reverse constitution | spec workflow; a brownfield-bootstrap extension is proposed (#1436) | spec workflow in the IDE | documents only |
 | Enforcement | executable gates, exit codes, commit hook + PR checks | prompts and review | IDE-guided workflow | none |
 | Evidence / audit | audit bundle, sha256 per artifact, SARIF | the documents themselves | IDE artifacts | none |

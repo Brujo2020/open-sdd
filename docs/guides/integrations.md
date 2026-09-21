@@ -43,7 +43,7 @@ pretending it was detected. An explicit host always wins.
 | OpenCode | `opencode` | `.opencode/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `opencode.json` | yes |
 | Google Antigravity | `antigravity` | `.agent/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.agents/mcp_config.json` (workspace), `~/.gemini/config/mcp_config.json` (global) | **yes** |
 | Zed | `zed` | `AGENTS.md` | `@AGENTS.md run the sdd-brownfield workflow` | Zed `settings.json` | yes |
-| Cline | `cline` | `.clinerules/sdd-*.md` | `@.clinerules/sdd-brownfield.md` | `cline_mcp_settings.json` | **yes** |
+| Continue.dev | `continue-dev` | none documented | `/` (picker, then type the rest) | `.continue/mcpServers/open-sdd.yaml` | **yes** (a YAML block, one file per server) |
 | Factory Droid | `factory-droid` | `.factory/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.factory/mcp.json` | **yes** |
 | Roo Code | `roo-code` | `.roo/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.roo/mcp.json` | **yes** |
 | Kilo Code | `kilo-code` | `.kilo/skills/sdd-*/SKILL.md` | `/sdd-brownfield` | `.kilo/kilo.jsonc` | **yes** (key `mcp`, ARRAY command) |
@@ -69,6 +69,16 @@ sibling `args`; ZCode nests the servers under `mcp.servers`; Amp namespaces the 
 CodeBuddy both write `<root>/.mcp.json`. Because Kilo's documented file is `.kilo/kilo.jsonc`, a config
 that already has comments is **refused rather than rewritten** — the reader is strict JSON and losing
 someone's comments to gain an MCP entry is not a trade this tool makes.
+
+Continue.dev is a third family again: its documented convention is **one standalone YAML block per
+server** in `.continue/mcpServers/`, with `mcpServers` as a **list** (`- name: …`) rather than a map.
+Because the file is ours and nothing of the user's lives inside it, the merge treats it as an owned
+block: created when absent, kept when byte-identical, and **conserved untouched** when it exists with
+different content — no YAML parser is involved, so no YAML this tool did not write can ever be
+rewritten by it. Its prompts are *not* written to `.continue/prompts/`: that convention appears **zero
+times** in the vendor's 153 documentation files, so the row refuses it and says so, even though the
+habit is widespread.
+
 
 **Verified** means the snippet shape (and the file the tool writes) is one this project is confident
 about, and the `notes` in the matrix say how we know. Every host in the shipped matrix is verified
@@ -176,6 +186,64 @@ they returned for one that could not be confirmed. The source of truth for this 
 Templates are idempotent and never overwrite a human edit: each artifact carries a sha256 signature
 of the body it was generated from, so a second run reports `keep`, an unedited older template is
 refreshed (`update`), and an edited template is reported `keep` with the reason.
+
+## Private and internal hosts
+
+Some hosts are distributed privately: an internal fork of a supported product, or a vendor package with
+no public documentation. The method is the same one the public rows follow, with one substitution —
+**the artifact the owning team supplies replaces the documentation**:
+
+- **Ask for the artifact, not for a path.** An extension package, a config sample or a screenshot of the
+  host's own settings resolve in minutes what a guess would get wrong silently.
+- **Verify against it, and say so.** A row verified that way carries `sourceArtifact` instead of a
+  `docUrl`, and the reading rules require its specifics to stay **out of this repository**.
+- **A fork earns its own verification.** `forkOf` records the parent, but a fork is never verified *by
+  inheritance*: it must cite its own artifact, because what a fork changes is exactly what the parent
+  cannot tell you.
+- **Keep the specifics local.** Paths, filenames and internal conventions of a privately distributed
+  host belong to the team that owns it, not to an MIT repository. If they cannot be published, the row
+  stays refused and says the evidence is held by the owning team — a declared hole, not a leak.
+
+## Internal forks of a supported host
+
+An enterprise that runs its own fork of a supported host is a first-class case, not a gap to be
+guessed at. A fork row **declares its parent** (`forkOf`) and inherits exactly what inheritance can
+carry:
+
+  commands directory, which is a verified property of Cline and therefore also of a fork of it.
+- **What is NOT inherited, and why.** Cline's MCP path is derived from its own VS Code extension id
+  (`…/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`). A fork ships under its
+  the row as **NO VERIFICADA** and refuses to write, instead of dropping a config into *another*
+  extension's directory — a file written in the wrong place is worse than an admitted hole.
+- **The datum that closes it.** The fork's VS Code extension id. Give the row that, and the path
+  becomes `<VS Code user dir>/globalStorage/<extension id>/settings/cline_mcp_settings.json`. Any
+  command or skills directory the fork *adds* on top of its parent is a convention of its own and can
+  only come from its internal documentation: it is never inferred from the parent.
+- **The invariant that keeps it honest.** A fork may never claim *more* verification than its parent,
+  and a row without `forkOf` may not be unverified at all. Both are enforced by tests, so "it is a
+  fork" cannot become a way to slip an unverified path into the matrix.
+
+
+## One shared skills tree for the cross-tool path
+
+Most of the hosts added in 3.3 read the cross-tool `.agents/skills/` convention as well as (or instead
+of) their own directory, and each row's `notes` names the page where that was read. So the skills are
+installed **once**, from one neutral tree, instead of one hand-adapted copy per host:
+
+```bash
+open-sdd --agents-skills                       # the legacy alias path: writes .agents/skills/ + AGENTS.md
+open-sdd init . --agent agents-skills --write  # the same thing through init
+open-sdd integrate roo-code --write            # that host's MCP file AND the shared skills tree
+```
+
+Twenty-one skills land in `.agents/skills/sdd-*/SKILL.md`. A host is only mapped to that installer when
+its own row documents reading that path — a test enforces it, because writing skills into a directory a
+host does not read is indistinguishable from not installing them. **Trae** is deliberately *not* mapped
+Gaia, which use their own layouts and are declared as gaps instead of being written blind.
+
+**Goose, OpenHands and DeepSeek Harness** read the same path but have no MCP row — their configuration
+is user-scoped or plugin-based — so `open-sdd --agents-skills` serves them too.
+
 
 ## How to verify any install
 
@@ -440,10 +508,7 @@ Windows), but the inner entry shape is not confirmed here. `--write` refuses it.
 ## Cline
 
 - **Install:** Cline has no skills installer in the agent registry; its rules live in
-  `.clinerules/`. Install the skills for another host if you also use one, and keep the rules file
   for Cline.
-- **What gets written:** `.clinerules/sdd-*.md`. Detection markers: `.clinerules/`, `.clinerules`.
-- **Invocation in chat:** `@.clinerules/sdd-brownfield.md` — Cline attaches rules, it has no slash
   commands.
 - **MCP registration (verified), `cline_mcp_settings.json` in the VS Code extension's
   `globalStorage`:**
@@ -467,7 +532,6 @@ because they are optional.
 
 - **Verify:** `open-sdd doctor`; confirm the server is listed in Cline's MCP panel.
 - **Uninstall:** delete the `open-sdd` key from `cline_mcp_settings.json`, remove
-  `.clinerules/sdd-*.md`.
 
 ---
 

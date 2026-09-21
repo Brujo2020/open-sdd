@@ -39,7 +39,8 @@
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
-export type SnippetFormat = 'json' | 'toml';
+/** `yaml` is the third family: a standalone block the tool OWNS (Continue's `.continue/mcpServers/`). */
+export type SnippetFormat = 'json' | 'toml' | 'yaml';
 
 /** The name our server registers under in every host config. */
 export const MCP_SERVER_NAME = 'open-sdd';
@@ -61,6 +62,15 @@ export interface HostIntegration {
     /** The host's own documentation page for the shape above, so a reader can re-check it. */
     docUrl?: string;
   };
+  /**
+   * The host this row INHERITS from, when it is an internal fork of one this project verified.
+   *
+   * An enterprise fork is a real host with real conventions, and the honest way to model it is
+   * inheritance: the parent's verified shape carries over, and whatever the fork changes (its VS Code
+   * extension id, therefore its globalStorage path) is exactly what cannot be inherited. A row may be
+   * `mcp.verified: false` ONLY when it declares `forkOf` and names the datum it is missing.
+   */
+  forkOf?: string;
   /** How we know the host is present: files/directories that exist. */
   detect: string[];
   /** Where the host's own config lives so `--write` can be idempotent. */
@@ -95,6 +105,26 @@ const ampSnippet = (cliPath: string): string =>
 /** CodeBuddy reuses the `mcpServers` family but requires an explicit `type: "stdio"` on the entry. */
 const stdioTypedSnippet = (cliPath: string): string =>
   jsonDoc({ mcpServers: { [MCP_SERVER_NAME]: { type: 'stdio', command: 'node', args: [cliPath, 'mcp'] } } });
+
+/**
+ * Continue's `.continue/mcpServers/open-sdd.yaml`: a standalone block whose `mcpServers` is a LIST of
+ * server objects, not a map. Emitted by hand and never parsed back — the merge treats the file as ours
+ * and refuses to rewrite anything that is not byte-identical to it.
+ */
+const continueYamlSnippet = (cliPath: string): string =>
+  [
+    `name: ${MCP_SERVER_NAME}`,
+    'version: 0.0.1',
+    'schema: v1',
+    'mcpServers:',
+    `  - name: ${MCP_SERVER_NAME}`,
+    '    type: stdio',
+    '    command: node',
+    '    args:',
+    `      - ${cliPath}`,
+    '      - mcp',
+    '',
+  ].join('\n');
 
 /** `{"mcpServers": {"open-sdd": {"command": "node", "args": ["<cli>", "mcp"]}}}` */
 const mcpServersSnippet = (cliPath: string): string =>
@@ -374,7 +404,7 @@ export const HOST_INTEGRATIONS: HostIntegration[] = [
     notes: [
       'Forma VERIFICADA: `.factory/mcp.json` en la raiz del proyecto con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array) hermanos. Documentacion: https://docs.factory.ai/llms-full.txt (seccion MCP, "Configuration file"); espejo por pagina: https://docs.factory.ai/droid-cli/settings.md.',
       'Los servidores de proyecto se leen en modo solo lectura desde el CLI (`droid mcp remove` no puede borrarlos) y no deben contener secretos: el snippet registra un servidor local (node <cli> mcp), no una credencial.',
-      'Skills: `.factory/skills/<n>/SKILL.md` documentado; el instalador de skills es el siguiente incremento (G-35).',
+      'Skills: `.factory/skills/<n>/SKILL.md` documentado, con compatibilidad `.agents/skills/` y `.agent/skills/`: por eso el instalador transversal escribe ahi y este anfitrion lo lee.',
     ],
   },
   {
@@ -442,7 +472,7 @@ export const HOST_INTEGRATIONS: HostIntegration[] = [
     notes: [
       'Forma VERIFICADA: `.junie/mcp/mcp.json` (usuario `~/.junie/mcp/mcp.json`) con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array). Documentacion: https://junie.jetbrains.com/docs/junie-cli-mcp-configuration.html; ajustes del plugin: https://junie.jetbrains.com/docs/junie-plugin-mcp-settings.html.',
       'Ojo con el anfitrion de documentacion: `www.jetbrains.com/help/junie/*` devuelve 200 pero son cascaras de redireccion de 203 bytes; la documentacion real vive en junie.jetbrains.com/docs/.',
-      'Skills: `.junie/skills/<n>/SKILL.md` documentado; el instalador de skills es el siguiente incremento (G-35).',
+      'Skills: `.junie/skills/<n>/SKILL.md` documentado, y Junie ademas detecta e importa las carpetas de skills de otros agentes (`.agents/skills/`, `.claude/skills/`, `.cursor/skills/`, `.codex/skills/`): por eso el instalador transversal escribe en `.agents/skills/` y este anfitrion lo lee.',
     ],
   },
   {
@@ -464,7 +494,7 @@ export const HOST_INTEGRATIONS: HostIntegration[] = [
     detect: ['.mimocode/'],
     notes: [
       'Forma VERIFICADA y DISTINTA: `.mimocode/mimocode.json` (o `.jsonc`; usuario `~/.config/mimocode/mimocode.jsonc`) con la clave `mcp`, entrada `type: "local"` y `command` como ARRAY, y `environment` en lugar de `env`. Documentacion: https://mimo.xiaomi.com/mimocode/mcp-servers.',
-      'Skills: `.mimocode/skills/**/SKILL.md` documentado (tambien los compatibles `.claude/`, `.agents/`, `.codex/`, `.opencode/`); el instalador de skills es el siguiente incremento (G-35).',
+      'Skills: `.mimocode/skills/**/SKILL.md` documentado, y MiMoCode lee ademas las carpetas compatibles `.claude/skills/`, `.agents/skills/`, `.codex/skills/` y `.opencode/skills/`: por eso el instalador transversal escribe en `.agents/skills/` y este anfitrion lo lee.',
     ],
   },
   {
@@ -693,6 +723,30 @@ export const HOST_INTEGRATIONS: HostIntegration[] = [
       'Forma VERIFICADA: `.devin/mcp_config.json` para el ambito de proyecto y `~/.config/devin/mcp_config.json` para el de usuario (`%APPDATA%\\devin\\mcp_config.json` en Windows), con el objeto `mcpServers` y entradas stdio de `command` (cadena) + `args` (array) + `env`. Documentacion: https://docs.devin.ai/cli/extensibility/mcp/configuration.md.',
       'Migracion documentada: desde la v3000.3 los servidores viven en ficheros dedicados; ANTES estaban en la clave `mcpServers` de `.devin/config.json`. El merge escribe el fichero nuevo, no el antiguo.',
       'Devin no documenta directorio de comandos de proyecto: su superficie es skills (`.devin/skills/`, `.agents/skills/`, `.windsurf/skills/`) y reglas. El instalador de skills es el siguiente incremento (G-35).',
+    ],
+  },
+  {
+    id: 'continue-dev',
+    label: 'Continue.dev',
+    skills: { layout: 'no Agent Skills and no project prompt directory documented', mode: 'prompt-file' },
+    invocation: '/ (picker: pick the prompt, then type the rest of the instruction)',
+    mcp: {
+      configPaths: {
+        linux: '.continue/mcpServers/open-sdd.yaml',
+        darwin: '.continue/mcpServers/open-sdd.yaml',
+        win32: '.continue/mcpServers/open-sdd.yaml',
+      },
+      snippetFormat: 'yaml',
+      snippet: continueYamlSnippet,
+      verified: true,
+      docUrl: 'https://raw.githubusercontent.com/continuedev/continue/main/docs/customize/deep-dives/mcp.mdx',
+    },
+    detect: ['.continue/'],
+    notes: [
+      'Forma VERIFICADA, y DISTINTA de todas las demas: la documentacion de Continue (`https://raw.githubusercontent.com/continuedev/continue/main/docs/customize/deep-dives/mcp.mdx`, fetched) manda crear la carpeta `.continue/mcpServers/` y anadir UN fichero YAML por servidor, con `mcpServers` como LISTA de objetos (`- name: ...`), no como mapa; la entrada stdio lleva `name`, `type: stdio`, `command` (cadena) y `args` (array hermano).',
+      'Por eso el merge es de BLOQUE PROPIO y no de fusion: el fichero es nuestro y no hay nada de nadie dentro que preservar. Si ya existe byte a byte identico se conserva; si existe con otro contenido se CONSERVA tambien y no se reescribe (puede ser el fichero de una persona con el mismo nombre). No se usa ningun parser YAML, asi que ningun YAML que no hayamos escrito puede ser reescrito por nosotros.',
+      'Tambien se leen configs JSON de otras herramientas en esa misma carpeta (`.continue/mcpServers/mcp.json`), pero no es la forma que este proyecto escribe.',
+      'NO tiene comandos de proyecto ni Agent Skills documentados: la convencion `.continue/prompts/*.prompt` que circula por ahi aparece CERO veces en los 153 ficheros de documentacion del repositorio del fabricante, asi que NO se escribe en esa ruta (ver la fila de plantillas de comando, que la rechaza nombrandolo).',
     ],
   },
 ];

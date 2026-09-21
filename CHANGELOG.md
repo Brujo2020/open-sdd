@@ -6,6 +6,43 @@ All notable changes to this project will be documented in this file.
 
 ## [3.3.0] — 2026-09-21
 
+### Silence is not a verdict: thirteen refusals, each with the URL that failed
+
+Eight hosts that the research investigated had no row at all in the command matrix — neither verified
+nor refused. That is the one outcome this project does not accept, because silence reads exactly like
+"nobody looked". Kimi Code CLI, Crush, Amp, Warp, Goose, OpenHands, DeepSeek Harness and Aider now have
+a **refusal row** that names the host, states why there is no project-scoped commands directory, and
+carries the URL that establishes it — Kimi's own documentation index (which has no commands page),
+Amp's "You do not need a slash command", DeepSeek Harness's "Plugin-owned command registration", and
+Aider's 84 documentation pages in which `AGENTS.md` appears zero times. The matrix is now 32
+conventions: 19 verified and 13 refused by name.
+
+
+### Continue.dev, and a third MCP family
+
+Continue.dev's convention is one **standalone YAML block per server** in `.continue/mcpServers/`, with
+`mcpServers` as a *list* rather than a map. The snippet is emitted by hand and the merge treats the file
+as an owned block: created when absent, kept when byte-identical, and **conserved untouched** when it
+exists with different content. No YAML parser is involved, so no YAML this tool did not write can ever
+be rewritten by it. Its prompts are **not** written to `.continue/prompts/`: that convention appears
+zero times in the vendor's 153 documentation files, so the row refuses it by name even though the habit
+is widespread — a plausible-looking path the host may never read is worse than an admitted gap.
+
+
+### One shared skills tree instead of sixteen copies
+
+Twenty-one skills now install **once**, from one neutral tree, into `.agents/skills/` — the cross-tool
+path that Roo Code, Kilo Code, Junie, MiMoCode, Crush, Amp, Kimi Code, Warp, Devin and Factory Droid
+each document reading (and that Goose, OpenHands and DeepSeek Harness read too). `integrate roo-code
+--write` writes that host's own MCP file *and* the shared tree, and the plan says where and why instead
+of announcing one directory and writing another. A host is mapped to that installer only when its own
+row documents the path — enforced by a test — so Trae (whose `.agents/skills/` support is off by
+default), Qoder, ZCode and CodeBuddy get a **manifest of their own that points at the same neutral
+tree** — one manifest per host, never a tree per host — so all four install 21 skills into their own
+different shape) and iFlow CLI (which documents no Agent Skills at all) remain declared rather than
+written blind.
+
+
 ### Eleven more hosts, each one read from its own documentation
 
 The 22 workflow templates no longer install for the eleven hosts this project started with. Each new
