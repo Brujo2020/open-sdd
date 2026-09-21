@@ -144,6 +144,10 @@ describe('specBiography — el ritmo se deriva de git, nunca se afirma', () => {
   });
 
   slowIt('el umbral de stale es una frontera comprobable: dos commits de código todavía no lo cruzan', async () => {
+    // La medición de este repositorio (2026-09-21) encontró silencios reconciliados de
+    // {0,0,0,0,1,2,3,5,5,12} commits (mediana 2, media 2.8, máximo 12): un commit es ruido
+    // demostrable y 3 cae en la media observada, así que la frontera se queda donde está (ver la
+    // cabecera del módulo). Tres commits sí cruzan; dos, no.
     const dir = await makeRepo();
     await write(dir, `${specPath}/requirements.md`, requirements(1));
     commitAll(dir, 'spec: nace');
@@ -174,6 +178,50 @@ describe('specBiography — el ritmo se deriva de git, nunca se afirma', () => {
     expect(ALIVE_SPEC_SHARE).toBeCloseTo(1 / 3);
     expect(bio.breathing).toBe('alive');
     expect(bio.activity.specCommits).toBeGreaterThan(1);
+  });
+
+  slowIt('la frontera de proporción cae en la banda vacía medida: 33% cruza y 29% no', async () => {
+    // La medición de este repositorio (2026-09-21; ver la cabecera del módulo y
+    // docs/guides/living-specs.md) observó proporciones de 23–31% por debajo de 1/3 —y en las 4 la
+    // spec no volvió a moverse— y de 38–67% por encima —y en 8 de 10 volvió a moverse—, SIN ninguna
+    // observación de la rama entre 31% y 38%. Estas dos fixtures fijan esa banda: exactamente 1/3
+    // cruza (la frontera es inclusiva) y 2/7 no. Las dos llegan a la rama de proporción porque
+    // quedan 2 commits después del último cambio de la spec (< STALE_CODE_COMMITS).
+    const build = async (codeBeforeLastSpec: number) => {
+      const dir = await makeRepo();
+      await write(dir, `${specPath}/requirements.md`, requirements(1));
+      commitAll(dir, 'spec: nace');
+      for (let i = 1; i <= codeBeforeLastSpec; i += 1) {
+        await write(dir, `src/before-${i}.ts`, `export const b${i} = ${i};\n`);
+        commitAll(dir, `code: antes ${i}`);
+      }
+      await write(dir, `${specPath}/tasks.md`, '- [ ] 1.1: la spec vuelve a moverse\n');
+      commitAll(dir, 'spec: acompaña');
+      await write(dir, 'src/after-1.ts', 'export const a1 = 1;\n');
+      commitAll(dir, 'code: después 1');
+      await write(dir, 'src/after-2.ts', 'export const a2 = 2;\n');
+      commitAll(dir, 'code: después 2');
+      return specBiography({ cwd: dir, feature: 'bio' });
+    };
+
+    const exactlyOneThird = await build(2); // 2 de spec / (2 + 4) = 33.3% → cruza
+    const belowOneThird = await build(3); // 2 de spec / (2 + 5) = 28.6% → no cruza
+
+    expect(ALIVE_SPEC_SHARE).toBeCloseTo(1 / 3);
+    expect(exactlyOneThird.activity).toEqual({
+      specCommits: 2,
+      codeCommits: 4,
+      sinceDays: expect.any(Number),
+    });
+    expect(exactlyOneThird.breathing).toBe('alive');
+    expect(exactlyOneThird.breathingReason).toContain('33%');
+    expect(belowOneThird.activity).toEqual({
+      specCommits: 2,
+      codeCommits: 5,
+      sinceDays: expect.any(Number),
+    });
+    expect(belowOneThird.breathing).toBe('quiet');
+    expect(belowOneThird.breathingReason).toContain('29%');
   });
 
   slowIt('spec escrita una vez y ningún commit de código → quiet (y se explica por qué no es orphan)', async () => {

@@ -47,16 +47,66 @@ that matches wins:
 | 7 | spec commits are ≥ **1/3** of all spec+code commits since birth | `alive` |
 | 8 | otherwise | `quiet` |
 
-The two thresholds are decisions, not truths. They live as named exports (`STALE_CODE_COMMITS` and
-`ALIVE_SPEC_SHARE`) so they can be argued about and changed in one place, and so tests can pin the
-boundary:
+The two thresholds are still decisions, not truths. They live as named exports
+(`STALE_CODE_COMMITS` and `ALIVE_SPEC_SHARE`) so they can be argued about and changed in one place,
+and so tests can pin the boundary. What changed is that they are now backed by a measurement of this
+repository instead of by argument alone — and that measurement says the sample is too small to
+calibrate them.
 
-- **`STALE_CODE_COMMITS = 3`** — a single commit can be a fix that does not change the contract, so
-  one silent commit is not drift. Three commits of code without the specification moving is already
-  material movement: the distance stops being explainable as the normal noise of work. It is the
-  point from which silence is named `stale` instead of a pause.
-- **`ALIVE_SPEC_SHARE = 1/3`** — one in every three moving pieces since birth is the specification.
-  Below that, the spec only shows up at the beginning and the end of the work.
+### What was measured (2026-09-21, this repository)
+
+The measurement imported the real module and, for every feature under `.sdd/specs/`, computed the raw
+numbers from git. One repository at one revision is one case, so the same numbers were measured at
+earlier revisions too: a temporary `git worktree` was checked out at 10 revisions spanning the 81
+commits since `.sdd/specs/` first appeared (`af6aa56`, 2026-09-16), giving **197 feature × revision
+observations** over **7 features** — the 3 live specs plus 4 demonstration specs that existed between
+two commits. The module's verdict was cross-checked against the independently computed numbers on 23
+of those observations (0 mismatches), so the harness measures what the module measures.
+
+**Reconciliation latency** — how many commits passed after the spec's last change before the spec was
+next updated, i.e. the silence the workflow actually tolerated before catching up:
+
+| Feature | Closed silences (commits of silence at the peak) |
+|---|---|
+| `paper-alignment` | 0, 5, 0, 12 |
+| `brownfield-support` | 3, 0, 5 |
+| `tool-maturity` | 0, 1, 2 |
+| **pooled (n=10)** | **0, 0, 0, 0, 1, 2, 3, 5, 5, 12** — median 2, mean 2.8, max 12 |
+
+The gaps still open at the measurement revision (`488c0a8`) were 30, 30 and 27 commits; they grow
+with every commit. **Nothing was observed between 12 and 27.**
+
+**Spec share** — the share branch is consulted only when the spec is not already `stale` and the code
+did move: 14 of the 197 observations, across 10 distinct revisions.
+
+| Observed share | Verdict | What happened next |
+|---|---|---|
+| 23%, 24%, 29%, 31% | below 1/3 → `quiet` | the spec never moved again (4/4) |
+| 38%, 40%, 40%, 43%, 44%, 50%, 50%, 60%, 67%, 67% | ≥ 1/3 → `alive` | the spec moved again (8/10; 2 were already at the feature's final revision) |
+
+No branch-reached observation falls between 31% and 38%, so 1/3 sits inside an empty band and is not
+distinguishable from 0.32 or 0.37 on this sample.
+
+### Why the constants did not move
+
+- **`STALE_CODE_COMMITS = 3` stays.** One commit is demonstrably noise: 4 of the 10 reconciled
+  silences peaked at 0–1 commits, and a threshold of 1 would have flagged 6 of 10. Three sits at the
+  mean of the observed tolerance (2.8). But the data does **not** make 3 a materiality boundary: 4 of
+  the 10 silences that were eventually reconciled had already reached 3 (3, 5, 5, 12), so `stale` at
+  3 is an early warning and it will label in-flight work as stale roughly 4 times out of 10. The only
+  thresholds with perfect separation on this sample are 13–27 — a 15-wide band delimited by 10 closed
+  and 3 open gaps — so picking a number inside it would be inventing a threshold from far too few
+  points.
+- **`ALIVE_SPEC_SHARE = 1/3` stays.** On the observations where the branch is reached it separates
+  cleanly — below 1/3 the spec never moved again, at or above it the spec did — but that is 14
+  observations from 10 revisions, and any value in 31%–37% produces identical verdicts. 1/3 is the
+  incumbent inside that band, not a calibrated point.
+
+**The honest limit:** 3 live features, 10 closed silences, one repository, one author and one
+workflow, over 5 days. A codebase with a different cadence can shift both numbers. The numbers above
+name the exact revisions, so the measurement can be repeated; if it is repeated on a larger corpus
+and supports a different interval, the constant changes in one place and the boundary tests move with
+it.
 
 Precedence is deliberate: `stale` beats `orphan`. A specification that was written once and then
 watched three code commits go by is both orphaned and out of date; the larger count is the stronger

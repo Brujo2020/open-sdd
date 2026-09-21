@@ -25,15 +25,37 @@
  *   7. proporción de commits de spec ≥ 1/3 del total          → `alive`
  *   8. en otro caso                                           → `quiet`
  *
- * Los dos umbrales son decisiones, no verdades; viven aquí con nombre para poder discutirlos y
- * cambiarlos en un solo sitio, y para que los tests fijen la frontera:
+ * Los dos umbrales siguen siendo decisiones: la medición de este repositorio (2026-09-21) los
+ * SOSTIENE como heurística, no los calibra. Lo medido, con el número delante:
  *
- *   · `STALE_CODE_COMMITS = 3` — un commit aislado puede ser un arreglo que no cambia el contrato;
- *     tres commits de código sin que la especificación se mueva ya son movimiento material, y la
- *     distancia deja de explicarse por el ruido normal del trabajo. Es el mínimo a partir del cual
- *     el silencio de la spec se nombra como `stale` en vez de como una simple pausa.
- *   · `ALIVE_SPEC_SHARE = 1/3` — una de cada tres piezas que se mueven desde el nacimiento es de la
- *     especificación. Por debajo, la spec solo aparece al principio o al final del trabajo.
+ *   · Muestra: 7 features bajo `.sdd/specs/` (3 vivas en HEAD, más 4 specs de demostración que
+ *     existieron entre dos commits), 197 observaciones (feature × revisión) sobre las 81 revisiones
+ *     desde `af6aa56` (el commit que creó `.sdd/specs/`), un repositorio, un autor y 5 días de
+ *     historia. Es demasiado pequeña para fijar un umbral: lo que estos números sostienen es un
+ *     INTERVALO, no un punto.
+ *   · `STALE_CODE_COMMITS = 3`: la latencia de reconciliación observada —pico de commits después del
+ *     último cambio de la spec antes de que la spec volviera a moverse, en las 3 features vivas— es
+ *     {0,0,0,0,1,2,3,5,5,12}: mediana 2, media 2.8, máximo 12. Un commit es ruido demostrable (4 de
+ *     10 silencios se reconciliaron con 0–1 commits; un umbral de 1 marcaría 6 de 10), y 3 cae en la
+ *     media de la tolerancia observada. Pero 3 NO es una frontera de materialidad: 4 de los 10
+ *     silencios que sí se reconciliaron llegaron a 3 o más (3, 5, 5, 12), así que `stale` a los 3 es
+ *     un AVISO TEMPRANO, no una prueba de abandono. Los huecos abiertos en la revisión medida
+ *     (`488c0a8`) son 27–30, muy por encima del máximo reconciliado (12). Los únicos valores con separación perfecta en esta muestra
+ *     (13–27) forman una banda de 15 puntos delimitada por 10 silencios cerrados y 3 abiertos:
+ *     elegir dentro de ella sería inventar un umbral con demasiado pocos puntos, así que se conserva
+ *     3 y se declara su coste medido (marca 4 de 10 silencios que sí se reconciliaron).
+ *   · `ALIVE_SPEC_SHARE = 1/3`: la rama de proporción solo se alcanza en 14 de las 197 observaciones
+ *     (10 revisiones distintas). Por debajo de 1/3 las proporciones observadas son {23,24,29,31}% y
+ *     en las 4 la spec NO volvió a moverse; por encima son {38,40,40,43,44,50,50,60,67,67}% y en 8
+ *     de 10 la spec volvió a moverse (las otras 2 están censuradas en la última revisión de la
+ *     feature). Entre 31% y 38% no hay ninguna observación de la rama: cualquier umbral de ese
+ *     intervalo produce los mismos veredictos, y 1/3 cae dentro. Separa en este repositorio, pero no
+ *     se distingue de 0.32 ni de 0.37.
+ *
+ * Límite honesto: otro repositorio (más features, otra cadencia, historia más larga) puede desplazar
+ * ambos números. La medición completa vive en `docs/guides/living-specs.md`; si se repite sobre un
+ * corpus mayor y sostiene otro intervalo, se cambia el valor aquí y se mueven los tests que fijan la
+ * frontera.
  *
  * Precedencia deliberada: `stale` gana a `orphan`. Una especificación que nació una vez y vio pasar
  * tres commits de código está huérfana Y desactualizada; el número mayor es la señal más fuerte, así
@@ -65,14 +87,25 @@ import { loadConstitution } from './status.js';
 export const DEFAULT_EVENT_LIMIT = 20;
 
 /**
- * Commits de código posteriores al último cambio de la spec a partir de los cuales el silencio de
- * la especificación es `stale`. Ver la cabecera para la justificación.
+ * Commits posteriores al último cambio de la spec a partir de los cuales el silencio de la
+ * especificación se nombra `stale`. Medido en este repositorio el 2026-09-21: la latencia de
+ * reconciliación observada es {0,0,0,0,1,2,3,5,5,12} (mediana 2, media 2.8, máximo 12) y los huecos
+ * abiertos en la revisión medida (`488c0a8`) son 27–30 (crecen con cada commit). 3 cae en la media
+ * observada y por encima del ruido de un solo commit,
+ * pero marca 4 de los 10 silencios que SÍ se reconciliaron: es un aviso temprano, no una frontera de
+ * materialidad. La muestra (3 features vivas, 10 silencios cerrados) no sostiene otro valor: los
+ * únicos que separan perfectamente aquí (13–27) forman una banda de 15 puntos. Ver la cabecera.
  */
 export const STALE_CODE_COMMITS = 3;
 
 /**
  * Proporción mínima de commits de spec sobre el total (spec + código) desde el nacimiento para
- * declarar `alive` cuando la spec no va por delante del último commit de código.
+ * declarar `alive` cuando la spec no va por delante del último commit de código. Medido en este
+ * repositorio el 2026-09-21: la rama solo se alcanza 14 veces; por debajo de 1/3 las proporciones
+ * observadas son 23–31% y la spec nunca volvió a moverse (4/4); por encima son 38–67% y volvió a
+ * moverse en 8 de 10 (2 censuradas en la última revisión). Entre 31% y 38% no hay observaciones: 1/3
+ * cae en esa banda vacía y no se distingue de 0.32 ni de 0.37. Se conserva por eso, no porque esté
+ * calibrado. Ver la cabecera.
  */
 export const ALIVE_SPEC_SHARE = 1 / 3;
 
