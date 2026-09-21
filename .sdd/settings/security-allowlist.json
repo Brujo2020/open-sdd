@@ -268,6 +268,18 @@
       "owner": "mantenimiento (bateria QA)",
       "actor": "spec:requirements-coach",
       "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/qaTier4Zombies.test.ts",
+      "ids": [
+        "ignore-previous",
+        "rm-rf-root",
+        "hidden-comment-instruction"
+      ],
+      "reason": "FIXTURE de la horda zombie (nivel 4 de QA): cien ataques contra un contrato de supervivencia, entre ellos tres formas de instruccion dirigida a un agente, un comando destructivo y un comentario oculto. Los literales son el OBJETO de la prueba —se comprueba que AI-002 los escala, que nada se obedece y que ningun fichero se escribe—, no instrucciones dirigidas a un modelo; se declaran con motivo, dueno y caducidad en vez de silenciarse, y no se repiten aqui para no reintroducirlos en el indice.",
+      "owner": "mantenimiento (bateria QA)",
+      "actor": "spec:requirements-coach",
+      "expires": "2027-03-31"
     }
   ]
 }

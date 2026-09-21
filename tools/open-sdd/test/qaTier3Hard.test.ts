@@ -7,14 +7,11 @@
  * turning a green line over a failing run.
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { runCli } from '../src/index.js';
-import { countByCheck, reviewRequirements } from '../src/core/requirementsCoach.js';
+import { countByCheck } from '../src/core/requirementsCoach.js';
 import { checkDrift, parseDriftBindings } from '../src/core/driftCheck.js';
 import { isBlocking, loadStandards } from '../src/core/standards.js';
 import { detectDrift, injectRules, renderEntryBlock } from '../src/core/standardsRender.js';
@@ -23,49 +20,12 @@ import { applySecurityAllowlist, type SecurityAllowlistEntry } from '../src/core
 import { applyUninstall, planUninstall, recordReceipt } from '../src/core/receipt.js';
 import { assessRigor } from '../src/core/rigor.js';
 import { applyDefaultFail, posturePasses } from '../src/core/enforcement.js';
+import { CLI_RUNTIME, REPO_ROOT, cleanupTempRepos, coachReview, gitCommit, makeCliHarness, makeTempRepo } from './qaSupport.js';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-const runtime = { platform: 'darwin' } as const;
+const repoRoot = REPO_ROOT;
+const runtime = CLI_RUNTIME;
 
-const dirs: string[] = [];
-const makeRepo = async (git = false): Promise<string> => {
-  const dir = await mkdtemp(path.join(tmpdir(), 'sdd-hard-'));
-  dirs.push(dir);
-  if (git) {
-    execFileSync('git', ['init', '-q'], { cwd: dir });
-    execFileSync('git', ['config', 'user.email', 'gate@open-sdd.test'], { cwd: dir });
-    execFileSync('git', ['config', 'user.name', 'gate'], { cwd: dir });
-  }
-  return dir;
-};
-afterEach(async () => {
-  await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
-});
-
-const makeIO = () => {
-  const logs: string[] = [];
-  const errs: string[] = [];
-  return {
-    io: { log: (m: string) => logs.push(m), error: (m: string) => errs.push(m), exit: () => undefined },
-    logs,
-    errs,
-    out: () => logs.join('\n'),
-    err: () => errs.join('\n'),
-  };
-};
-
-const gitCommit = (cwd: string, message: string): void => {
-  execFileSync('git', ['add', '-A'], { cwd });
-  execFileSync('git', ['commit', '-qm', message], { cwd });
-};
-
-const review = (text: string, extra: { file: string; text: string }[] = []) =>
-  reviewRequirements({
-    feature: 'f',
-    artifacts: [{ file: '.sdd/specs/f/requirements.md', text }, ...extra],
-    entries: [],
-    runner: () => [],
-  });
+afterEach(cleanupTempRepos);
 
 describe('tier 3 — hard: complex projects, hard decisions and adversarial input', () => {
   // ── Cross-spec drift on a project with three specs ──────────────────────────────────────────
@@ -149,7 +109,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
 
   // ── The rigour ladder decides advisory versus blocking, on a real (temp) project ─────────────
   const rigorRepo = async (): Promise<string> => {
-    const cwd = await makeRepo(true);
+    const cwd = await makeTempRepo({ git: true });
     await mkdir(path.join(cwd, '.sdd/specs/f'), { recursive: true });
     await mkdir(path.join(cwd, '.sdd/steering'), { recursive: true });
     await mkdir(path.join(cwd, 'src'), { recursive: true });
@@ -186,7 +146,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
 
   // ── The catalogue refuses what it cannot justify ─────────────────────────────────────────────
   it('12. a malformed catalogue entry is rejected BY NAME, never thrown and never silent', async () => {
-    const cwd = await makeRepo();
+    const cwd = await makeTempRepo();
     await mkdir(path.join(cwd, '.sdd/settings/standards'), { recursive: true });
     await writeFile(path.join(cwd, '.sdd/settings/standards/broken.json'), JSON.stringify({ id: 'REQ-BAD-001' }), 'utf8');
     const { entries, rejected } = await loadStandards(cwd);
@@ -195,7 +155,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
     expect(rejected[0].file).toContain('broken.json');
   });
   it('13. one corrupt entry does not take the rest of the catalogue down', async () => {
-    const cwd = await makeRepo();
+    const cwd = await makeTempRepo();
     await mkdir(path.join(cwd, '.sdd/settings/standards'), { recursive: true });
     await writeFile(path.join(cwd, '.sdd/settings/standards/broken.json'), '{ not json', 'utf8');
     const valid = {
@@ -226,7 +186,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
 
   // ── Injecting into a living document ────────────────────────────────────────────────────────
   const catalogueRepo = async (): Promise<string> => {
-    const cwd = await makeRepo();
+    const cwd = await makeTempRepo();
     await mkdir(path.join(cwd, '.sdd/settings/standards'), { recursive: true });
     await mkdir(path.join(cwd, '.sdd/settings/rules'), { recursive: true });
     await writeFile(
@@ -282,7 +242,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
 
   // ── Identifiers against a real revision ─────────────────────────────────────────────────────
   it('18. a real base revision yields both ID-MUTATED and ID-LOST', async () => {
-    const cwd = await makeRepo(true);
+    const cwd = await makeTempRepo({ git: true });
     await mkdir(path.join(cwd, '.sdd/specs/p'), { recursive: true });
     const rel = '.sdd/specs/p/requirements.md';
     await writeFile(
@@ -303,7 +263,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
     expect(report.findings.map((f) => f.code).sort()).toEqual(['ID-LOST', 'ID-MUTATED']);
   });
   it('19. a base that does not resolve produces a problem, not an invented verdict', async () => {
-    const cwd = await makeRepo(true);
+    const cwd = await makeTempRepo({ git: true });
     await mkdir(path.join(cwd, '.sdd/specs/p'), { recursive: true });
     const rel = '.sdd/specs/p/requirements.md';
     await writeFile(path.join(cwd, rel), '### REQ-P-014 — x\n', 'utf8');
@@ -314,7 +274,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
 
   // ── Reversibility under pressure ────────────────────────────────────────────────────────────
   it('20. a file a human edited is refused, never deleted', async () => {
-    const cwd = await makeRepo();
+    const cwd = await makeTempRepo();
     await mkdir(path.join(cwd, '.claude'), { recursive: true });
     await writeFile(path.join(cwd, '.claude/a.json'), 'ours\n', 'utf8');
     await recordReceipt(cwd, [{ path: '.claude/a.json', action: 'create' }]);
@@ -324,7 +284,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
     expect(existsSync(path.join(cwd, '.claude/a.json'))).toBe(true);
   });
   it('21. a merged external config is refused, because un-merging is not deleting', async () => {
-    const cwd = await makeRepo();
+    const cwd = await makeTempRepo();
     await mkdir(path.join(cwd, '.claude'), { recursive: true });
     await writeFile(path.join(cwd, '.claude/settings.json'), '{"mcp":{}}\n', 'utf8');
     await recordReceipt(cwd, [{ path: '.claude/settings.json', action: 'merge' }]);
@@ -335,7 +295,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
     expect(existsSync(path.join(cwd, '.claude/settings.json'))).toBe(true);
   });
   it('22. a corrupt receipt authorises nothing', async () => {
-    const cwd = await makeRepo();
+    const cwd = await makeTempRepo();
     await mkdir(path.join(cwd, '.sdd'), { recursive: true });
     await writeFile(path.join(cwd, '.sdd/.open-sdd-receipt.json'), '{ not json', 'utf8');
     const plan = await planUninstall(cwd);
@@ -344,7 +304,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
     expect(plan.problems).toHaveLength(1);
   });
   it('23. .sdd/ is removed only when --purge-sdd is explicit', async () => {
-    const cwd = await makeRepo();
+    const cwd = await makeTempRepo();
     await mkdir(path.join(cwd, '.sdd'), { recursive: true });
     await writeFile(path.join(cwd, '.sdd/note.json'), '{}\n', 'utf8');
     await recordReceipt(cwd, [{ path: '.sdd/note.json', action: 'create' }]);
@@ -380,45 +340,45 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
 
   // ── The console contract under failure ──────────────────────────────────────────────────────
   it('27. an unknown command exits 2 and suggests the nearest one', async () => {
-    const ctx = makeIO();
+    const ctx = makeCliHarness();
     const code = await runCli(['statu'], runtime, ctx.io, {});
     expect(code).toBe(2);
     expect(ctx.err()).toContain('status');
   });
   it('28. an unknown flag exits 2 as a usage error', async () => {
-    const ctx = makeIO();
+    const ctx = makeCliHarness();
     const code = await runCli(['--nope'], runtime, ctx.io, {});
     expect(code).toBe(2);
   });
   it('29. an untranslated locale is refused by name with the translated list', async () => {
-    const ctx = makeIO();
+    const ctx = makeCliHarness();
     const code = await runCli(['status', '--lang', 'ja'], runtime, ctx.io, {});
     expect(code).toBe(2);
     expect(ctx.err()).toMatch(/`es`.*`en`/);
   });
   it('30. a FAILING gates run never ends on a success-looking line', async () => {
-    const cwd = await makeRepo();
+    const cwd = await makeTempRepo();
     await mkdir(path.join(cwd, '.sdd/specs/payments'), { recursive: true });
     await writeFile(path.join(cwd, '.sdd/specs/payments/requirements.md'), '# Requirements\n\n### REQ-PAY-001 — x\n', 'utf8');
     await writeFile(path.join(cwd, '.sdd/specs/payments/plan.md'), '# Plan\n', 'utf8');
     await writeFile(path.join(cwd, '.sdd/specs/payments/tasks.md'), '# Tasks\n\n- [x] T1 done _Requirements: REQ-PAY-001_\n', 'utf8');
 
-    const ctx = makeIO();
+    const ctx = makeCliHarness();
     const code = await runCli(['gates', 'run'], runtime, ctx.io, {}, { cwd });
     expect(code).toBe(1);
     expect(ctx.out()).toContain('La cadena NO pasa');
     expect(ctx.out()).not.toContain('gates OK');
   });
   it('31. help exit-codes documents all five codes', async () => {
-    const ctx = makeIO();
+    const ctx = makeCliHarness();
     const code = await runCli(['help', 'exit-codes'], runtime, ctx.io, {});
     expect(code).toBe(0);
     for (const code_ of ['0', '1', '2', '3', '4']) expect(ctx.out()).toContain(code_);
     expect(ctx.out()).toMatch(/usage/i);
   });
   it('32. brownfield ids without a base is a usage error, not a silent pass', async () => {
-    const cwd = await makeRepo(true);
-    const ctx = makeIO();
+    const cwd = await makeTempRepo({ git: true });
+    const ctx = makeCliHarness();
     const code = await runCli(['brownfield', 'ids', 'f'], runtime, ctx.io, {}, { cwd });
     expect(code).toBe(2);
   });
@@ -431,7 +391,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
       lines.push(`- The system shall not fail for case ${index}.`);
     }
     const started = Date.now();
-    const report = review(lines.join('\n'));
+    const report = coachReview(lines.join('\n'));
     const elapsed = Date.now() - started;
 
     expect(countByCheck(report.findings)['SIN-007']).toBe(300);
@@ -445,7 +405,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
 
   // ── The adversarial case: a spec that tries to give orders ─────────────────────────────────
   it('34. instruction-shaped spec text is escalated, never obeyed, and nothing is written', async () => {
-    const cwd = await makeRepo();
+    const cwd = await makeTempRepo();
     await mkdir(path.join(cwd, '.sdd/specs/f'), { recursive: true });
     const file = path.join(cwd, '.sdd/specs/f/requirements.md');
     const hostile = [
@@ -461,7 +421,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
     await writeFile(file, hostile, 'utf8');
     const before = await readFile(file, 'utf8');
 
-    const report = review(hostile);
+    const report = coachReview(hostile);
     const hostileFindings = report.findings.filter((f) => f.standardId === 'AI-002');
     expect(hostileFindings.length).toBeGreaterThanOrEqual(3);
     for (const finding of hostileFindings) {
@@ -472,7 +432,7 @@ describe('tier 3 — hard: complex projects, hard decisions and adversarial inpu
     // Nada se obedece y nada se escribe: la revisión es de solo lectura.
     expect(await readFile(file, 'utf8')).toBe(before);
     // Y el veredicto se niega a certificar incluso con el ataque dentro.
-    const ctx = makeIO();
+    const ctx = makeCliHarness();
     const code = await runCli(['requirements', 'review', 'f'], runtime, ctx.io, {}, { cwd });
     expect([0, 1]).toContain(code);
     expect(ctx.out()).toContain('not correctness');

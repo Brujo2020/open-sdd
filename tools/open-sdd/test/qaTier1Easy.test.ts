@@ -8,19 +8,12 @@
 import { describe, expect, it } from 'vitest';
 import { allocateBlock, auditIds, normalizeStatement, parseRequirementIds } from '../src/core/stableIds.js';
 import { isExpiredWaiver, matchesGlob } from '../src/core/driftCheck.js';
-import { classifyArtifact, countByCheck, reviewRequirements } from '../src/core/requirementsCoach.js';
+import { classifyArtifact, countByCheck } from '../src/core/requirementsCoach.js';
+import { coachReview } from './qaSupport.js';
 import { parseChecklist } from '../src/core/checklist.js';
 import { wordDiff } from '../src/core/specReview.js';
 import { normalizeRel, sha256Of } from '../src/core/receipt.js';
 import { parseSecurityAllowlist } from '../src/core/securityAllowlist.js';
-
-const review = (text: string) =>
-  reviewRequirements({
-    feature: 'f',
-    artifacts: [{ file: '.sdd/specs/f/requirements.md', text }],
-    entries: [],
-    runner: () => [],
-  });
 
 describe('tier 1 — easy: the units later tiers stand on', () => {
   // 1-5: artifact classification decides which checks run at all.
@@ -172,7 +165,7 @@ describe('tier 1 — easy: the units later tiers stand on', () => {
 
   // A guard on the tier itself: the review of an empty artifact must not invent findings.
   it('31. an empty artifact produces no findings and no invented check', () => {
-    const report = review('# Requirements\n');
+    const report = coachReview('# Requirements\n');
     expect(report.findings).toEqual([]);
     expect(countByCheck(report.findings)).toEqual({});
   });
