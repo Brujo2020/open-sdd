@@ -56,20 +56,20 @@ Command run from the repository root, 2026-09-21:
 
 ```
 $ node tools/open-sdd/dist/cli.js assure claims --verify
-62 afirmaciones | 59 verificadas | 0 declaradas | 3 no medidas | 0 rotas | 0 desactualizadas
+66 afirmaciones | 63 verificadas | 0 declaradas | 3 no medidas | 0 rotas | 0 desactualizadas
 [exit=0]
 ```
 
 | State (§9.6) | Count | Claims |
 |---|---|---|
-| `verified` | 59 | CLM-001 … CLM-027, CLM-030, CLM-032 … CLM-062 |
+| `verified` | 63 | CLM-001 … CLM-027, CLM-030, CLM-032 … CLM-066 |
 | `not-implemented` (declared gap confirmed) | 0 | — |
 | `not-measured` (absence of evidence persists) | 3 | CLM-028 (`docs/lab` absent), CLM-029 (`bin/sh-gate` absent), CLM-031 (`.steelharness/` absent) |
 | `broken` (text claims a pass the code does not deliver) | 0 | — |
 | `outdated-text` (code improved past the prose) | 0 | — |
 
-In the short vocabulary: **verified = 59, declared-gap = 0, absent/not-measured = 3, broken = 0,
-outdated-text = 0** (out of 62). CLM-045 … CLM-057 decide the brownfield and rigor capabilities by
+In the short vocabulary: **verified = 63, declared-gap = 0, absent/not-measured = 3, broken = 0,
+outdated-text = 0** (out of 66). CLM-045 … CLM-057 decide the brownfield and rigor capabilities by
 exit code: delta validation and two-way traceability, the mandatory `previous` on `MODIFIED`, the
 evidence-or-amendment rule for descriptive principles, the constitution being blocking at every
 level as the floor of the ladder, absent practices travelling as proposed amendments,
@@ -79,7 +79,11 @@ constitution-plus-requirements floor, the ladder monotonicity (2 → 4 → 6 gat
 unknown gate id, and the quiet `--no-drift` commit path. CLM-058 … CLM-062 cover the surfaces added
 since: the single brownfield entry point, the `sdd-brownfield` skill, the one status dashboard, its
 `--quiet` commit-time line, and the phantom-authority check that makes `status --check` exit 1 on a
-principle that is not in force.
+principle that is not in force. CLM-063 … CLM-066 bind the W2/W3 work to the same discipline: the
+standards catalogue loads 16 entries with none rejected, `isBlocking` is false for every shipped
+standard (calibrate before you block), C8 is a declared extension (core, advisory, `imposes: []`), and
+the requirements coach states in its own output that it reports checks and adjudication, not
+correctness.
 
 Observed exit codes, from the run above: **CLM-028, CLM-029 and CLM-031 exited `1`; every other claim
 exited `0`.** Both runners print the per-claim code, so the line above can be re-derived rather than

@@ -456,3 +456,31 @@
   statement_en: 'A spec that declares a principle not in force is a phantom authority: status --check reports it as an UNKNOWN_PRINCIPLE error and exits 1.'
   verifier: 'node -e "const fs=require(''fs''),os=require(''os''),p=require(''path''),cp=require(''child_process'');const cli=p.resolve(''tools/open-sdd/dist/cli.js'');const d=fs.mkdtempSync(p.join(os.tmpdir(),''sdd-phantom-''));const s=p.join(d,''.sdd'');fs.mkdirSync(p.join(s,''specs'',''x''),{recursive:true});fs.mkdirSync(p.join(s,''steering''),{recursive:true});fs.copyFileSync(''.sdd/steering/constitution.md'',p.join(s,''steering'',''constitution.md''));fs.writeFileSync(p.join(s,''specs'',''x'',''requirements.md''),''# R''+String.fromCharCode(10)+''_Constitution: C-FANTASMA_''+String.fromCharCode(10));const r=cp.spawnSync(process.execPath,[cli,''status'',''x'',''--check''],{cwd:d,encoding:''utf8''});process.exit(r.status===1&&String(r.stdout).includes(''UNKNOWN_PRINCIPLE'')?0:1)"'
   expectation: pass
+
+- id: CLM-063
+  section: "W2 / REQ-STD-001 (the standards catalogue is data, not prose)"
+  statement_es: 'El repositorio envia un catalogo de estandares maquina-verificable: 16 entradas bajo .sdd/settings/standards/ y ninguna rechazada por un campo ausente.'
+  statement_en: 'The repository ships a machine-checkable standards catalogue: 16 entries under .sdd/settings/standards/, none rejected for a missing field.'
+  verifier: 'node --input-type=module -e "import {loadStandards} from \"./tools/open-sdd/dist/core/standards.js\"; const r=await loadStandards(\".\"); process.exit(r.entries.length===16&&r.rejected.length===0?0:1)"'
+  expectation: pass
+
+- id: CLM-064
+  section: "W2 / REQ-STD-005 (calibrate before you block)"
+  statement_es: 'Ningun estandar puede bloquear sin un corpus medido: isBlocking es falso para las 16 entradas enviadas.'
+  statement_en: 'No standard may block without a measured corpus: isBlocking is false for all 16 shipped entries.'
+  verifier: 'node --input-type=module -e "import {loadStandards,isBlocking} from \"./tools/open-sdd/dist/core/standards.js\"; const r=await loadStandards(\".\"); process.exit(r.entries.every(e=>isBlocking(e)===false)?0:1)"'
+  expectation: pass
+
+- id: CLM-065
+  section: "W2 / REQ-STD-006 (C8 is a declared extension beyond the paper)"
+  statement_es: 'C8 Standards Conformance es una extension declarada: esta en el nucleo de todo perfil, es advisory y no impone ninguna puerta logica del articulo.'
+  statement_en: 'C8 Standards Conformance is a declared extension: it is in the core of every profile, it is advisory, and it imposes no logical gate of the paper.'
+  verifier: 'node --input-type=module -e "import {resolveGateChain,getExecutableGate} from \"./tools/open-sdd/dist/core/gateCatalog.js\"; const c=resolveGateChain(\"solo\"); const g=getExecutableGate(\"C8\"); process.exit(c.core.includes(\"C8\")&&g?.posture===\"advisory\"&&g?.imposes.length===0?0:1)"'
+  expectation: pass
+
+- id: CLM-066
+  section: "W3 / REQ-RQC-011 (the coach never certifies)"
+  statement_es: 'El coach de requisitos nunca certifica: su salida declara que informa de comprobaciones y adjudicacion, no de correccion.'
+  statement_en: 'The requirements coach never certifies: its output states that it reports checks and adjudication, not correctness.'
+  verifier: 'node tools/open-sdd/dist/cli.js requirements review standards-engine 2>&1 | grep -q "not correctness"'
+  expectation: pass
