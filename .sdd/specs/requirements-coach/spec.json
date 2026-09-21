@@ -1,0 +1,13 @@
+{
+  "name": "requirements-coach",
+  "phase": "tasks-drafted",
+  "approvals": {
+    "requirements": false,
+    "design": false,
+    "tasks": false
+  },
+  "language": "en",
+  "created_at": "2026-09-21T00:00:00.000Z",
+  "updated_at": "2026-09-21T00:00:00.000Z",
+  "description": "W3 of docs/EVOLUTION-PLAN.md: make the requirements-quality catalogue executable. Deterministic checks in eight families gate, a model critique advises, every finding carries a position, a basis and a graded remedy or an explicit question, and the coach never certifies a specification. Implements decisions 1 (es/en, refuse the rest by name), 2 (Ollama, offline) and 3 (advisory until calibrated)."
+}

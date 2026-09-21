@@ -776,14 +776,17 @@ named is not reported as a number.
 7. **Days 14 — close the loop.** Record what shipped in `docs/MEASUREMENTS.md`; update
    `PAPER-ALIGNMENT.md` gaps touched (G-26/G-28 and the new C8); keep `assure claims` at 0 broken.
 
-**Decisions requested before P1 begins**
+**Decisions taken (2026-09-21).** All four were answered by the owner; they are now constraints, not
+options.
 
-- **Locales:** implement the 13 advertised, or declare `es`/`en` and refuse the rest by name?
-  (Recommended: declare now, refuse by name, implement on demand — honesty over breadth.)
-- **First AI backend:** local Ollama (privacy, offline) or an OpenAI-compatible endpoint (quality)?
-  (Recommended: Ollama first, so the default stays network-free.)
-- **New standards:** advisory-by-default until calibrated, or blocking where the tool is already
-  confident? (Recommended: advisory-by-default; promote after the corpus.)
-- **Formalization:** turn W1–W4 into SDD specs under `.sdd/specs/` before implementing, or execute
-  the first slice directly and spec the rest? (Recommended: spec W2/W3 first — they are the ones
-  that change the gate chain.)
+- **Locales — declared, not aspirational.** `es` and `en` only; any other locale is **refused by name**
+  with the list of translated ones. Implemented in W1 and carried into the coach's locale contract
+  (REQ-RQC-012). No locale is accepted that has no translation.
+- **First AI backend — Ollama, local.** The deterministic core stays network-free by default; the
+  model is opt-in, local, and never load-bearing. Carried into W5 and into REQ-RQC-010/011.
+- **New standards — advisory until calibrated.** No new check blocks before a measured corpus records
+  its precision. Carried into REQ-STD-005 and REQ-RQC-004.
+- **Formalization — specs first, and the gate chain is not touched before approval.** W2 and W3 are now
+  specs: `.sdd/specs/standards-engine/` and `.sdd/specs/requirements-coach/`, each with requirements in
+  EARS, a plan and tasks. Their `approvals` are all `false` and their phase is `tasks-drafted`: the
+  three phases are **awaiting human review**, and no implementation starts until they are approved.
