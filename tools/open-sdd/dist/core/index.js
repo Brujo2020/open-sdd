@@ -62,5 +62,7 @@ export * from './commandTemplates.js';
 export * from './standardsTypes.js';
 export * from './standards.js';
 export * from './standardsRender.js';
+// Stable identifiers: allocate in blocks, audit against a base, never renumber.
+export * from './stableIds.js';
 // Reversibility: the receipt of what this tool wrote, so an install can be undone.
 export * from './receipt.js';

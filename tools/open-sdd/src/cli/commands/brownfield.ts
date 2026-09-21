@@ -17,6 +17,7 @@ import type { CliIO } from '../io.js';
 import { scanProject } from '../../core/reverseEngineering.js';
 import { buildDescriptiveConstitution, collectRepoFacts } from '../../core/reverseConstitution.js';
 import { buildConstitutionDraft, constitutionArtifactPaths, RATIFY_INSTRUCTION } from '../../core/constitutionDraft.js';
+import { auditIdsAgainstBase } from '../../core/stableIds.js';
 import { parseConstitution, renderConstitution, validateConstitution, principlesInForce, resolveAuthority } from '../../core/constitution.js';
 import {
   deltaCounts,
@@ -485,10 +486,69 @@ export const handleDeltaCommand = async (args: string[], io: CliIO, cwd: string)
 // brownfield
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * `brownfield ids <feature> --base <ref>` — el centinela de identificadores estables.
+ *
+ * Un `REQ-AREA-014` es una cita: si insertar un requisito renumera los siguientes, cada cita pasa a
+ * significar otra cosa en silencio. Esto compara los ids y sus enunciados contra la base y reporta
+ * `ID-MUTATED` (mismo id, otro significado) e `ID-LOST` (el id desapareció). La delta es el canal
+ * para declararlo, así que un hallazgo no es un error del cambio: es un cambio sin declarar.
+ *
+ * Códigos de salida del contrato: 2 si falta la feature o la base, o si la base no se pudo leer
+ * (no se puede auditar); 1 si hay hallazgos; 0 si no hay nada que declarar.
+ */
+const handleIdsAudit = async (args: string[], io: CliIO, root: string): Promise<number> => {
+  const positional = args.filter((a) => !a.startsWith('-'));
+  const feature = positional[0] === 'audit' ? positional[1] : positional[0];
+  const inline = args.find((a) => a.startsWith('--base='));
+  const baseIdx = args.findIndex((a) => a === '--base');
+  const base = inline ? inline.slice('--base='.length) : baseIdx >= 0 ? args[baseIdx + 1] : undefined;
+  const json = args.includes('--json');
+
+  if (!feature || !base) {
+    io.error(colors.red('error[usage]: `brownfield ids <feature> --base <ref>` necesita la feature y la base.'));
+    io.error('  = help: open-sdd brownfield ids tool-maturity --base main');
+    return 2;
+  }
+
+  const rel = path.posix.join('.sdd', 'specs', feature, 'requirements.md');
+  const afterText = await readFile(path.join(root, rel), 'utf8').catch(() => null);
+  const report = auditIdsAgainstBase({ cwd: root, base, requirementsRelPath: rel, afterText });
+
+  if (json) {
+    io.log(
+      JSON.stringify(
+        {
+          ok: report.findings.length === 0 && report.problems.length === 0,
+          command: 'brownfield ids',
+          data: { feature, base, ...report },
+        },
+        null,
+        2,
+      ),
+    );
+  } else {
+    io.log(colors.bold(`Ids de "${feature}" contra ${base}`));
+    io.log(`  ${report.beforeCount} id(s) en la base · ${report.afterCount} en el árbol de trabajo`);
+    for (const problem of report.problems) io.log(`  ${colors.yellow('!')} ${problem}`);
+    for (const finding of report.findings) io.log(`  ${colors.red('✗')} ${finding.code} ${finding.id} — ${finding.detail}`);
+    if (report.problems.length === 0 && report.findings.length === 0) {
+      io.log(`  ${colors.green('✓')} ningún id cambió de significado ni desapareció sin declararlo`);
+    }
+  }
+
+  if (report.problems.length > 0) return 2;
+  return report.findings.length > 0 ? 1 : 0;
+};
+
 export const handleBrownfieldCommand = async (args: string[], io: CliIO, cwd: string): Promise<number> => {
   const sub = args[0] ?? 'survey';
   const positional = args.slice(1).filter((a) => !a.startsWith('-'));
   const target = positional[0] ? path.resolve(cwd, positional[0]) : await findRepoRoot(cwd);
+
+  if (sub === 'ids') {
+    return handleIdsAudit(args.slice(1), io, await findRepoRoot(cwd));
+  }
 
   if (sub === 'bootstrap') {
     // El positional de `bootstrap` es una RUTA (como en survey/constitution), no un nombre de
