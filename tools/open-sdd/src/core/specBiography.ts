@@ -40,10 +40,11 @@
  *     media de la tolerancia observada. Pero 3 NO es una frontera de materialidad: 4 de los 10
  *     silencios que sí se reconciliaron llegaron a 3 o más (3, 5, 5, 12), así que `stale` a los 3 es
  *     un AVISO TEMPRANO, no una prueba de abandono. Los huecos abiertos en la revisión medida
- *     (`488c0a8`) son 27–30, muy por encima del máximo reconciliado (12). Los únicos valores con separación perfecta en esta muestra
- *     (13–27) forman una banda de 15 puntos delimitada por 10 silencios cerrados y 3 abiertos:
- *     elegir dentro de ella sería inventar un umbral con demasiado pocos puntos, así que se conserva
- *     3 y se declara su coste medido (marca 4 de 10 silencios que sí se reconciliaron).
+ *     (`488c0a8`) son 27–30, muy por encima del máximo reconciliado (12). Los únicos valores con
+ *     separación perfecta en esta muestra (13–27) forman una banda de 15 puntos delimitada por 10
+ *     silencios cerrados y 3 abiertos: elegir dentro de ella sería inventar un umbral con demasiado
+ *     pocos puntos, así que se conserva 3 y se declara su coste medido (marca 4 de 10 silencios que
+ *     sí se reconciliaron).
  *   · `ALIVE_SPEC_SHARE = 1/3`: la rama de proporción solo se alcanza en 14 de las 197 observaciones
  *     (10 revisiones distintas). Por debajo de 1/3 las proporciones observadas son {23,24,29,31}% y
  *     en las 4 la spec NO volvió a moverse; por encima son {38,40,40,43,44,50,50,60,67,67}% y en 8
@@ -322,7 +323,7 @@ const decideBreathing = (measured: {
   if (codeSinceLastChange >= STALE_CODE_COMMITS) {
     return {
       breathing: 'stale',
-      reason: `el código cambió materialmente desde el último cambio de la especificación: ${codeSinceLastChange} commit(s) posteriores a ese cambio y ninguno la tocó (umbral de ${STALE_CODE_COMMITS}).`,
+      reason: `el código siguió moviéndose sin ella: ${codeSinceLastChange} commit(s) posteriores al último cambio de la especificación y ninguno la tocó (umbral de ${STALE_CODE_COMMITS}; aviso temprano, no prueba de abandono).`,
     };
   }
 

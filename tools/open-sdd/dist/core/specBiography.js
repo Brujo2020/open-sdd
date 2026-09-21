@@ -39,11 +39,12 @@
  *     10 silencios se reconciliaron con 0–1 commits; un umbral de 1 marcaría 6 de 10), y 3 cae en la
  *     media de la tolerancia observada. Pero 3 NO es una frontera de materialidad: 4 de los 10
  *     silencios que sí se reconciliaron llegaron a 3 o más (3, 5, 5, 12), así que `stale` a los 3 es
- *     un AVISO TEMPRANO, no una prueba de abandono. Los huecos abiertos en HEAD son 27–30, muy por
- *     encima del máximo reconciliado (12). Los únicos valores con separación perfecta en esta muestra
- *     (13–27) forman una banda de 15 puntos delimitada por 10 silencios cerrados y 3 abiertos:
- *     elegir dentro de ella sería inventar un umbral con demasiado pocos puntos, así que se conserva
- *     3 y se declara su coste medido (marca 4 de 10 silencios que sí se reconciliaron).
+ *     un AVISO TEMPRANO, no una prueba de abandono. Los huecos abiertos en la revisión medida
+ *     (`488c0a8`) son 27–30, muy por encima del máximo reconciliado (12). Los únicos valores con
+ *     separación perfecta en esta muestra (13–27) forman una banda de 15 puntos delimitada por 10
+ *     silencios cerrados y 3 abiertos: elegir dentro de ella sería inventar un umbral con demasiado
+ *     pocos puntos, así que se conserva 3 y se declara su coste medido (marca 4 de 10 silencios que
+ *     sí se reconciliaron).
  *   · `ALIVE_SPEC_SHARE = 1/3`: la rama de proporción solo se alcanza en 14 de las 197 observaciones
  *     (10 revisiones distintas). Por debajo de 1/3 las proporciones observadas son {23,24,29,31}% y
  *     en las 4 la spec NO volvió a moverse; por encima son {38,40,40,43,44,50,50,60,67,67}% y en 8
@@ -86,7 +87,8 @@ export const DEFAULT_EVENT_LIMIT = 20;
  * Commits posteriores al último cambio de la spec a partir de los cuales el silencio de la
  * especificación se nombra `stale`. Medido en este repositorio el 2026-09-21: la latencia de
  * reconciliación observada es {0,0,0,0,1,2,3,5,5,12} (mediana 2, media 2.8, máximo 12) y los huecos
- * abiertos en HEAD son 27–30. 3 cae en la media observada y por encima del ruido de un solo commit,
+ * abiertos en la revisión medida (`488c0a8`) son 27–30 (crecen con cada commit). 3 cae en la media
+ * observada y por encima del ruido de un solo commit,
  * pero marca 4 de los 10 silencios que SÍ se reconciliaron: es un aviso temprano, no una frontera de
  * materialidad. La muestra (3 features vivas, 10 silencios cerrados) no sostiene otro valor: los
  * únicos que separan perfectamente aquí (13–27) forman una banda de 15 puntos. Ver la cabecera.
@@ -209,7 +211,7 @@ const decideBreathing = (measured) => {
     if (codeSinceLastChange >= STALE_CODE_COMMITS) {
         return {
             breathing: 'stale',
-            reason: `el código cambió materialmente desde el último cambio de la especificación: ${codeSinceLastChange} commit(s) posteriores a ese cambio y ninguno la tocó (umbral de ${STALE_CODE_COMMITS}).`,
+            reason: `el código siguió moviéndose sin ella: ${codeSinceLastChange} commit(s) posteriores al último cambio de la especificación y ninguno la tocó (umbral de ${STALE_CODE_COMMITS}; aviso temprano, no prueba de abandono).`,
         };
     }
     if (specCommits <= 1) {

@@ -378,7 +378,8 @@ node -p "require('./package.json').version"                          # the versi
 Level B is the pre-commit hook, and on Windows it is the half of the floor that no Linux job can
 witness: git, the shell git uses to honour the hook's shebang, and the Node that receives the file
 are all different binaries there. Running the test suite on Windows is **not** the same thing as
-running the hook git invokes — the suite imports the gate's code, it does not let git call it.
+running the hook git invokes: the suite does spawn the hook file through `node` on that host, but it
+never lets **git** resolve and call it, which is the path a developer's commit actually takes.
 
 The `windows` job therefore ends with a step that executes the hook for real, and the step is the
 proof rather than a description of one:
