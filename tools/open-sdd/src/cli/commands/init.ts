@@ -495,15 +495,18 @@ export const planInit = async (input: PlanInitInput): Promise<InitPlan> => {
   }
 
   if (input.skills) {
-    const commandsDir = getAgentDefinition(agent.id).layout.commandsDir;
+    const definition = getAgentDefinition(agent.id);
+    const commandsDir = definition.layout.commandsDir;
     const skillsDirExists = await exists(path.join(target, commandsDir));
     artifacts.push({
       kind: 'agent-skills',
       path: commandsDir,
-      action: skillsDirExists ? 'update' : 'create',
-      reason: skillsDirExists
-        ? `el conjunto ya está presente: el instalador existente completa lo ausente y NO sobrescribe lo editado (modo prompt en no-TTY)`
-        : `instalación delegada al instalador existente: open-sdd ${agent.flag} --lang ${language.lang}`,
+      action: definition.manifestId ? (skillsDirExists ? 'update' : 'create') : 'keep',
+      reason: definition.manifestId
+        ? skillsDirExists
+          ? `el conjunto ya está presente: el instalador existente completa lo ausente y NO sobrescribe lo editado (modo prompt en no-TTY)`
+          : `instalación delegada al instalador existente: open-sdd ${agent.flag} --lang ${language.lang}`
+        : `sin skills para ${definition.label}: esta versión no trae su árbol de skills (brecha declarada G-35); sus plantillas de comando SÍ se instalan.`,
     });
   }
 
@@ -753,6 +756,16 @@ const installAgentSkills = async (
   plan: InitPlan,
 ): Promise<{ action: 'create' | 'keep'; failure?: string; detail?: string }> => {
   if (!plan.skills) return { action: 'keep' };
+  // Un anfitrión sin árbol de skills en el registro no tiene manifiesto que ejecutar: delegar
+  // produciría un ENOENT y un «revisa el mensaje anterior» sin decir qué falta. Se declara como lo
+  // que es — una brecha, no un fallo del usuario — y las plantillas de comando sí se instalan.
+  const definition = getAgentDefinition(plan.agent.id);
+  if (!definition.manifestId) {
+    return {
+      action: 'keep',
+      detail: `sin skills para ${definition.label}: esta versión no trae su árbol de skills (brecha declarada G-35). Sus 22 plantillas de comando SÍ se instalan; la superficie de skills es el siguiente incremento.`,
+    };
+  }
   return installAgentSkillSet(plan.root, plan.agent.id, plan.language.lang);
 };
 

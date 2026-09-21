@@ -389,6 +389,171 @@ export const agentDefinitions = {
         },
         manifestId: 'antigravity-skills',
     },
+    'factory-droid': {
+        label: 'Factory Droid',
+        description: 'Installs the 22 sdd prompt templates in `.factory/commands/`, shared settings in `{{SDD_DIR}}/settings/`. Project instructions are read from AGENTS.md; the skills surface is a declared gap (see docs/PAPER-ALIGNMENT.md).',
+        aliasFlags: ['--factory-droid', '--droid'],
+        layout: {
+            commandsDir: '.factory/commands',
+            agentDir: '.factory',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
+    'roo-code': {
+        label: 'Roo Code',
+        description: 'Installs the 22 sdd prompt templates in `.roo/commands/`, shared settings in `{{SDD_DIR}}/settings/`. Project instructions are read from `.roo/rules/` and AGENTS.md; the skills surface is a declared gap.',
+        aliasFlags: ['--roo-code', '--roo'],
+        layout: {
+            commandsDir: '.roo/commands',
+            agentDir: '.roo',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
+    'kilo-code': {
+        label: 'Kilo Code',
+        description: 'Installs the 22 sdd prompt templates in `.kilo/commands/`, shared settings in `{{SDD_DIR}}/settings/`. Project instructions are read from `.kilo/rules/` and AGENTS.md; the skills surface is a declared gap.',
+        aliasFlags: ['--kilo-code', '--kilo'],
+        layout: {
+            commandsDir: '.kilo/commands',
+            agentDir: '.kilo',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
+    'junie': {
+        label: 'JetBrains Junie',
+        description: 'Installs the 22 sdd prompt templates in `.junie/commands/`, shared settings in `{{SDD_DIR}}/settings/`. Guidelines are read from `.junie/AGENTS.md` then AGENTS.md; the skills surface is a declared gap.',
+        aliasFlags: ['--junie', '--jetbrains-junie'],
+        layout: {
+            commandsDir: '.junie/commands',
+            agentDir: '.junie',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
+    'mimocode': {
+        label: 'MiMoCode (Xiaomi)',
+        description: 'Installs the 22 sdd prompt templates in `.mimocode/commands/`, shared settings in `{{SDD_DIR}}/settings/`. Project instructions are read from AGENTS.md; the skills surface is a declared gap.',
+        aliasFlags: ['--mimocode', '--mimo'],
+        layout: {
+            commandsDir: '.mimocode/commands',
+            agentDir: '.mimocode',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
+    'iflow': {
+        label: 'iFlow CLI',
+        description: 'Installs the 22 sdd prompt templates in `.iflow/commands/`, shared settings in `{{SDD_DIR}}/settings/`. The context file is `IFLOW.md` unless `contextFileName` points at AGENTS.md; the skills surface is a declared gap.',
+        aliasFlags: ['--iflow'],
+        layout: {
+            commandsDir: '.iflow/commands',
+            agentDir: '.iflow',
+            docFile: 'IFLOW.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
+    'zcode': {
+        label: 'ZCode (Z.ai)',
+        description: 'Installs the 22 sdd prompt templates in `.zcode/commands/` (SOURCE-VERIFIED: the vendor resolver computes the path, its docs do not state it), shared settings in `{{SDD_DIR}}/settings/`. Reads a flat AGENTS.md; the skills surface is a declared gap.',
+        aliasFlags: ['--zcode', '--z-ai'],
+        layout: {
+            commandsDir: '.zcode/commands',
+            agentDir: '.zcode',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
+    'augment': {
+        label: 'Augment Code',
+        description: 'Installs the 22 sdd prompt templates in `.augment/commands/`, shared settings in `{{SDD_DIR}}/settings/`. Rules live in `.augment/rules/` and AGENTS.md; the skills surface is a declared gap.',
+        aliasFlags: ['--augment', '--augment-code'],
+        layout: {
+            commandsDir: '.augment/commands',
+            agentDir: '.augment',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
+    'trae': {
+        label: 'Trae (ByteDance)',
+        description: 'Installs the 22 sdd prompt templates in `.trae/commands/`, shared settings in `{{SDD_DIR}}/settings/`. Project rules are read from AGENTS.md (toggle required); the skills surface is a declared gap.',
+        aliasFlags: ['--trae'],
+        layout: {
+            commandsDir: '.trae/commands',
+            agentDir: '.trae',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
+    'qoder': {
+        label: 'Qoder (Alibaba)',
+        description: 'Installs the 22 sdd prompt templates in `.qoder/commands/`, shared settings in `{{SDD_DIR}}/settings/`. Qoder is the current name of Tongyi Lingma; rules live in `.qoder/rules/` with a documented 100,000-character budget, and the skills surface is a declared gap.',
+        aliasFlags: ['--qoder', '--lingma'],
+        layout: {
+            commandsDir: '.qoder/commands',
+            agentDir: '.qoder',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
+    'codebuddy': {
+        label: 'CodeBuddy (Tencent)',
+        description: 'Installs the 22 sdd prompt templates in `.codebuddy/commands/`, shared settings in `{{SDD_DIR}}/settings/`. Native instructions live in CODEBUDDY.md (AGENTS.md only as fallback); the skills surface is a declared gap.',
+        aliasFlags: ['--codebuddy'],
+        layout: {
+            commandsDir: '.codebuddy/commands',
+            agentDir: '.codebuddy',
+            docFile: 'CODEBUDDY.md',
+        },
+        commands: {
+            spec: '`/sdd-specify <what-to-build>`',
+            steering: '`/sdd-constitution`',
+            steeringCustom: '`/sdd-constitution <amendment>`',
+        },
+    },
 };
 export const getAgentDefinition = (agent) => {
     const definition = agentDefinitions[agent];

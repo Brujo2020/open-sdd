@@ -307,13 +307,24 @@ describe('command templates — host conventions are declared, verified or refus
     const verified = HOST_COMMAND_TEMPLATES.filter((host) => host.verified).map((host) => host.id).sort();
     expect(verified).toEqual([
       'antigravity',
+      'augment',
       'claude-code',
+      'codebuddy',
       'copilot',
       'cursor',
+      'factory-droid',
       'gemini-cli',
+      'iflow',
+      'junie',
+      'kilo-code',
+      'mimocode',
       'opencode',
+      'qoder',
       'qwen-code',
+      'roo-code',
+      'trae',
       'windsurf',
+      'zcode',
     ]);
     // Every verified convention cites the page it was read from (or the layout the installer ships).
     for (const id of verified) expect(commandHostById(id)?.docUrl, id).toBeTruthy();

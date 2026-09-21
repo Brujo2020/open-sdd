@@ -108,8 +108,27 @@ written:
 | Windsurf | `.windsurf/workflows/` | `sdd-<id>.md` | none documented | yes — legacy path but still read; `.devin/workflows/` is the newer preferred path; **12 000-character limit enforced** |
 | Antigravity | `.agents/workflows/` | `sdd-<id>.md` | none documented | yes — legacy workflows, deprecated 2026-11-01 in favour of `.agents/skills/`; **12 000-character limit enforced** |
 | Codex CLI | `.codex/prompts/` (declared) | `sdd-<id>.md` | none | **NO** — docs document only a deprecated user-scoped `~/.codex/prompts/`; the repo surface is `.agents/skills/` |
+| Factory Droid | `.factory/commands/` | `sdd-<id>.md` | `$ARGUMENTS` | yes |
+| Roo Code | `.roo/commands/` | `sdd-<id>.md` | none documented | yes |
+| Kilo Code | `.kilo/commands/` | `sdd-<id>.md` | none documented | yes |
+| JetBrains Junie | `.junie/commands/` | `sdd-<id>.md` | `$prompt` (+ injected `allowPromptArgument: true`) | yes |
+| MiMoCode (Xiaomi) | `.mimocode/commands/` | `sdd-<id>.md` | `$ARGUMENTS` | yes |
+| iFlow CLI | `.iflow/commands/` | `sdd-<id>.md` | `{{args}}` | yes |
+| ZCode (Z.ai) | `.zcode/commands/` | `sdd-<id>.md` | `$ARGUMENTS` | yes — **SOURCE-VERIFIED**: the vendor's own resolver computes the path; its docs only say "the project directory" |
+| Augment Code | `.augment/commands/` | `sdd-<id>.md` | `$ARGUMENTS` | yes |
+| Trae (ByteDance) | `.trae/commands/` | `sdd-<id>.md` | none documented | yes |
+| Qoder (Alibaba) | `.qoder/commands/` | `sdd-<id>.md` | none documented | yes — Qoder is the current name of Tongyi Lingma |
+| CodeBuddy (Tencent) | `.codebuddy/commands/` | `sdd-<id>.md` | `$ARGUMENTS` | yes |
 | Zed | none | — | none | **NO** — slash commands come from Skills; no prompt-file directory is documented |
 | Cline | none | — | none | **NO** — customization is Skills; no workflow directory is documented |
+
+Eleven of these conventions were added after reading each vendor's own documentation (or, for ZCode,
+the vendor's own resolver); every one carries the URL it was checked against in `--json`, and the ones
+that could not be confirmed are printed as **NO VERIFICADA** rather than guessed. Warp, Devin, Replit,
+Firebase Studio, Aider, Crush, Amp, OpenHands, Goose, Kimi Code CLI, DeepSeek Harness and the
+JetBrains AI Assistant have **no documented project-scoped commands directory**, so no row is invented
+for them: their integration surface is skills and/or MCP, and it is declared as a gap in
+`docs/PAPER-ALIGNMENT.md` (G-35) until that surface is installed for them too.
 
 **The argument is translated, not passed through.** The 22 templates are authored once, with a single
 `$ARGUMENTS` block. At install time the installer renders each host's own token: `{{args}}` for Gemini

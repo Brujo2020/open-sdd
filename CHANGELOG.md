@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 **Release Notes**: [English](docs/RELEASE_NOTES/RELEASE_NOTES_en.md)
 
+## [3.3.0] — 2026-09-21
+
+### Eleven more hosts, each one read from its own documentation
+
+The 22 workflow templates no longer install for the eleven hosts this project started with. Each new
+convention below was read from the vendor's own documentation (or, for ZCode, from the vendor's own
+resolver, and the row says SOURCE-VERIFIED), and the row carries the URL it was checked against:
+
+- **Factory Droid** — `.factory/commands/`, `$ARGUMENTS`.
+- **Roo Code** — `.roo/commands/`; its `argument-hint` is display-only, so the input arrives as a
+  plain instruction instead of a token the engine never expands.
+- **Kilo Code** — `.kilo/commands/`; no placeholder documented.
+- **JetBrains Junie** — `.junie/commands/`, and the installer **injects** the `allowPromptArgument:
+  true` frontmatter key that the host requires before it will expose `$prompt` at all.
+- **MiMoCode (Xiaomi)** — `.mimocode/commands/`, `$ARGUMENTS`.
+- **iFlow CLI** — `.iflow/commands/`, `{{args}}`.
+- **ZCode (Z.ai)** — `.zcode/commands/`, `$ARGUMENTS`; SOURCE-VERIFIED, because the documentation stops
+  at "the project directory" and the path comes from the vendor's own command resolver.
+- **Augment Code** — `.augment/commands/`, `$ARGUMENTS`.
+- **Trae (ByteDance)** — `.trae/commands/`; no placeholder documented.
+- **Qoder (Alibaba)** — `.qoder/commands/`; Qoder is the current name of Tongyi Lingma.
+- **CodeBuddy (Tencent)** — `.codebuddy/commands/`, `$ARGUMENTS`.
+
+`open-sdd templates` now lists 22 conventions (19 verified, 3 refused) and `open-sdd --agent <id>`
+accepts 29 agent definitions. Fourteen further hosts were investigated and are **not** given a
+commands row, because no project-scoped commands directory is documented for them (Warp, Devin,
+Replit, Firebase Studio, Aider, Crush, Amp, OpenHands, Goose, Kimi Code CLI, DeepSeek Harness,
+JetBrains AI Assistant, Continue.dev, Amazon Q Developer) — their surface is skills and/or MCP, which
+is the next increment and is declared in G-35 rather than half-shipped.
+
 ## [3.2.1] — 2026-09-21
 
 ### The argument you type now actually arrives

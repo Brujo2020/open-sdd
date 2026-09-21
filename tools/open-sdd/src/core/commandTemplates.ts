@@ -113,6 +113,12 @@ export interface HostCommandConvention {
    * silent truncation: a prompt cut in half is worse than a prompt that was not installed.
    */
   maxChars?: number;
+  /**
+   * Frontmatter keys the host requires in order to read the argument at all (Junie's
+   * `allowPromptArgument`, for instance). Injected, never assumed: each one is named with the page
+   * that documents it in `argumentEvidence` or `evidence`.
+   */
+  frontmatterKeys?: Record<string, string>;
   verified: boolean;
   /** How we know: the documented convention, or the path open-sdd itself already installs into. */
   evidence: string;
@@ -295,6 +301,172 @@ export const HOST_COMMAND_TEMPLATES: HostCommandConvention[] = [
       'NOT VERIFIED and no documented prompt/command directory: `https://docs.cline.bot/core-workflows/using-commands.md` (fetched) lists only built-in slash commands (`/newtask`, `/smol`, `/newrule`, `/deep-planning`, `/reportbug`) plus enabled skills triggered by slash command; `https://docs.cline.bot/customization/skills.md` (fetched) documents the customization surface as skill directories in `.cline/skills/` (or `.clinerules/skills/`, global `~/.cline/skills/`) with a `SKILL.md` each; `https://docs.cline.bot/customization/cline-rules.md` (fetched) documents `.clinerules/` and `.cline/rules/` for rules only. No `.clinerules/workflows/` prompt directory is documented, so no directory is declared and `--write` refuses it.',
     docUrl: 'https://docs.cline.bot/core-workflows/using-commands.md',
   },
+  {
+    id: 'factory-droid',
+    label: 'Factory Droid',
+    dir: '.factory/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: '$ARGUMENTS',
+    argumentEvidence:
+      'VERIFIED: `https://docs.factory.ai/harness/custom-slash-commands.md` (fetched) documents project commands in `<repo>/.factory/commands/`, invoked `/command-name args`, with the `$ARGUMENTS` placeholder (and notes that `$1`/`$2` are NOT supported in the Markdown form).',
+    verified: true,
+    evidence:
+      'Factory Droid documents custom slash commands as Markdown files in `.factory/commands/` (user scope `~/.factory/commands/`), with optional YAML frontmatter (`description`, `argument-hint`), invoked as `/command-name`.',
+    docUrl: 'https://docs.factory.ai/harness/custom-slash-commands.md',
+  },
+  {
+    id: 'roo-code',
+    label: 'Roo Code',
+    dir: '.roo/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: null,
+    argumentEvidence:
+      'NOT DOCUMENTED as an engine substitution: `https://roocodeinc.github.io/Roo-Code/features/slash-commands` (fetched) documents project commands in `.roo/commands/` (global `~/.roo/commands/`) as Markdown files with frontmatter, and `argument-hint` is display-only — there is no placeholder the engine substitutes, so the input arrives as a plain instruction.',
+    verified: true,
+    evidence:
+      'Roo Code documents project slash commands as Markdown files in `.roo/commands/`, invoked `/name`.',
+    docUrl: 'https://roocodeinc.github.io/Roo-Code/features/slash-commands',
+  },
+  {
+    id: 'kilo-code',
+    label: 'Kilo Code',
+    dir: '.kilo/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: null,
+    argumentEvidence:
+      'NOT DOCUMENTED as an engine substitution: `https://kilocode.ai/docs/llms.txt` → `## Source: /customize/workflows` (fetched) documents project commands in `.kilo/commands/` (global `~/.config/kilo/commands/`) as Markdown files with frontmatter, and no argument placeholder; the page states there is no character limit on rule files.',
+    verified: true,
+    evidence:
+      'Kilo Code documents project workflow files as Markdown in `.kilo/commands/`, invoked `/name`.',
+    docUrl: 'https://kilocode.ai/docs/llms.txt',
+  },
+  {
+    id: 'junie',
+    label: 'JetBrains Junie',
+    dir: '.junie/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: '$prompt',
+    argumentEvidence:
+      'VERIFIED: `https://junie.jetbrains.com/docs/custom-slash-commands.html` (fetched) documents project commands in `.junie/commands/` and NAMED placeholders (`$argumentName`); free-form input is opt-in — "add `allowPromptArgument: true` to the command\'s YAML frontmatter. This exposes an additional `$prompt` argument" — so the canonical block is rendered as `$prompt` and the frontmatter key is injected.',
+    frontmatterKeys: { allowPromptArgument: 'true' },
+    verified: true,
+    evidence:
+      'JetBrains Junie documents project slash commands as Markdown files in `.junie/commands/` (user `~/.junie/commands/`), invoked `/name`.',
+    docUrl: 'https://junie.jetbrains.com/docs/custom-slash-commands.html',
+  },
+  {
+    id: 'mimocode',
+    label: 'MiMoCode (Xiaomi)',
+    dir: '.mimocode/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: '$ARGUMENTS',
+    argumentEvidence:
+      'VERIFIED: `https://mimo.xiaomi.com/mimocode/commands` (fetched) documents project commands in `.mimocode/commands/` (global `~/.config/mimocode/commands/`), "Place them in: Global … Per-project `.mimocode/commands/`", invoked `/test`, with `$ARGUMENTS`, `$1`..`$N`, `` !`cmd` `` and `@file`.',
+    verified: true,
+    evidence:
+      'MiMoCode documents custom commands as Markdown files in `.mimocode/commands/` with YAML frontmatter (`description`, `agent`, `model`), invoked `/name`.',
+    docUrl: 'https://mimo.xiaomi.com/mimocode/commands',
+  },
+  {
+    id: 'iflow',
+    label: 'iFlow CLI',
+    dir: '.iflow/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: '{{args}}',
+    argumentEvidence:
+      'VERIFIED: `https://raw.githubusercontent.com/iflow-ai/iflow-cli/main/docs_en/examples/subcommand.md` (fetched) documents project commands in `.iflow/commands/` (global `~/.iflow/commands/`, project wins) as `<name>.toml` (description + prompt) or `<name>.md` (frontmatter description), invoked `/command-name`, with the `{{args}}` placeholder — the same token Gemini CLI and Qwen Code use.',
+    verified: true,
+    evidence:
+      'iFlow CLI documents project commands in `.iflow/commands/`, invoked `/command-name`; `--write` uses the Markdown form, which the same page documents.',
+    docUrl: 'https://raw.githubusercontent.com/iflow-ai/iflow-cli/main/docs_en/examples/subcommand.md',
+  },
+  {
+    id: 'zcode',
+    label: 'ZCode (Z.ai)',
+    dir: '.zcode/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: '$ARGUMENTS',
+    argumentEvidence:
+      'SOURCE-VERIFIED, not documented: `https://zcode.z.ai/en/docs/commands` (fetched) states only that "workspace-level commands live in the project directory"; the exact path comes from the vendor\'s own resolver at `https://raw.githubusercontent.com/zai-org/ZCode/main/apps/zcode-cli/packages/adapters/src/commands/roots.ts`, which resolves `<base>/.zcode/commands` and `<base>/.agents/commands` per directory up to the worktree root, and `$ARGUMENTS` from `packages/contracts/src/commands/index.ts`. The evidence names the source file so a reader can re-check it.',
+    verified: true,
+    evidence:
+      'ZCode documents commands (user scope `~/.zcode/commands` verified) and its own resolver computes the project path `.zcode/commands`; the docs do not state the project path, so this row is SOURCE-VERIFIED and says so.',
+    docUrl: 'https://zcode.z.ai/en/docs/commands',
+  },
+  {
+    id: 'augment',
+    label: 'Augment Code',
+    dir: '.augment/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: '$ARGUMENTS',
+    argumentEvidence:
+      'VERIFIED: `https://docs.augmentcode.com/using-augment/custom-commands.md` (fetched, and note that this Mintlify host serves real Markdown bodies on 404 — always check the status) documents project commands in `.augment/commands/` (user `~/.augment/commands/`), invoked `/name` with `dir:name` namespacing, with `$ARGUMENTS`.',
+    verified: true,
+    evidence:
+      'Augment Code documents custom commands as Markdown files in `.augment/commands/` with frontmatter (`description`, `argument-hint`, `model`).',
+    docUrl: 'https://docs.augmentcode.com/using-augment/custom-commands.md',
+  },
+  {
+    id: 'trae',
+    label: 'Trae (ByteDance)',
+    dir: '.trae/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: null,
+    argumentEvidence:
+      'NOT DOCUMENTED as an engine substitution: `https://docs.trae.ai/ide/slash-commands?_lang=en` (the SPA embeds its doc body as Quill-delta JSON in the served HTML, so it is readable without JS) documents project commands in `.trae/commands/` (up to three nesting levels) as `<name>.md` with the description below the frontmatter, invoked `/name`, and describes no argument placeholder.',
+    verified: true,
+    evidence:
+      'Trae documents project slash commands as Markdown files in `.trae/commands/`, invoked `/name`; project rules are read from AGENTS.md once the toggle is on and are referenced as `#Rule`.',
+    docUrl: 'https://docs.trae.ai/ide/slash-commands?_lang=en',
+  },
+  {
+    id: 'qoder',
+    label: 'Qoder (Alibaba)',
+    dir: '.qoder/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: null,
+    argumentEvidence:
+      'NOT DOCUMENTED as an engine substitution: `https://docs.qoder.com/user-guide/commands.md` (fetched; note that this host gzip-encodes without `Content-Encoding`, so `curl --compressed` is required) documents project commands in `.qoder/commands/` as Markdown with `name` and `description` frontmatter, invoked `/name` (nested commands become `/git:commit`), and describes no placeholder. Qoder is the current name of Tongyi Lingma.',
+    verified: true,
+    evidence:
+      'Qoder documents project commands in `.qoder/commands/` with `name`+`description` frontmatter, invoked `/name`; skills live in `.qoder/skills/` and rules in `.qoder/rules/` (with a documented 100,000-character budget across ALL active rule files).',
+    docUrl: 'https://docs.qoder.com/user-guide/commands.md',
+  },
+  {
+    id: 'codebuddy',
+    label: 'CodeBuddy (Tencent)',
+    dir: '.codebuddy/commands',
+    fileName: flatMarkdown,
+    format: 'markdown',
+    invocation: (id) => `/sdd-${id}`,
+    argumentSyntax: '$ARGUMENTS',
+    argumentEvidence:
+      'VERIFIED: `https://www.codebuddy.ai/docs/cli/slash-commands` (fetched; VitePress) documents project commands in `.codebuddy/commands/` as `<name>.md` with `argument-hint` frontmatter, nested commands becoming `/frontend:build`, and the `$ARGUMENTS` placeholder alongside `$1`..`$N`.',
+    verified: true,
+    evidence:
+      'CodeBuddy documents project slash commands as Markdown files in `.codebuddy/commands/`, invoked `/name`; native instructions live in CODEBUDDY.md with AGENTS.md as fallback only when CODEBUDDY.md is absent.',
+    docUrl: 'https://www.codebuddy.ai/docs/cli/slash-commands',
+  },
 ];
 
 export const commandHostById = (id: string): HostCommandConvention | undefined =>
@@ -326,6 +498,17 @@ const AGENT_HOST: Record<string, string> = {
   'opencode-agent': 'opencode',
   'opencode-skills': 'opencode',
   'antigravity-skills': 'antigravity',
+  'factory-droid': 'factory-droid',
+  'roo-code': 'roo-code',
+  'kilo-code': 'kilo-code',
+  junie: 'junie',
+  mimocode: 'mimocode',
+  iflow: 'iflow',
+  zcode: 'zcode',
+  augment: 'augment',
+  trae: 'trae',
+  qoder: 'qoder',
+  codebuddy: 'codebuddy',
 };
 
 export const hostForAgent = (agent: string): string | undefined => AGENT_HOST[agent];
@@ -468,6 +651,30 @@ const translateInput = (raw: string, host: HostCommandConvention): string => {
 };
 
 /**
+ * Inject the frontmatter keys a host needs in order to read the argument at all.
+ *
+ * Junie is the case that forced this: it only exposes `$prompt` when the command's frontmatter says
+ * `allowPromptArgument: true`, so rendering the token without the key would be a token that is never
+ * substituted. Keys are injected (or replaced in place) and never invented: the page that documents
+ * each one is named in the row's evidence.
+ */
+const adaptFrontmatter = (raw: string, host: HostCommandConvention, format: CommandTemplateFormat): string => {
+  if (format !== 'markdown' || !host.frontmatterKeys) return raw;
+  const entries = Object.entries(host.frontmatterKeys);
+  if (entries.length === 0) return raw;
+  const { frontmatter, body } = splitFrontmatter(raw);
+  if (frontmatter === '') return raw;
+  const lines = frontmatter.split(/\r?\n/);
+  for (const [key, value] of entries) {
+    const line = `${key}: ${value}`;
+    const at = lines.findIndex((entry) => entry.startsWith(`${key}:`));
+    if (at >= 0) lines[at] = line;
+    else lines.push(line);
+  }
+  return `---\n${lines.join('\n')}\n---\n${body}`;
+};
+
+/**
  * Render one template for one host. Markdown hosts receive the file as authored (frontmatter
  * included, because `description` is meaningful to them); TOML hosts receive the `description` key
  * plus the body as the multi-line `prompt` value. In both cases the input is translated first.
@@ -478,7 +685,7 @@ export const renderCommandTemplate = async (
   templatesRoot?: string,
 ): Promise<RenderedTemplate> => {
   const raw = await readFile(commandTemplatePath(id, templatesRoot), 'utf8');
-  const translated = translateInput(raw, host);
+  const translated = adaptFrontmatter(translateInput(raw, host), host, host.format);
   const { frontmatter, body } = splitFrontmatter(translated);
   const description = frontmatterDescription(frontmatter);
 
