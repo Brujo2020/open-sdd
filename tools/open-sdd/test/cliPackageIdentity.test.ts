@@ -19,7 +19,7 @@ import {
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const srcRoot = path.resolve(here, '..', 'src');
-const rootManifest = path.resolve(srcRoot, '..', '..', 'package.json');
+const rootManifest = path.resolve(srcRoot, '..', '..', '..', 'package.json');
 
 const walk = async (dir: string): Promise<string[]> => {
   const entries = await readdir(dir, { withFileTypes: true });

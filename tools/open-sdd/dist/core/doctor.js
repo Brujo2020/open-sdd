@@ -38,7 +38,7 @@ import { chmod, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promis
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { colors } from '../cli/ui/colors.js';
+import { colors, formatVerdict } from '../cli/ui/colors.js';
 import { INSTALL_COMMAND } from '../cli/packageIdentity.js';
 import { parseConstitution, principlesInForce, validateConstitution } from './constitution.js';
 import { DEFAULT_RIGOR_LEVEL, RIGOR_LEVELS, effectiveGates, isRigorLevel, resolveRigorSettings, } from './rigor.js';
@@ -929,10 +929,10 @@ export const renderDoctor = (report) => {
     lines.push('');
     const failed = report.checks.filter((check) => check.status === 'fail');
     if (failed.length > 0) {
-        lines.push(`Corrige ${failed.length} fallo(s). \`open-sdd doctor --fix\` repara en sitio solo lo seguro: el hook y el archivo de rigor ausentes.`);
+        lines.push(`FAIL — Corrige ${failed.length} fallo(s). \`open-sdd doctor --fix\` repara en sitio solo lo seguro: el hook y el archivo de rigor ausentes.`);
     }
     else {
-        lines.push('Sin fallos. Los avisos documentan deuda, no bloquean: `open-sdd status --check` valida la spec contra la constitución.');
+        lines.push('PASS — Sin fallos. Los avisos documentan deuda, no bloquean: `open-sdd status --check` valida la spec contra la constitución.');
     }
     return lines;
 };
@@ -1039,9 +1039,7 @@ export const handleDoctorCommand = async (args, io, cwd = process.cwd()) => {
             io.log(`  ${item.startsWith('=') ? colors.dim(item) : colors.green(`✓ ${item}`)}`);
         io.log('');
     }
-    io.log(computed.report.ok
-        ? colors.green(computed.report.detail)
-        : colors.red(computed.report.detail));
+    io.log(formatVerdict(computed.report.ok ? 'pass' : 'fail', computed.report.ok ? colors.green(computed.report.detail) : colors.red(computed.report.detail)));
     io.log('');
     return computed.report.ok ? 0 : 1;
 };

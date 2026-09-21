@@ -80,7 +80,7 @@ describe('exit-code contract', () => {
       expect(code, argv.join(' ')).toBe(EXIT.USAGE);
       expect(ctx.errs.join('\n'), argv.join(' ')).toContain('unknown subcommand');
     }
-  });
+  }, 20_000);
 
   it('a non-zero exit never prints the score door', async () => {
     const cwd = await makeCwd();

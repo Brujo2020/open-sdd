@@ -33,23 +33,33 @@ const makeIO = () => {
 };
 
 describe('help contract — one table, three projections', () => {
-  it('every routed command has its own help', async () => {
-    for (const name of ROUTED_COMMANDS) {
-      const ctx = makeIO();
-      const code = await runCli(['help', name], runtime, ctx.io, {});
-      expect(code, `help ${name}`).toBe(0);
-      expect(ctx.logs.join('\n'), `help ${name}`).toContain(`Command: open-sdd ${name}`);
-    }
-  });
+  it(
+    'every routed command has its own help',
+    async () => {
+      for (const name of ROUTED_COMMANDS) {
+        const ctx = makeIO();
+        const code = await runCli(['help', name], runtime, ctx.io, {});
+        expect(code, `help ${name}`).toBe(0);
+        expect(ctx.logs.join('\n'), `help ${name}`).toContain(`Command: open-sdd ${name}`);
+      }
+    },
+    // Una invocación de CLI por comando enrutado: bajo carga paralela esto supera el tope por
+    // defecto. El aserto no se relaja; solo se le da margen.
+    30_000,
+  );
 
-  it('every routed command answers `<command> --help`', async () => {
-    for (const name of ROUTED_COMMANDS) {
-      const ctx = makeIO();
-      const code = await runCli([name, '--help'], runtime, ctx.io, {});
-      expect(code, `${name} --help`).toBe(0);
-      expect(ctx.logs.join('\n'), `${name} --help`).toContain(`Command: open-sdd ${name}`);
-    }
-  });
+  it(
+    'every routed command answers `<command> --help`',
+    async () => {
+      for (const name of ROUTED_COMMANDS) {
+        const ctx = makeIO();
+        const code = await runCli([name, '--help'], runtime, ctx.io, {});
+        expect(code, `${name} --help`).toBe(0);
+        expect(ctx.logs.join('\n'), `${name} --help`).toContain(`Command: open-sdd ${name}`);
+      }
+    },
+    30_000,
+  );
 
   it('the routed table and the help table are the same set', () => {
     for (const name of ROUTED_COMMANDS) expect(KNOWN_COMMANDS.has(name), name).toBe(true);

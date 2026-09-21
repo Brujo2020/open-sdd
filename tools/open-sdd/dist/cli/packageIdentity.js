@@ -2,11 +2,11 @@
  * Identidad del paquete — UNA fuente para el nombre, la versión y el comando de instalación.
  *
  * ── Por qué existe este archivo ────────────────────────────────────────────────────────────────
- * El CLI anunciaba `npx open-sdd@latest` en sus propios mensajes de runtime, pero el nombre sin
- * scope `open-sdd` NO existe en npm (E404): el primer comando que un usuario copia del propio tool
- * falla. El nombre real vive en el `package.json` de la RAÍZ de la distribución
- * (`@brujo2020/open-sdd`), así que aquí se DERIVA de ahí en vez de escribirse a mano. Un nombre
- * escrito a mano es un nombre que envejece (W0/W1 de `docs/EVOLUTION-PLAN.md`).
+ * El CLI anunciaba el nombre SIN SCOPE con `@latest` en sus propios mensajes de runtime, pero ese
+ * nombre no existe en npm (E404): el primer comando que un usuario copia del propio tool falla. El
+ * nombre real vive en el `package.json` de la RAÍZ de la distribución (`@brujo2020/open-sdd`), así
+ * que aquí se DERIVA de ahí en vez de escribirse a mano. Un nombre escrito a mano es un nombre que
+ * envejece (W0/W1 de `docs/EVOLUTION-PLAN.md`).
  *
  * ── Resolución robusta ─────────────────────────────────────────────────────────────────────────
  * En el checkout: `tools/open-sdd/dist/cli/packageIdentity.js` → cuatro niveles arriba está la raíz
