@@ -270,39 +270,73 @@ their generated form; the no-dead-ends test passes.
 does not check the quality characteristics that make a requirement usable, and it does not teach.
 
 **Design.**
-- **A full, checkable catalogue** beyond EARS: compound obligations (more than one `shall`),
-  `and/or`, unbounded lists, unquantified adjectives and superlatives, missing units or thresholds,
-  passive voice and missing actor, pronouns without an antecedent, negation without a positive
-  statement, TBD/`{{…}}`, implementation leakage (technology in requirements), duplicated
-  obligations, missing *unwanted-behaviour* coverage (no `IF`), missing acceptance criteria,
-  non-numeric ids, glossary/term consistency, and traceability to tasks and tests.
-- **Standards behind it:** EARS (six patterns), the INCOSE *Guide for Writing Requirements* quality
-  characteristics, ISO/IEC 29148, RFC 2119/8174 keyword discipline (`shall/should/may`), and the
-  "requirements smells" literature. Each check cites its standard and URL in the catalogue.
-- **Non-functional requirements get a real shape:** the SEI quality-attribute scenario (source,
-  stimulus, environment, artifact, response, response measure) and SLI/SLO/error-budget fields, so
-  "fast" and "robust" become measurable or become an explicit question.
+- **A catalogue of 42 checks in 8 families**, each with an id, a severity tier — **S1 blocker /
+  S2 major / S3 advisory / S4 metric** — its exact detection (a validated regex or structural rule)
+  and two worked examples (bad → rewritten). The families: (1) EARS/statement shape; (2) ambiguity;
+  (3) singularity; (4) verifiability; (5) set-level coherence; (6) NFR measurability;
+  (7) traceability; (8) AI-specific hazards.
+- **Standards behind it, cited per check:** EARS (six patterns); the INCOSE *Guide for Writing
+  Requirements* (15 characteristics and the weak-word lists of rules R7–R9/R16–R19/R24/R26/R32–R35);
+  ISO/IEC/IEEE 29148 §5.2.5–5.2.7 (9 individual + 5 set characteristics and a 9-category
+  forbidden-language list); IEEE 830 §4.3; RFC 2119/8174 (`shall/should/may`); the SEI six-part
+  quality-attribute scenario and SLI/SLO/error-budget fields; and published measurable thresholds
+  (Core Web Vitals 2.5 s / 200 ms / 0.1 at p75, WCAG 2.2, OWASP ASVS 5.0, CVSS bands). Every entry
+  carries the source URL.
+- **Calibrated against measured precision, not intuition.** Femmer et al.'s nine requirement smells
+  carry per-smell precision from **0.96 (Subjective) to 0.26 (Vague Pronouns)**, average P 0.59 /
+  R 0.82. Our adapters are seeded from that taxonomy, and their own precision and recall are published
+  per family on the labelled corpus (the S4 metrics) — which is what decides promotion to S1/S2.
+- **Never block-only — the finding channel is adjudication.** A finding can be accepted or rejected
+  **with a reason and an owner**, recorded, reusing the existing
+  `.sdd/settings/security-allowlist.json` shape rather than inventing a second mechanism. Femmer's
+  stated design goal is verbatim "not to enforce resolving a potential smell but to increase the
+  awareness … and to make transparent later reasoning why certain decisions have been taken" — exactly
+  this.
+- **Deterministic checks gate; LLM checks advise.** OWASP LLM01's own mitigation is "use deterministic
+  code to validate adherence to these formats", and temperature 0 does not make a model deterministic.
+  So S1/S2 regex and structural checks may block, while an LLM critique yields S3 advisories plus a
+  *proposed* rewrite a human accepts. The evidence is blunt: the best off-the-shelf model detected
+  **47 % of expert-identified requirement issues at 11 % false-flag** and missed necessity and
+  correctness almost always (arXiv 2609.03230), while LLM support *reduced* human inspection accuracy
+  (arXiv 2608.21298). An LLM verdict is never the sole gate.
+- **Spec content is untrusted input.** An indirect prompt injection is defined by resource control,
+  not by "user" input (NIST, OWASP LLM01). A check flags injection-shaped content in a requirement, and
+  the reviewer runs contained — no outbound channel, no secret access — reporting instruction-like spec
+  text as a finding rather than following it (designed in W5, tested here).
+- **Ask the human when the honest answer is a question.** The "ASK THE HUMAN" triggers: an undefined
+  actor, a threshold nobody has decided, a term used two ways, a requirement whose *necessity* is
+  doubtful (the playbook says challenge it rather than reword it), and any S1 finding whose fix would
+  change behaviour. The rewrite playbook gives 3–5 remedy patterns and 1–3 alternative valid rewrites
+  per defect class and never emits a template with holes — the rule `assistants.ts` already enforces.
+- **Non-functional requirements get a real shape:** the SEI six-part scenario and SLI/SLO/error-budget
+  fields, so "fast" and "robust" become measurable or become an explicit question.
 - **Commands.** `open-sdd requirements review <feature>` (findings + rewrites),
-  `requirements checklist <feature>` (a checklist *executed*, not printed — "unit tests for
-  English"), `requirements fix <feature> --apply <id>`, all with `--json`.
-- **The rewrite playbook, per defect:** at least one canonical rewrite and one or two valid
-  alternatives; when the honest answer is "the human must supply the datum" (the actor, the
-  threshold, the trigger), the tool asks an explicit question instead of inventing a template with
-  holes — the rule `assistants.ts` already enforces.
-- **Checklist items are predicates, not prose** (W8.1 row 3): each item declares `cmd:` (exit code
-  and digest), `artifact:` (file#line/hash) or `trace:` (REQ→task); `checklist verify <feature>`
-  runs them and a `[x]` without a stored digest fails the commit gate, reusing C3's evidence store.
-- **Traceability is part of quality.** A requirement with no task and no verification is a finding;
-  the delta/evidence machinery already supplies the other end of the link.
+  `requirements checklist <feature>` (a checklist *executed*), `requirements fix <feature> --apply
+  <id>`, `standards explain <id>`, all with `--json`.
+- **Checklist items are predicates, not prose** (W8.1 row 2): each item declares `cmd:` (exit code and
+  digest), `artifact:` (file#line/hash), `property:` (preferred — a property test derived from the
+  requirement, counterexamples shrunk) or `trace:` (REQ→task); `checklist verify <feature>` runs them
+  and a `[x]` without a stored digest fails the commit gate, reusing C3's evidence store.
+- **Traceability is part of quality** (ISO 29148 §6.4.3.5, NASA SEH): an orphan requirement and "gold
+  plating" (code with no requirement behind it) are both findings, as is a requirement with no task and
+  no verification.
 - **A one-page review surface** (W8.1 row 8): `review <feature> --base <ref>` renders ADDED/MODIFIED/
   REMOVED requirements as word-level diffs, each row carrying its tasks, the tests that would fail if
   it changed (`brownfield contracts`) and a risk score, exiting 1 on unapproved requirement changes —
   because reviewing markdown is not reviewing code.
 
-**Acceptance.** Against a labelled corpus of requirements with known defects (this corpus also
-closes G-03 for requirements): recall and false-positive rate are measured and published in
-`docs/MEASUREMENTS.md`; every finding has a remedy or a question; a human can take a vague
-requirement to a checked one without leaving the terminal.
+**Acceptance.** Against a labelled corpus of requirements with known defects (this corpus also closes
+G-03 for requirements): recall and false-positive rate are measured and published per family in
+`docs/MEASUREMENTS.md`; every finding has a remedy or a question and an adjudication path; a human can
+take a vague requirement to a checked one without leaving the terminal.
+
+**Do not cite without a source.** The research flagged claims that circulate but could not be
+verified: the phrase "unit tests for English" (no source found — use it as a description, not a
+quotation); CARL as a tool; Rupp's ambiguity taxonomy (not verifiable this session, so ISO 29148 and
+Femmer were used instead); Jama's "AI quality linter" (their documented mechanism is a review workflow
+with suspect links); the phrase "traceability theater" (practitioner shorthand, no authoritative use);
+and DO-178C Table A objective ids (do not publish without the RTCA document). The same rule as
+`docs/PAPER-ALIGNMENT.md` applies: a claim whose source cannot be named is not made.
 
 ### W4 — The living constitution
 
@@ -346,6 +380,17 @@ governance tool must model before adopting one.
   model judgment as evidence requires an I6 receipt (the receipt machinery exists).
 - **Adversarial, not agreeable.** The reviewer prompt is adversarial and the review is independent
   of the author (`sdd-review` already defines the protocol). Consensus is not evidence.
+- **The measured limits are the design.** The best off-the-shelf model detected **47 % of
+  expert-identified requirement issues at 11 % false-flag**, missing necessity and correctness almost
+  always (arXiv 2609.03230); LLM support *reduced* human inspection accuracy (arXiv 2608.21298); and
+  sycophancy and LLM-as-judge bias are measurable (κ deflation). Therefore a model never gates on its
+  own: it produces S3 advisories and *proposed* rewrites, a deterministic check always backs or
+  refutes it, and a judging verdict counts only with two independent providers (I4) and an I6 receipt.
+- **Injection safety by construction.** An indirect prompt injection is defined by *resource control*,
+  not by "user" input (NIST, OWASP LLM01), and the "lethal trifecta" is private data + untrusted
+  content + an outbound channel — so the reviewer removes the third: spec content is delimited and
+  treated as data, the critique runs without secret access or egress, and instruction-like text inside
+  a spec is reported as a finding rather than obeyed.
 - **Injection safety.** Spec content is untrusted data: it is delimited, never followed as
   instructions, and any instruction-like content found in a spec is itself a finding. The tool
   reports the attempt instead of obeying it.
@@ -549,7 +594,8 @@ Each phase ends with its acceptance criteria demonstrated in CI and recorded in
 | **Time to first value** | Fresh repository → `doctor` 9 ok / 0 fail | < 60 s | CI fixture, timed |
 | **Dead ends** | Findings with neither `fix:` nor `question:` | 0 | A test over the emitted-finding catalogue |
 | **Enforcement coverage** | Rule statements that are machine-checked or explicitly advisory | 100 % of the catalogue | `standards list --json` |
-| **Requirements recall / FPR** | Detection over the labelled defect corpus | published, then improve | `bench/` + `docs/MEASUREMENTS.md` |
+| **Requirements recall / FPR** | Detection over the labelled defect corpus, **per check family** | published, then improve | `bench/` + `docs/MEASUREMENTS.md` |
+| **AI verdicts backed** | Model advisories a deterministic check confirms or refutes | 100 % (none stands alone) | `review --json` |
 | **Remedy usefulness** | Findings whose suggested remedy resolved the issue (opt-in telemetry) | measured, target set after baseline | opt-in, aggregated |
 | **Floor green** | Linux + Windows + publish workflows | all green | CI |
 | **Host coverage** | Verified / refused-by-name / declared, with URLs | no silent host | `integrate --list`, a test |
