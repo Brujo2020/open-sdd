@@ -110,6 +110,15 @@ Those three are the plan.
    (recall *and* false-positive rate), and only then may become blocking. This is the C4 lesson.
 8. **Surpass, never copy.** Imitate the *flow* a competitor popularised and beat it on verification:
    the differentiator is never more prose, it is a check a reader can run.
+9. **Every claimed capability ships its sentinel.** A capability is declared only with the check that
+   measures it — the house style C7 already uses (`inspects: false` rather than a green). Kiro's own
+   hooks documentation marks Web as supporting event-driven hooks while every trigger row reads "—";
+   that contradiction is the defect this tenet exists to prevent, and it is why no new capability in
+   this plan is "done" without its measurement.
+10. **Fail loudly, with the line.** A format rule (EARS shape, delta verb, id grammar) never rejects
+    in silence: it names `file:line:column` and the fix. OpenSpec's schema ships delta scenarios that
+    "fail silently" and a glossary listing three of the four delta verbs its own template uses — format
+    drift hiding inside the spec format is exactly what `delta validate` must make impossible.
 
 ---
 
@@ -239,6 +248,10 @@ make them hold — warning when they do not, always with a solution.*
   it with a rationale and an owner, reusing the waiver shape (`.sdd/settings/standards.local.yaml`).
 - **No dead ends, mechanically.** A test enumerates every finding the engine can emit and fails if
   any lacks `fix:` or `question:` (tenet 2).
+- **Format rules fail loudly, with the position** (tenet 10): `delta validate` asserts the delta verb
+  set and the format grammar **together**, so a glossary can never drift from the template, and every
+  rejection names `file:line:column` plus the fix. OpenSpec's scenario rule that fails silently and its
+  glossary that lists three of its own four verbs are the worked example of the opposite.
 - **Four checks the field proved are load-bearing** (designs in W8.1): the **drift sentinel**
   (row 1 — `REQ` id → globs + text hash, checked per commit, waivers with owner and expiry, wired
   into the staged-index hook at `spec-anchored`); **block-allocated, non-renumbering ids** with
@@ -398,7 +411,8 @@ asserted rather than exercised.
   `.sdd/settings/context-budget.json`; `doctor --context` fails above the ceiling and offers
   `--lazy` (one-line stubs expanded on demand) or `--install a,b,c`. The field measured 18.6k
   tokens/session for an unconditionally installed surface — the number is the argument for lazy
-  defaults.
+  defaults. The stubs are **glob-scoped** (W8.1 small additions), so only the workflows a change's
+  paths need are loaded.
 
 **Acceptance.** The survey detects modules in all six ecosystems on fixtures; a cold vs warm index
 measurement is published; an air-gapped install reaches a green `doctor` with the network disabled.
@@ -431,33 +445,67 @@ fails if a generated block drifts from its source.
 
 #### W8.1 — What the field proved, and the improved design
 
-External research (2026-09-21, primary sources; `web_search` was unavailable, so everything below was
-fetched directly — raw templates, GitHub API issue search, vendor docs). github/spec-kit is the
-reference: **138,177★, 12,381 forks, 300 open issues, MIT, Python, created 2025-08-21**
+External research (2026-09-21, primary sources; `web_search` was unavailable, so everything was
+fetched directly — raw templates, GitHub API issue search, vendor docs, CLI references). github/spec-kit
+is the reference: **138,177★, 12,381 forks, 300 open issues, MIT, Python, created 2025-08-21**
 (https://api.github.com/repos/github/spec-kit). It earned the adoption; its own issues and its own
 docs name the failures. Each row is an idea to imitate and beat, not to copy.
 
+**Corrections the research forced — do not repeat the stale premises.** *Tessl* is no longer an SDD
+tool: its docs describe an agentic-development platform and the current CLI (v0.109.0) has neither
+`tessl build` nor `tessl document` (https://docs.tessl.io/reference/cli-commands.md), so only its
+surviving verifier model is useful (row 3). *GitHub Copilot Workspace* was **sunset on 30 May 2025**
+(https://githubnext.com/projects/copilot-workspace/), not merely unverifiable; one idea survives
+(row 8). *Amazon Q Developer* is end-of-life — "the Q CLI has become the Kiro CLI", IDE plugins end
+30 April 2027, and Kiro marks spec-driven development as unavailable for Q
+(https://kiro.dev/docs/upgrade-guides/migrating-from-q-developer/) — so its only durable idea is
+admin-grade audit as a product (small additions). *BMAD* and *Agent OS* both moved to skills-based
+distributions, and **Agent OS deliberately retired spec writing, task breakdown and implementation
+orchestration** (https://buildermethods.com/agent-os/migration): a vacancy this plan fills.
+
 | # | Idea to imitate (source) | The failure it fixes | The improved design here |
 |---|---|---|---|
-| 1 | A constitution every command analyses against (`/constitution`) | spec-kit's docs admit spec-anchoring is a *convention*, not a mechanism; issue **#1191** (115 reactions) is the top unmet need — specs are write-once | **Drift sentinel in the floor**: `drift bind <feature>` records each `REQ` id → claimed globs + sha256 of its text; `drift check --since <ref>` exits 1 on a commit touching uncovered paths; `drift waive` writes a waiver with owner + expiry; the staged-index hook runs it at `spec-anchored`. `driftDetected` already exists in `auditEngine` — this makes it per-commit and blocking |
-| 2 | Size the process to the change (BMAD's "the process sizes itself") | "Sledgehammer to crack a nut": `/clarify`, `/checklist`, `/analyze` are optional with no rule for when they are required | **`open-sdd route "<intent>"`**: survey + reuse + impact forecast returns **S/M/L** with its evidence (files likely touched, dependents, public-API deltas, coverage), fixes the artifact set and rigor in `.sdd/settings/route.json`, and `delta init` refuses extra ceremony for S unless `--override` (recorded, visible in `status`) |
-| 3 | "Unit tests for English" (`/checklist`) | spec-kit's items are unverifiable prose and `/implement` only counts unchecked boxes; Fowler: no guarantee they are respected | **Executable checklist predicates**: every item in `checklist.md` declares `cmd:` (exit code + digest), `artifact:` (file#line/hash) or `trace:` (REQ→task); `checklist verify <feature>` runs them, a `[x]` without a stored digest fails the commit gate, and C3's evidence store is reused, not duplicated |
-| 4 | Stable ids with traceability | **#4065**: inserting an `FR` silently invalidates every citation ("nothing errors — the references just quietly mean something else") | **Block-allocated, non-renumbering ids** (`REQ-AUTH-010…019`); `ids audit --base <ref>` fails `ID-MUTATED` / `ID-LOST` / `ID-REUSED` with git evidence, as a PR check |
-| 5 | Measure the context the tool installs | **#1401**: installed command surface measured at **18.6k tokens/session** (~93 % of Cursor's default chat) | **`init --context-report`** measures the generated files and prints per-host + total token estimates against the host's documented budget, writes `context-budget.json`; `doctor --context` fails above the ceiling and suggests `--lazy` (one-line stubs expanded by `prompt <workflow>`) or `--install a,b,c` |
-| 6 | Post-implementation convergence (`/converge`) | Append-only LLM gap-hunting with no dedupe, no progress requirement, no budget; **#4164** reports clean while the line was never in context | **Monotone convergence**: a finding without `file:line` + source-ref is dropped (and counted); dedupe by (source-ref, gap-type, evidence-hash); `--require-progress` fails when `uncovered(n) ≥ uncovered(n−1)`; `--verify <cmd>` refuses "converged" while the external suite is red; a `convergence.json` series makes the trend auditable |
-| 7 | Reuse before writing (Fowler's agent regenerated existing classes; #1436 lists it as a must) | Duplication created by agents that never looked | **Reuse as a blocking gate**: `brownfield reuse --index` builds a symbol index (name, signature, path, hash); `delta validate` blocks a newly declared symbol without `reuse:` evidence, or flags near-identical signatures as candidates; the hook can run it over the staged index |
-| 8 | Archive the change into the living spec (OpenSpec's `/opsx:archive`) | Spec trees accumulate dead branches instead of staying current | **`delta merge --archive`**: fold the delta into the base and move the change to `.sdd/specs/<f>/archive/<date>/`; add `review <feature> --base <ref>` — one diff-shaped page with ADDED/MODIFIED/REMOVED requirements, their tasks, the tests that would fail (from `brownfield contracts`) and a risk score, exiting 1 on unapproved requirement changes |
-| 9 | One rule source per project | **#609** ("CLAUDE.md vs constitution.md", 24👍, open+stale), **#2362**, **#2681**: governance duplicated across constitution, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, copilot-instructions | **Generated host projections**: `integrate <host> --project-steering --write` generates the host rule file **from** the constitution + steering with an embedded `<!-- sdd-projection: sha256=… -->`; `doctor` fails on a stale or hand-edited projection and `--fix` regenerates it. Exactly one editable source |
-| 10 | Extensions and hooks | spec-kit's docs admit preset `update` has no rollback, hooks ignore `priority`, `auto_execute_hooks` is not consulted, and workflow `shell` steps interpolate agent output with no sandbox; **#4200** measured extension commands invoked **0 of 30** runs | **Supply chain with evidence**: `ext add --sha256` verifies before unpack; `.sdd/extensions.lock.json` stores per-artifact hashes and `ext verify` recomputes them; hooks declare `command`, `timeout`, `sandbox: none|read-only` and run in declared order; anything interpolating untrusted values is `unsafe: true` and refused under `--frozen`; per-hook firing counts are reported, so "installed" ≠ "working" |
+| 1 | A constitution every command analyses against (`/constitution`) | spec-kit's docs admit spec-anchoring is a *convention*, not a mechanism; **#1191** (115 reactions) is the top unmet need — specs are write-once | **Drift sentinel in the floor**: `drift bind <feature>` records each `REQ` id → claimed globs + sha256 of its text; `drift check --since <ref>` exits 1 on commits touching uncovered paths; `drift waive` writes an owner + expiry waiver; the staged-index hook runs it at `spec-anchored`. `driftDetected` already exists in `auditEngine` — this makes it per-commit and blocking |
+| 2 | EARS turned into **derived property-based tests** (Kiro Correctness, https://kiro.dev/docs/specs/correctness.md) | "Unit tests for English" are prose: spec-kit's `/checklist` items are unverifiable and `/implement` only counts unchecked boxes | **Executable requirements**: `checklist verify` accepts `property:` (a property-test id, counterexamples shrunk) alongside `cmd:`/`artifact:`/`trace:`, and `govern checklist --apply` refuses `[x]` without a passing property or command run captured as evidence — unit tests *of* the English, not about it. Reuses C3's evidence store |
+| 3 | One invariant, one enforcing check (Tessl's surviving `covered_by`, https://docs.tessl.io/reference/configuration.md) | An LLM judge re-decides what a lint rule or a test already decides: tokens spent and false positives paid twice (our own C4 lesson) | **`covered_by` on claims-registry entries and gate configs**: when every coverage link is fresh, `gates run` **skips** the judge and records `skipped: covered`; a stale link forces the judge and is itself a drift finding |
+| 4 | Machine-readable state beside the human markdown — independently converged on by comet (`.comet.yaml`), conductor (`metadata.json`), gsd-core (`STATE.md`) and spec-workflow-mcp (approvals ledger) | The workflow's real state (phase, evidence digests, ids in force, approvals) exists only as prose, so nothing can verify it | **`.sdd/specs/<f>/state.json`**: phase, declared rigor, evidence digests, delta ids in force, approval records and archive status — body authoritative over frontmatter, per-field conflict policy, `O_EXCL` lockfile with stale-lock detection. The cheapest structural upgrade, and it makes rows 6, 8 and 12 verifiable data instead of rendering |
+| 5 | Hook/policy floor with precedence and **fail-closed** semantics (Cursor hooks, https://cursor.com/docs/hooks) | Hooks that fail open, and a lower policy layer overriding a higher one | **Policy floor**: `deny > ask > allow` regardless of source, Enterprise cannot be overridden by Project, a block on invalid or missing hook output, and `failClosed` turning crash/timeout/non-zero into a block — the inverse of Cursor's fail-open default. Blocking triggers at `PreToolUse`, `PromptSubmit` and `PreTaskExecution`, paired with the extension supply chain (small additions) |
+| 6 | Right-size the process to the change (BMAD's planning-path chooser; OpenSpec concedes ceremony "may not pay off" for a truly trivial fix, https://raw.githubusercontent.com/Fission-AI/OpenSpec/main/docs/overview.md) | "Sledgehammer to crack a nut": `/clarify`, `/checklist`, `/analyze` are optional with no rule for when they are required | **`open-sdd route "<intent>"`**: survey + reuse + impact forecast returns **S/M/L** with its evidence (files likely touched, dependents, public-API deltas, coverage), fixes the artifact set and rigor in `.sdd/settings/route.json`; `delta init` refuses extra ceremony for class S unless `--override` (recorded and visible in `status`) |
+| 7 | Measure the context the tool installs | **#1401**: 18.6k tokens/session installed (~93 % of Cursor's default chat); cc-sdd measured ~6,900 tokens/iteration and **~283,000 tokens over a 41-sub-task run** (https://github.com/gotalab/cc-sdd/issues/188) | **`init --context-report`** measures the generated files, prints per-host and total token estimates against the host's documented budget and writes `context-budget.json`; `doctor --context` fails above the ceiling and offers `--lazy` (one-line stubs expanded by `prompt <workflow>`) or `--install a,b,c` |
+| 8 | The **two-list spec** (retired Copilot Workspace) plus archive-as-merge-back (OpenSpec) and a recorded approval ledger (spec-workflow-mcp) | Agents plan against a codebase they never restated; spec trees accumulate dead branches; a chat "yes" is the only approval record | **Current state / desired state** required in every delta, so the agent's understanding of existing code is reviewable *before* planning; `delta merge --archive` folds the delta into the base and moves the change to `archive/<date>/`; `review <feature> --base <ref>` renders one diff-shaped page (requirements as word-level diffs with their tasks, the tests that would fail, and a risk score, exiting 1 on unapproved requirement changes); `approve <feature> --gate requirements\|design\|tasks` writes `.sdd/approvals/<gate>.json` (approver, timestamp, artifact sha256) and `audit bundle` includes it |
+| 9 | Post-implementation convergence (`/converge`) | Append-only LLM gap-hunting with no dedupe, no progress requirement, no budget; **#4164** reports clean while the line was never in context | **Monotone convergence** over the existing `converge.ts`: a finding without `file:line` + source-ref is dropped (and counted); dedupe by (source-ref, gap-type, evidence-hash); `--require-progress` fails when `uncovered(n) ≥ uncovered(n−1)`; `--verify <cmd>` refuses "converged" while the external suite is red; a `convergence.json` series makes the trend auditable |
+| 10 | Reuse before writing (Fowler's agent regenerated existing classes; **#1436** lists it as a must) | Duplication created by agents that never looked | **Reuse as a blocking gate**: `brownfield reuse --index` builds a symbol index (name, signature, path, hash); `delta validate` blocks a newly declared symbol without `reuse:` evidence or flags near-identical signatures as candidates; the hook can run it over the staged index |
 
-Adjacent tools, one idea each: **Kiro** — event-driven hooks (enforce steering at write time, not read
-time); **cc-sdd** — `_Boundary:_`/`_Depends:_` tasks plus a fresh implementer + independent reviewer
-(our `waves`/`scheduler.ts` already plans this; executing it closes G-10); **Tessl** —
-`GENERATED FROM SPEC — DO NOT EDIT` banners that make the spec's authority machine-checkable;
-**OpenSpec** — archive-as-merge-back (row 8); **BMAD** — the explicit planning-path chooser (row 2);
-**Agent OS / Cursor rules** — path/glob-scoped rule loading, the cheapest known fix for context tax
-(rows 5 and 9). Copilot Workspace's current model could not be verified (its docs page 404s) and is
-deliberately not characterised.
+**Also worth adopting (small, cheap, high-signal).** **Boundary-first tasks** (cc-sdd): the design
+carries a File Structure Plan and each task declares its file surface, with a boundary violation a
+hard review finding — our `triad.ts` diff budget is adjacent but not boundary-scoped. **`revert
+<feature> --to <ref>`** derived from git history (conductor), so spec rollback is a governance
+operation, not archaeology. **Zero-findings-is-valid** (BMAD's review contract): the reviewer has a
+named lens set, one finding shape, and must never pad to look thorough. **One editable rule source,
+projected** (spec-kit **#609**, **#2362**, **#2681**): `integrate <host> --project-steering --write`
+generates the host rule file from the constitution + steering with an embedded
+`<!-- sdd-projection: sha256=… -->`, and `doctor` fails on a stale or hand-edited projection.
+**Extension supply chain**: `ext add --sha256`, an `.sdd/extensions.lock.json` verified by `ext
+verify`, hooks declaring `command`/`timeout`/`sandbox` in declared order, `unsafe: true` refused under
+`--frozen`, per-hook firing counts (spec-kit's own docs admit no rollback and no `priority`, and
+**#4200** measured 0 of 30 extension commands invoked). **Admin-grade audit** (Amazon Q, being
+retired): `audit bundle` already produces a per-artifact manifest; add optional, local-first org
+surfaces — aggregated gate/waiver/approval metrics, an MCP mediation log, and a decision log for AI
+reviews. **Glob-scoped lazy stubs** (Cursor rules' `globs` plus skills' frontmatter `paths` and
+auto-scoped nested folders, https://cursor.com/docs/skills): the stubs of row 7 load only for the paths
+a change touches — a change under `tools/open-sdd/src/core/**` loads the core-relevant workflows, not
+all 22. **A dated, committed design doc as a precondition** (obra/superpowers): `spec init` requires a
+committed `brief.md` whose dated name (`YYYY-MM-DD-<topic>-design.md`) makes revisions immutable in
+git, used as the parent of the requirements phase — so "the design existed before the plan" is a
+verifiable fact, not an assertion.
+
+Two structural facts from the survey worth stating plainly, because they validate the design here:
+OpenSpec's own tracker concedes there is **no programmatic guarantee that a gate actually ran**
+(https://github.com/Fission-AI/OpenSpec/issues/1142) — the gate chain is the answer; and gsd-core's
+parallel agents commit with `--no-verify`, skipping the hooks during waves — a floor that can be
+bypassed is not a floor. Star counts circulating for the wider set (superpowers, ruflo, gsd-core,
+comet, conductor, spec-workflow-mcp) were read from GitHub HTML after the API rate-limited and are
+**not** independently verified; they are cited as a map, not as evidence.
 
 #### W8.2 — Measured anti-evidence (why "calibrate before blocking" is earned)
 
