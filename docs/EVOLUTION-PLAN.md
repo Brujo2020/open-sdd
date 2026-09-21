@@ -74,6 +74,18 @@ The engine is not the problem. Adoption, enforcement coverage and the last mile 
      supported", while the compiled registry exposes 34 agent definitions and 31 command conventions
      (19 verified, 12 declared); the README says 35 / 32 (20 / 12). Three sources, three answers,
      none generated.
+   - **A failing command can end on a success-looking line.** `open-sdd gates chainn` prints
+     `Subcomando desconocido: chainn…`, exits 1, and then still prints a **236-character** score door
+     ending in "gates OK (C1, C2 …)". The last line the user reads contradicts the verdict.
+   - **No global escape hatches.** There is no `--no-input`, global `--json`, `--plain`, `--explain`
+     or `--debug` (`--no-footer` is the only global flag), and the interactive prompts throw a bare
+     `TTY required for interactive prompts` at three sites instead of naming the flag to pass.
+   - **The CLI has no uninstall.** `open-sdd uninstall` is an unknown command, yet the tool writes
+     skills, chat commands, MCP registrations, a git hook and `.sdd/`. Only
+     `scripts/install-hooks.mjs --uninstall` reverses the hook, and no receipt records what a run
+     wrote, so a partial install cannot be reversed.
+   - **The two manifests disagree.** Root `package.json` is **3.3.0** while
+     `tools/open-sdd/package.json` is **3.0.2** (the compiled CLI reports 3.3.0).
 3. **The floor is not green everywhere.** The Windows suite is red at two named
    `coreCommandTemplates` assertions (G-26) and the hook step behind it is `skipped`, so the
    portable commit gate has never executed under git on Windows; no CI credential route has carried
@@ -119,6 +131,13 @@ Those three are the plan.
     in silence: it names `file:line:column` and the fix. OpenSpec's schema ships delta scenarios that
     "fail silently" and a glossary listing three of the four delta verbs its own template uses — format
     drift hiding inside the spec format is exactly what `delta validate` must make impossible.
+11. **Exit codes are a contract.** `0` verdict passed · `1` your repository failed a gate · `2` usage
+    error (bad flag or subcommand) · `3` environment or configuration · `4` tool bug — documented in
+    `help exit-codes`. The host-loop sentinel (`exit 2 = blocked`) stays as it is and is documented
+    alongside. A usage error must never be reported as a governance failure.
+12. **The tool is reversible.** A command that writes into a repository that is not its own leaves a
+    receipt and can be undone in one command; `.sdd/` is the user's data and is removed only with an
+    explicit `--purge-sdd`. An invasive tool with no exit is a trust asymmetry, not a feature.
 
 ---
 
@@ -176,32 +195,88 @@ apply. `doctor` is excellent but is a *diagnosis*, not a *concierge*. `install.s
 - **`open-sdd up [target]`** — the single entry point. It detects the repository (git? language?
   existing `.sdd/`?) and the hosts actually present (`.claude/`, `.cursor/`, `.github/`, `.agents/`,
   `.codex/`…), proposes a plan, writes it, then *verifies its own write* with `doctor`, printing the
-  next three commands. Idempotent, `--dry-run` first, `--yes` for CI.
-- **Interactive when a TTY, flags when not.** A keyboard picker for host/locale/level; the same
-  choices as flags; `--no-input` never hangs.
-- **Undo and safety.** `open-sdd undo [--last|--list]` over the existing `backup.ts`; every write
-  prints the exact path before writing; atomic writes; never overwrite a human-authored file
-  (already the rule — make it visible).
-- **Install trust.** Keep `npx` as the primary path, add checksum/provenance verification at install
-  time, publish a one-line container run, and an air-gapped tarball with a verified digest. The
-  install command is **single-sourced** from `package.json.name` so it can never point at the
-  nonexistent unscoped `open-sdd`, and provenance (W0) is shown, not just claimed.
-- **Honest locales.** Either ship the 13 advertised locales or make `--lang` **refuse an
-  untranslated locale by name** with the list of translated ones. Silence is not a verdict. Make the
-  default locale follow the environment (not a hardcoded `es`), and keep the `--json` envelope
-  locale-independent so machine consumers never parse a translated sentence.
+  next three commands. Idempotent, `--dry-run` first, `--yes` for CI. Include a **`--demo`** mode so
+  a first run reaches a real, green artefact in two steps on a repository with nothing in it.
+- **Interactive when a TTY, flags when not — always with an escape.** A keyboard picker for
+  host/locale/level; the same choices as flags; `--no-input` never hangs; `NONINTERACTIVE=1` /
+  `OPEN_SDD_PROMPT=0`; every multiselect has a flag equivalent (`--ops ADDED,MODIFIED`); Ctrl-C
+  prints `Operation cancelled.` and leaves no partial write; answers are cached in `.sdd/settings/`
+  and a re-run says what it reused instead of re-asking.
+- **Install paths that cannot 404.** The install command is generated from `package.json.name` +
+  `version` so `npx open-sdd@latest` cannot recur. The docs lead with the reproducible path
+  (a pinned `devDependency` + `npx`, which prefers the local copy) and state the **`npx -y`
+  collision** (`npx` consumes `-y` for its own prompt, so `open-sdd`'s own flag needs
+  `npx @brujo2020/open-sdd -- -y`). `devEngines.runtime.onFail: "error"` makes a wrong Node fail
+  cleanly. The zero-runtime-dependency artifact and the deliberate **no-op postinstall** are
+  advertised, not just true — npm 12 blocks dependency lifecycle scripts by default and the
+  Shai-Hulud waves spread through exactly those scripts.
+- **Reversible by construction (tenet 12).** `open-sdd uninstall` prints the plan;
+  `uninstall --write` removes skills, chat commands, MCP registrations and the Stop hook, and never
+  deletes `.sdd/` without `--purge-sdd`. Every writing command records
+  `.sdd/.open-sdd-receipt.json` (paths + hashes + timestamp), so a partial run is undone with
+  `open-sdd restore --from .sdd/.open-sdd-receipt.json` — generalising the discipline already proven
+  in `core/backup.ts`.
+- **Plan → apply is an artifact, not a conversation.** `--out <file>` saves a plan with its sha256;
+  `gates apply <file>` executes the reviewed plan verbatim; destructive regeneration requires
+  `--confirm=<feature>`. Any *human* file touched outside `.sdd/` (`.claude/settings.json`,
+  `~/.codex/config.toml`, Zed/Cline settings) is backed up to a timestamped `.bak` first, and the
+  command prints the undo.
+- **`doctor` is the front door.** Keep its `✓/!/✗` + `fix:` format, and make every `fix:` value a
+  single runnable line with no trailing prose; add `doctor --json` for tooling and `doctor -v` for
+  evidence paths. A `✗` always names a command.
 - **Help that answers the question asked.** `open-sdd help <command>` returns that command's own
-  help; `init --help`, `doctor --help`, `integrate --help` work; the help index is generated from
-  the same table that dispatches commands, so a routed command cannot be missing from help
-  (today: 8 lines against `--help`'s 58). An unknown command suggests the nearest match
-  (`did you mean 'status'?`) and points at `--help`.
-- **A rendering and prompt contract.** `formatSectionTitle` emits real ANSI sequences or none; the
-  `NO_COLOR` rule honours "present and non-empty"; every interactive prompt either works or fails
-  naming `--yes` / `--no-input`. A test covers each.
+  help; `init --help`, `doctor --help`, `integrate --help` work; the index is generated from the
+  dispatch table (today: 8 lines against `--help`'s 58). An unknown command suggests the nearest
+  match from a documented threshold, capped at three, and points at `--help` and `help exit-codes`.
+- **Honest locales.** Either ship the 13 advertised locales or make `--lang` **refuse an
+  untranslated locale by name** with the list of translated ones. The console locale follows the
+  project's detected language (not a hardcoded `es`), while `C1…C7`, `REQ-<AREA>-<NNN>`, every JSON
+  key, every `ruleId` and every `= help:` command stay **English and unlocalized**.
 
-**Acceptance.** On a fresh clone of a foreign repository: `npx @brujo2020/open-sdd@latest up -y`
-reaches `doctor` 9 ok / 0 fail in under 60 s, and `undo` restores the previous state byte-for-byte.
-A test asserts no routed command is absent from help.
+**Acceptance.** On a fresh clone of a foreign repository: `npx @brujo2020/open-sdd@latest up --demo`
+reaches `doctor` 9 ok / 0 fail in under 60 s; `uninstall --write` returns the repository to its
+pre-install state byte-for-byte; `restore --from` recovers a partial run; a test asserts no routed
+command is absent from help.
+
+#### W1.1 — The console contract (exit codes, diagnostics, machine surface)
+
+The research distilled this into twenty rules; they are the executable form of tenet 2 and every one
+of them is testable.
+
+- **Exit codes are a contract (tenet 11).** `0` passed · `1` your repository failed a gate · `2`
+  usage error · `3` environment/configuration · `4` tool bug — documented in `help exit-codes`, with
+  the host-loop sentinel (`exit 2 = blocked`) documented alongside. `open-sdd statu` exits **2**, not
+  1, and code `4` attributes itself as a bug, offers a pre-filled report URL and writes the trace to
+  a log file instead of the terminal.
+- **Diagnostics are rustc-shaped.** `error[C1]: message` / `--> path:LL:CC` / a code frame with the
+  `^^^` label / `= help:` for the runnable fix / `= note:` for the authority that made it blocking;
+  lowercase first letter, no trailing period, backticks around identifiers, and no more than ~10
+  lines per finding. Every code resolves offline: `open-sdd explain C1`.
+- **A failure never ends on a success-looking line.** On non-zero exit the score door is suppressed
+  or inverted (`/!\ SDD 85% — this command FAILED: 1 blocking finding (C1)`) — never the current
+  behaviour where `gates chainn` exits 1 and then prints "gates OK".
+- **One machine surface.** Finish the `jsonEnvelope` adoption (ten `jsonOut.ts`-declared commands
+  are still on legacy JSON); bare `--json` lists the available fields; records go one per line to
+  stdout and human logs to stderr; SARIF keeps a stable `ruleId: open-sdd/C1…C7`; field names are
+  never renamed in a minor.
+- **Suggestions declare applicability.** Each fix is graded (`machine-applicable` / `maybe-incorrect`
+  / `needs-human`); only the first auto-applies, and an unsafe-class rewrite of a spec is never
+  applied silently.
+- **Color is never the only signal.** Fix `formatSectionTitle`'s missing escapes; honour
+  `NO_COLOR` (present and non-empty), `FORCE_COLOR` and `--color=auto|always|never` per stream;
+  keep `PASS`/`FAIL`/`WARN` words beside `✓/!/✗`; disable animations when stdout is not a TTY.
+- **Nothing uninspected is reported as passing.** A check that could not inspect renders
+  `SKIP`/`UNKNOWN` and is excluded from the pass count (C5's `mode=degraded` is the model), and an
+  ungrounded assistant answer is `ABSTAIN` plus the command that would ground it — never a guess.
+- **The twenty rules, as a checklist** (each traceable to a source in the research): names the
+  artifact and position; ends in a runnable command or URL; never a bare `invalid`/`illegal`; rustc
+  message style; blames the state, not the person; the exit code separates the failure classes;
+  machine output one record per line on one stream; bare `--json` lists fields; suggestions graded;
+  internal errors attribute themselves; traces only under `--debug`; color is never the only carrier;
+  `NO_COLOR`/`FORCE_COLOR`/`--color` honoured per stream; ≤10 lines and one code frame per finding;
+  "did you mean" with a threshold and a cap; prompt only on a TTY and never in CI; every prompt has a
+  flag/env equivalent; no success-looking line after a failure; translatable prose with stable
+  English codes; nothing uninspected reported as passing.
 
 ### W2 — Standards engine: rules you can run
 
@@ -246,6 +321,16 @@ make them hold — warning when they do not, always with a solution.*
   decide says `no verificado` — never `ok` (the `notChecked` discipline).
 - **Overrides with a reason.** A repository may downgrade or disable a standard only by declaring
   it with a rationale and an owner, reusing the waiver shape (`.sdd/settings/standards.local.yaml`).
+  Every suppression carries an `expires`, and an **unused suppression is itself reported** (the
+  Ruff `RUF100` pattern), so accepted debt cannot become a permanent blind spot.
+- **Fixes are graded, not guessed.** Each remedy declares its applicability —
+  `machine-applicable` (safe to auto-apply), `maybe-incorrect` (preview first) or `needs-human`
+  (the ASK-THE-HUMAN case) — and only the first auto-applies. An unsafe-class rewrite of a spec is
+  never applied silently, because it would change the contract of change.
+- **Hints are pull-only.** The `assistants.ts` doctrine becomes a visible contract: hints appear only
+  when asked (`--hints`) or on a non-blocking pass, one line each, always with a `why:`, always
+  dismissible with a recorded reason and expiry (`gates dismiss C1 --reason … --expires …`), and the
+  next edit supersedes rather than re-emits them.
 - **No dead ends, mechanically.** A test enumerates every finding the engine can emit and fails if
   any lacks `fix:` or `question:` (tenet 2).
 - **Format rules fail loudly, with the position** (tenet 10): `delta validate` asserts the delta verb
@@ -593,6 +678,8 @@ Each phase ends with its acceptance criteria demonstrated in CI and recorded in
 |---|---|---|---|
 | **Time to first value** | Fresh repository → `doctor` 9 ok / 0 fail | < 60 s | CI fixture, timed |
 | **Dead ends** | Findings with neither `fix:` nor `question:` | 0 | A test over the emitted-finding catalogue |
+| **Console contract** | The twenty rules of W1.1, asserted over real output | 100 % | fixture-based tests per rule |
+| **Reversibility** | `uninstall --write` restores the pre-install tree byte-for-byte | round-trip green | install/uninstall fixture |
 | **Enforcement coverage** | Rule statements that are machine-checked or explicitly advisory | 100 % of the catalogue | `standards list --json` |
 | **Requirements recall / FPR** | Detection over the labelled defect corpus, **per check family** | published, then improve | `bench/` + `docs/MEASUREMENTS.md` |
 | **AI verdicts backed** | Model advisories a deterministic check confirms or refutes | 100 % (none stands alone) | `review --json` |
@@ -626,6 +713,21 @@ named is not reported as a number.
   of the author, and must be able to say "I cannot decide".
 - **Prompt injection.** Spec content is data; an instruction inside a spec is a finding, not a
   command.
+- **Required prompts and prompt spam.** A governance CLI runs in CI, so a prompt without a flag
+  escape is a defect. Answers are cached and a re-run says what it reused instead of asking again.
+- **Generic errors and success-looking failures.** Never a bare `invalid`; never a stack trace
+  without `--debug`; never one exit code for every failure class; and never a score line after a
+  failure. A failing command that ends on a confident green line is worse than no output.
+- **Silence about what was not shown.** No "showing first 10" without the total — `12 shown, 40 more
+  below --min-severity INFO` — and no suppression without a reason and an expiry.
+- **Warnings that block, and blanket `--fix`.** Warnings stay out of the exit code (the ESLint
+  model); blocking on heuristics trains `--no-verify`; only `machine-applicable` fixes auto-apply.
+- **Localized machine surfaces.** JSON keys, gate codes, `ruleId`s and the commands inside a fix stay
+  English and stable under any `--lang`.
+- **Unattributed AI output.** Any AI-assisted artifact carries its `mode=`/trailer and the human
+  review link, or it becomes indistinguishable from a deterministic check.
+- **Invasive without an exit.** Every command that writes into a repository that is not its own
+  leaves a receipt and has an uninstall. Reversibility is a requirement, not a courtesy.
 - **Stale docs.** Any number about the repository is generated or claim-verified. This plan's own
   numbers are dated and sourced.
 - **Scope creep.** The `[-]` backlog is closed honestly — finished, or re-declared as not done —
@@ -640,24 +742,32 @@ named is not reported as a number.
      `@brujo2020/open-sdd`) single-sourced from `package.json`;
    - `open-sdd help <command>` returns command-specific help generated from the dispatch table
      (`init --help`, `integrate --help`, `gates --help`), and an unknown command suggests the
-     nearest match — no more `Error: Unknown positional argument: statu` with no way forward;
+     nearest match and **exits 2** — no more `Error: Unknown positional argument: statu` with no way
+     forward;
+   - the exit-code taxonomy (tenet 11) plus `help exit-codes`, and **no success-looking footer after
+     a failure**: `gates chainn` currently exits 1 and then prints "gates OK";
    - `--lang` refuses an untranslated locale by name and lists `es`, `en`; the default locale stops
      being hardcoded `es`; the `--json` envelope stops carrying localized text in `detail`;
    - `formatSectionTitle` emits real ANSI sequences, `NO_COLOR` honours "present and non-empty",
      and the three TTY prompts name `--yes` / `--no-input`;
    - `docs/COMPARE.md` regenerated from the registry (34 definitions / 31 conventions, not "8 agents").
    *Acceptance:* one test asserts every routed command has help; one asserts every emitted finding
-   has a `fix:` or a `question:`; one asserts no runtime message names an unpublishable package.
-2. **Days 2–3 — W0.** The two Windows assertions fixed; the G-26 hook step runs; a patch release
-   carried by a CI credential route (or the manual route declared as the mechanism).
-3. **Days 4–7 — W2 MVP.** The standards catalogue seeded from `ears.ts` + the three Mechanical
+   has a `fix:` or a `question:`; one asserts no runtime message names an unpublishable package; one
+   asserts a non-zero exit never prints the score door.
+2. **Day 2 — reversibility.** `open-sdd uninstall [--write] [--purge-sdd]` and the
+   `.sdd/.open-sdd-receipt.json` written by every command that writes, with
+   `restore --from <receipt>` — the round-trip test is the acceptance.
+3. **Days 3–4 — W0.** The two Windows assertions fixed; the G-26 hook step runs; a patch release
+   published with provenance by a CI credential route (or the manual route declared as the
+   mechanism).
+4. **Days 5–8 — W2 MVP.** The standards catalogue seeded from `ears.ts` + the **two** Mechanical
    Checks sections + `ears-format.md`; `standards list|show|check`; the requirements subset wired
-   into C1; every finding carries a remedy; the no-dead-ends test.
-4. **Days 8–10 — W3 MVP.** Vague-term, compound-obligation, missing-unit, passive-voice and
+   into C1; every finding carries a graded remedy; the no-dead-ends test.
+5. **Days 9–11 — W3 MVP.** Vague-term, compound-obligation, missing-unit, passive-voice and
    no-`IF` checks with rewrites; `requirements review <feature>`.
-5. **Days 11–12 — W1 MVP.** `open-sdd up [--dry-run|--write|--yes]` with self-verification and
-   `undo`; the host auto-detection over the existing registry.
-6. **Days 13–14 — close the loop.** Record what shipped in `docs/MEASUREMENTS.md`; update
+6. **Days 12–13 — W1 MVP.** `open-sdd up [--dry-run|--write|--yes] [--demo]` with self-verification,
+   the host auto-detection over the existing registry, and the rustc-shaped diagnostic renderer.
+7. **Days 14 — close the loop.** Record what shipped in `docs/MEASUREMENTS.md`; update
    `PAPER-ALIGNMENT.md` gaps touched (G-26/G-28 and the new C8); keep `assure claims` at 0 broken.
 
 **Decisions requested before P1 begins**
