@@ -218,6 +218,16 @@
       "owner": "mantenimiento (tests y plantillas)",
       "actor": "spec:tool-maturity",
       "expires": "2027-03-31"
+    },
+    {
+      "path": "docs/guides/requirements-quality-catalog.md",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "El catalogo de calidad de requisitos cita, como EJEMPLO de lo que el check AI-002 debe detectar, la frase con la que se intenta secuestrar a un agente. El literal es el objeto de la documentacion, no una instruccion dirigida a un modelo, y que C2 lo detecte es la prueba de que el patron funciona. Se declara con motivo, dueno y caducidad en vez de silenciarse; el literal no se repite aqui para no reintroducirlo en el indice.",
+      "owner": "mantenimiento (catalogo de requisitos)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
     }
   ]
 }

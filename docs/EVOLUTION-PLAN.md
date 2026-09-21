@@ -354,6 +354,12 @@ their generated form; the no-dead-ends test passes.
 **Problem.** Requirements are where a project fails expensively. The tool checks EARS *shape*; it
 does not check the quality characteristics that make a requirement usable, and it does not teach.
 
+**The stored catalogue** is [`docs/guides/requirements-quality-catalog.md`](guides/requirements-quality-catalog.md)
+— the 42 checks with severity, detection and a worked example, the rewrite playbook with its
+ASK-THE-HUMAN triggers, the definitions of done for a requirement and for a set, the critique
+contract and output shape, and the do-not-cite register. It is research input: nothing there runs
+until this workstream implements it.
+
 **Design.**
 - **A catalogue of 42 checks in 8 families**, each with an id, a severity tier — **S1 blocker /
   S2 major / S3 advisory / S4 metric** — its exact detection (a validated regex or structural rule)
