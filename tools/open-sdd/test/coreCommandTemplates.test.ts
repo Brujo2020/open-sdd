@@ -293,19 +293,30 @@ describe('command templates — host conventions are declared, verified or refus
     }
   });
 
-  it('the five conventions verified against the hosts docs are exactly those', () => {
+  it('the conventions verified against the hosts docs are exactly those', () => {
     const verified = HOST_COMMAND_TEMPLATES.filter((host) => host.verified).map((host) => host.id).sort();
-    expect(verified).toEqual(['claude-code', 'copilot', 'cursor', 'gemini-cli', 'opencode']);
+    expect(verified).toEqual([
+      'antigravity',
+      'claude-code',
+      'copilot',
+      'cursor',
+      'gemini-cli',
+      'opencode',
+      'qwen-code',
+      'windsurf',
+    ]);
     // Every verified convention cites the page it was read from (or the layout the installer ships).
     for (const id of verified) expect(commandHostById(id)?.docUrl, id).toBeTruthy();
   });
 
   it('the unverified hosts are marked and name why they are unverified', () => {
     const unverified = HOST_COMMAND_TEMPLATES.filter((host) => !host.verified).map((host) => host.id).sort();
-    expect(unverified).toEqual(['antigravity', 'cline', 'codex', 'qwen-code', 'windsurf', 'zed']);
+    expect(unverified).toEqual(['cline', 'codex', 'zed']);
     for (const id of unverified) {
       const host = commandHostById(id)!;
       expect(host.evidence, id).toMatch(/NOT VERIFIED|no documented|no tiene/i);
+      // An honest dead end must name the URL(s) that were tried, not just assert a gap.
+      expect(host.evidence, `${id}: evidence names the docs it read`).toMatch(/https:\/\//);
     }
   });
 
@@ -327,6 +338,21 @@ describe('command templates — host conventions are declared, verified or refus
     expect(commandHostById('copilot')?.dir).toBe('.github/prompts');
     expect(commandHostById('copilot')?.fileName('constitution')).toBe('sdd-constitution.prompt.md');
     expect(commandHostById('claude-code')?.invocation('plan')).toBe('/sdd-plan');
+    // Qwen Code migrated from TOML to Markdown in its own docs; the matrix must not write the
+    // deprecated extension.
+    expect(commandHostById('qwen-code')?.dir).toBe('.qwen/commands');
+    expect(commandHostById('qwen-code')?.fileName('constitution')).toBe('sdd-constitution.md');
+    expect(commandHostById('qwen-code')?.format).toBe('markdown');
+    expect(commandHostById('qwen-code')?.argumentSyntax).toBe('{{args}}');
+    // Windsurf workflows and Antigravity legacy workflows are project-scoped Markdown files; the
+    // Antigravity directory is the documented PLURAL `.agents/workflows/`.
+    expect(commandHostById('windsurf')?.dir).toBe('.windsurf/workflows');
+    expect(commandHostById('windsurf')?.fileName('constitution')).toBe('sdd-constitution.md');
+    expect(commandHostById('antigravity')?.dir).toBe('.agents/workflows');
+    expect(commandHostById('antigravity')?.fileName('constitution')).toBe('sdd-constitution.md');
+    // No command directory can be declared for the hosts whose docs steer to skills.
+    expect(commandHostById('zed')?.dir).toBeNull();
+    expect(commandHostById('cline')?.dir).toBeNull();
   });
 });
 
@@ -349,6 +375,29 @@ describe('installCommandTemplates — create, keep, update, and refuse', () => {
     }
     expect(await exists(path.join(dir, '.claude', 'commands', 'sdd-constitution.md'))).toBe(true);
     expect(await exists(path.join(dir, '.claude', 'commands', 'sdd-tasks-to-issues.md'))).toBe(true);
+  });
+
+  it('writes into each newly documented host at the exact path its own docs name', async () => {
+    const dir = await makeRoot();
+    const result = await installCommandTemplates({
+      cwd: dir,
+      hosts: ['windsurf', 'qwen-code', 'antigravity'],
+      write: true,
+    });
+
+    expect(result.failures).toEqual([]);
+    expect(result.artifacts.every((artifact) => artifact.verified)).toBe(true);
+    // Windsurf: .windsurf/workflows/*.md (docs.devin.ai).
+    expect(await exists(path.join(dir, '.windsurf', 'workflows', 'sdd-constitution.md'))).toBe(true);
+    // Qwen Code: .qwen/commands/*.md, Markdown — the docs deprecate the .toml form.
+    expect(await exists(path.join(dir, '.qwen', 'commands', 'sdd-constitution.md'))).toBe(true);
+    expect(await exists(path.join(dir, '.qwen', 'commands', 'sdd-constitution.toml'))).toBe(false);
+    // Antigravity: the documented plural `.agents/workflows/`, not the legacy `.agent/`.
+    expect(await exists(path.join(dir, '.agents', 'workflows', 'sdd-constitution.md'))).toBe(true);
+    expect(await exists(path.join(dir, '.agent', 'workflows'))).toBe(false);
+
+    const qwen = await readFile(path.join(dir, '.qwen', 'commands', 'sdd-constitution.md'), 'utf8');
+    expect(qwen.startsWith('---\n')).toBe(true);
   });
 
   it('is idempotent: a second run reports keep for every artifact and rewrites nothing', async () => {
@@ -432,6 +481,13 @@ describe('installCommandTemplates — create, keep, update, and refuse', () => {
     expect(claude.format).toBe('markdown');
     expect(claude.content.startsWith('---\n')).toBe(true);
     expect(claude.content).toMatch(/^<!-- open-sdd:command-template id=constitution sha256=[0-9a-f]{64} -->$/m);
+
+    // Qwen Code is now a Markdown host (its docs deprecate TOML): the rendered artifact must be a
+    // Markdown file with frontmatter, not a TOML `prompt = """` document.
+    const qwen = await renderCommandTemplate('constitution', commandHostById('qwen-code')!);
+    expect(qwen.format).toBe('markdown');
+    expect(qwen.content.startsWith('---\n')).toBe(true);
+    expect(qwen.content).not.toContain('prompt = """');
   });
 
   it('an unknown host id is a failure, never a plausible-looking write', async () => {

@@ -4,6 +4,132 @@ All notable changes to this project will be documented in this file.
 
 **Release Notes**: [English](docs/RELEASE_NOTES/RELEASE_NOTES_en.md)
 
+## [3.2.0] — 2026-09-20
+
+### The way of working: 22 prompt templates, installed by default
+
+- **`open-sdd init <target> --write` installs 22 workflow templates into the host's own commands
+  directory, and they are now the default path.** `/sdd-onboard`, `/sdd-constitution`,
+  `/sdd-specify`, `/sdd-clarify`, `/sdd-plan`, `/sdd-tasks`, `/sdd-implement`, `/sdd-analyze`,
+  `/sdd-checklist`, `/sdd-converge`, `/sdd-tasks-to-issues`, `/sdd-brownfield`, `/sdd-status`,
+  `/sdd-contracts`, `/sdd-impact`, `/sdd-reuse`, `/sdd-gates`, `/sdd-audit`, `/sdd-import`,
+  `/sdd-doctor`, `/sdd-tour` and `/sdd-release` are plain prompt files written where the host
+  already reads them (`.claude/commands/`, `.cursor/commands/`, `.github/prompts/`,
+  `.gemini/commands/`, `.opencode/commands/`). Each one points at the real engine
+  (`open-sdd status --json`, `open-sdd delta validate <feature> --json`, …) instead of guessing, so
+  the whole workflow runs with **no MCP server and no network**.
+- **MCP is now opt-in.** `open-sdd init <target> --write --mcp` adds the host's MCP registration on
+  top of the templates; without `--mcp`, no MCP configuration is touched. Some hosts do not
+  implement MCP and some security policies block or allow-list it, so the default path had to stop
+  depending on it. `open-sdd integrate <host> --write` remains the host-by-host equivalent.
+- **The template install is idempotent and never overwrites your edits.** Every installed template
+  carries a sha256 signature of the body it was generated from: a re-run refreshes an untouched
+  template (`update`), leaves an edited one alone and says why (`keep`), and `--write` refuses to
+  write into a host whose commands convention is not verified rather than inventing a path the host
+  may never read.
+
+### Brownfield convergence: what the specification asks and the code does not do
+
+- **`open-sdd brownfield converge <feature>` measures the distance between the spec and the code
+  instead of asserting it.** It reads `requirements.md`, `plan.md`/`design.md`, `tasks.md` and the
+  delta, and reports six kinds of gap, each with machine-collected evidence: `missing` (a requirement
+  no task implements, or a declared boundary that does not exist), `partial` (traced tasks that are
+  not all complete, with the measured ratio), `contradicts` (a task citing an unknown requirement, or
+  a constitutional pivot error), `unrequested` (a changed file exporting a symbol no spec token
+  names), `unprotected` (a contract the delta declares that exists nowhere — a green test run cannot
+  close this one) and `unbound` (a task marked `[x]` with no `_Evidence:`). A finding without
+  evidence is discarded before it is printed, and the exit code is `1` when any gap is `high`.
+- **`--write` appends the remaining work and nothing else.** Exactly one
+  `## Phase N: Convergence` section goes to the bottom of `tasks.md`; existing tasks are never
+  rewritten, renumbered or reordered, `requirements.md` and `plan.md` are never touched, and no
+  application code is written. Re-running on the same tree does not append a gap twice.
+
+### The constitution as the pivot: a natural-language interview and EARS
+
+- **`open-sdd brownfield constitution --interview` is a conversation that does not ask what the code
+  already answers.** It starts from the descriptive constitution — what the repository already
+  demonstrates — and separates `decidedByEvidence` (the stack, the observed practices, the
+  boundaries, the API surface, the established facts) from the questions only a person can answer:
+  which observed principles to ratify, which practice the code does not yet show to adopt, and the
+  normative decisions (API deprecation, regression floor, boundary crossing, sensitive data). With
+  `--answers <path> --write` it writes a validated draft to `.sdd/steering/constitution.draft.md`
+  and **never touches `constitution.md`**; only
+  `open-sdd govern constitution --ratify --by "<name>" --rationale "<reason>"` puts it in force, so
+  the authority is always a named person's decision.
+- **`open-sdd brownfield specify <feature> "<description>"` derives EARS requirements from plain
+  language**, and `open-sdd brownfield requirements <feature> [--suggest] [--apply <i>] [--write]`
+  runs the EARS assistant over an existing `requirements.md`. Both use the same analyzer that
+  validates the document, so the assistant and the gate cannot disagree.
+- **`open-sdd brownfield clarify <feature>` asks the questions the analysis actually raised**, from
+  the ambiguity codes and the unresolved delta markers rather than from a fixed script. The batch is
+  capped (5 by default; when it is cut, `truncated`, `remaining` and the detail say so), and every
+  answer rewrites only the affected line before the analysis is re-run to prove the ambiguity is
+  gone: a response that does not remove the finding is reported open, never as fixed.
+
+### Enforcement that fails closed, including the stop hook
+
+- **`open-sdd integrate <host> --write` installs a `Stop` hook on the hosts whose blocking contract
+  was verified against their own documentation (Claude Code, Codex CLI).** The hook runs the exact
+  invocation the commit gate runs (`gates run C1 C2 C3 --staged --strict`), and an adapter maps both
+  a failing gate (exit `1`) and a chain that could not run (exit `2`) to exit `2` — the code those
+  hosts document as "block". Without that translation the raw argv would **fail open**: the check
+  would run, see the failure, and the agent could still declare itself finished.
+- **A host with no verified `Stop` mechanism is refused, not guessed at.** `integrate` reports
+  `refused` with the reason and writes nothing for that host; this release does not ship a hook whose
+  blocking behaviour was never confirmed.
+
+### The celebration, when — and only when — it is earned
+
+- **`open-sdd status --check` now prints a green feature block when three independent verdicts are
+  all true at once:** the feature's requirements are EARS-conformant, its constitutional pivot was
+  evaluated with no errors, and the gate chain the declared rigor level activates passed. Anything
+  missing is `refused` with the missing datum named, and a real failure is reported `plain` — a check
+  that did not run is never celebrated. The streak comes from the adhesion ratchet, not from a second
+  count.
+- **`open-sdd status --celebrations [--json]` reads the ledger of validations**
+  (`.sdd/state/celebrations.json`), and the achievements shown are derived from events actually
+  recorded there. An unreadable ledger is warned about and shown empty, never filled in.
+
+### The living spec and its biography
+
+- **`open-sdd biography <feature>` turns a specification's git history into its biography:** when it
+  was born and when it last moved, one event per changed artifact with the lines added and removed,
+  the spec's commits against the code's, the delta entries (amendments) that shaped it and the
+  behaviour they replaced, who ratified the constitution it is read against, and the phases declared
+  in `spec.json` over time. `--json` for scripts and `--limit N` for the event window.
+- **The rhythm verdict is derived from measured numbers, never asserted.** `unknown`, `orphan`,
+  `quiet`, `stale` and `alive` come from the commits and dates the repository actually has, and every
+  rendering carries the sentence that activity is not quality: a spec that never changes can be
+  correct, and one that changes daily can be a disaster.
+
+### Progress and backup
+
+- **`open-sdd progress` is an append-only ledger of milestones** (`.sdd/state/progress.json`), and
+  `open-sdd progress record --kind <kind> --summary "<one line>" --score <0..100> --phase <1|2|3>
+  [--evidence <path>]` appends one. The `delta` is computed against the previous entry and cannot be
+  supplied by the caller; a flat day says *sin cambios* instead of dressing up as a rise; an empty,
+  vague or multi-line summary is rejected because it would put a phrase where the fact belongs; and a
+  corrupt ledger warns and starts a new series instead of inventing a history.
+- **`open-sdd backup create|verify|restore` makes the governance state restorable.** `backup create`
+  copies the whole `.sdd/` tree into a directory with a `manifest.json` and a sha256 per file;
+  `backup verify <archive>` recomputes every hash and reports mismatches; `backup restore <archive>`
+  is a dry run unless `--write`, and `--only <path>` restores a single file. Files shaped like
+  credentials (`.env*`, `.npmrc`, `.netrc`, private keys), symlinks and `node_modules`/`dist`/`.git`
+  are omitted and named in the manifest detail instead of being copied silently.
+
+### Native GitFlow: the branch role decides the governance
+
+- **`open-sdd gitflow [--level <level>] [--greenfield] [--json]` derives the branch's role from the
+  branches that actually exist and says what that role requires before you ask.** The model is
+  detected, not configured: `gitflow` only when `develop` and `main`/`master` coexist, `trunk` for a
+  single non-role branch, and `none` with the reason otherwise. The role (`main`, `develop`,
+  `feature`, `release`, `hotfix`, `other`) comes from the branch name, and the output names the
+  artifacts the role owes, the gate chain for the declared rigor level, the next step, and —
+  separately — what can actually block today (the commit hook, the pull-request workflow, the
+  governance profiles) versus what is only advice.
+- **It is a read-only report.** `gitflow` changes no branch, runs no gate chain, and never declares a
+  branch protection it has not observed.
+
 ## [3.1.0] — 2026-09-20
 
 ### Added — one entry point, one dashboard, and the constitution as the pivot

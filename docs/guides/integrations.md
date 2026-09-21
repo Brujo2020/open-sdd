@@ -98,15 +98,17 @@ written:
 | GitHub Copilot | `.github/prompts/` | `sdd-<id>.prompt.md` | yes |
 | Gemini CLI | `.gemini/commands/` | `sdd-<id>.toml` | yes |
 | OpenCode | `.opencode/commands/` | `sdd-<id>.md` | yes |
-| Codex CLI | `.codex/prompts/` (declared) | `sdd-<id>.md` | **NO** — Codex no longer loads that directory |
-| Windsurf | `.windsurf/workflows/` (declared) | `sdd-<id>.md` | **NO** — docs redirect; layout not re-confirmed |
-| Qwen Code | `.qwen/commands/` (declared) | `sdd-<id>.toml` | **NO** — fork format not re-confirmed |
-| Antigravity | `.agent/workflows/` (declared) | `sdd-<id>.md` | **NO** — no readable documentation page |
-| Zed | none | — | **NO** — Zed has no `/` commands; it uses file mentions |
-| Cline | none | — | **NO** — Cline steers customization to Skills |
+| Qwen Code | `.qwen/commands/` | `sdd-<id>.md` | yes — the docs now specify Markdown with `{{args}}`; the `.toml` form is deprecated |
+| Windsurf | `.windsurf/workflows/` | `sdd-<id>.md` | yes — legacy path but still read; `.devin/workflows/` is the newer preferred path |
+| Antigravity | `.agents/workflows/` | `sdd-<id>.md` | yes — legacy workflows, deprecated 2026-11-01 in favour of `.agents/skills/` |
+| Codex CLI | `.codex/prompts/` (declared) | `sdd-<id>.md` | **NO** — docs document only a deprecated user-scoped `~/.codex/prompts/`; the repo surface is `.agents/skills/` |
+| Zed | none | — | **NO** — slash commands come from Skills; no prompt-file directory is documented |
+| Cline | none | — | **NO** — customization is Skills; no workflow directory is documented |
 
 An unverified host is printed as **NO VERIFICADA** and `--write` refuses to write into it, exactly as
-the MCP matrix refuses an unverified snippet. The source of truth for this table is
+the MCP matrix refuses an unverified snippet. The `evidence` string is the audit trail: it names the
+documentation URL that was fetched for a verified host, or the exact URLs that were tried and what
+they returned for one that could not be confirmed. The source of truth for this table is
 `tools/open-sdd/src/core/commandTemplates.ts`; the MCP matrix is
 `tools/open-sdd/src/core/integrations.ts`.
 

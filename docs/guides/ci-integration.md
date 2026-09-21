@@ -292,6 +292,136 @@ check is an exit-2 condition, never a silently malformed upload.
 node tools/open-sdd/dist/cli.js audit sarif --out .sdd/audit/open-sdd.sarif || test $? -eq 1
 ```
 
+## The published container image
+
+The `container` job in [`.github/workflows/gates.yml`](../../.github/workflows/gates.yml) builds the
+[`Dockerfile`](../../Dockerfile) for **`linux/amd64` and `linux/arm64`** and, when the run is allowed
+to publish, pushes both platforms to the GitHub Container Registry. A multi-architecture build that
+nobody can pull is a promise, not a distribution, so the image is published under tags a human can
+actually resolve.
+
+### Pulling and running it
+
+The version tag is read from the repository's root `package.json` by the job, so it is the version
+this tree declares; `latest` tracks the default branch. In a checkout you can derive it instead of
+copying a literal that goes stale:
+
+```bash
+TAG="$(node -p "require('./package.json').version")"   # 3.2.0 at the time of writing
+IMAGE="ghcr.io/brujo2020/open-sdd:${TAG}"
+
+# Pull the version this release declares, or the default branch's build.
+docker pull "$IMAGE"
+docker pull ghcr.io/brujo2020/open-sdd:latest
+
+# Run the CLI against the repository you are standing in. `status` is the default command.
+docker run --rm -v "$PWD:/work" "$IMAGE" status
+
+# Any other command: the image's entrypoint is `node /app/dist/cli.js`.
+docker run --rm -v "$PWD:/work" "$IMAGE" gates run
+docker run --rm "$IMAGE" --version
+```
+
+Written out, that is the pull a reader copies when the declared version is `3.2.0`:
+
+```bash
+docker pull ghcr.io/brujo2020/open-sdd:3.2.0
+docker run --rm -v "$PWD:/work" ghcr.io/brujo2020/open-sdd:3.2.0 status
+```
+
+The container runs as the non-root user `sdd` and `status`/`gates`/`delta` only read the mount. For a
+command that writes into it (the installer, `--write`), add `--user "$(id -u):$(id -g)"` or mount a
+writable copy: a container user cannot write into a directory owned by your host user.
+
+### What is published, and when
+
+| Ref | Tags | When |
+|---|---|---|
+| `refs/heads/main` | `:<version>`, `:sha-<commit>`, `:latest` | every green run on `main` |
+| `refs/tags/v*.*.*` | `:<version>`, `:sha-<commit>` | every green run on a version tag |
+| `pull_request` | none — the job builds for both platforms and does not push | every pull request, forks included |
+
+Two consequences worth stating plainly:
+
+- **The image will exist only after the first successful run on `main`.** Until then
+  `docker pull ghcr.io/brujo2020/open-sdd:3.2.0` fails with `manifest unknown` (or `denied`): there is
+  no earlier image and no fallback registry. A version tag publishes the image with the version in
+  `package.json` at the tagged commit; `:latest` is only moved by a run on the default branch, so an
+  old maintenance tag cannot drag `latest` backwards.
+- **A pull request cannot publish.** The job's `PUSH_IMAGE` guard is
+  `github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))`;
+  a pull request is always `refs/pull/<n>/merge`, so the GHCR login step is skipped and the build runs
+  with `push: false`. `permissions: packages: write` is scoped to this one job — the gate and Windows
+  jobs never hold it — and GitHub withholds write tokens from fork pull requests regardless.
+
+GHCR packages are **private by default**, even in a public repository: the first image is visible only
+to the account that owns the package until it is switched to public in the repository's *Packages*
+settings (<https://github.com/users/Brujo2020/packages/container/package/open-sdd>). Until then, pull
+it authenticated:
+
+```bash
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
+```
+
+### Verifying what a tag points at
+
+The tags are derived in CI from `package.json` and `github.sha`, never re-typed, and the build that
+produced them is the same job that passed the build check for both platforms:
+
+```bash
+docker buildx imagetools inspect ghcr.io/brujo2020/open-sdd:3.2.0   # manifest list: both platforms
+node -p "require('./package.json').version"                          # the version the tag was read from
+```
+
+## Proving the commit hook on a non-POSIX host
+
+Level B is the pre-commit hook, and on Windows it is the half of the floor that no Linux job can
+witness: git, the shell git uses to honour the hook's shebang, and the Node that receives the file
+are all different binaries there. Running the test suite on Windows is **not** the same thing as
+running the hook git invokes — the suite imports the gate's code, it does not let git call it.
+
+The `windows` job therefore ends with a step that executes the hook for real, and the step is the
+proof rather than a description of one:
+
+1. `git init` a throwaway fixture **outside** the repository, with a valid `.sdd/specs/governance`
+   triad so the blocking gates judge a real tree.
+2. Copy `tools/open-sdd/templates/hooks/pre-commit.mjs` to `<fixture>/.githooks/pre-commit` — the
+   extensionless path the installer ships — and set `core.hooksPath` to `.githooks`, so **git** is
+   what resolves and invokes the hook.
+3. Run the hook directly through `node` on a clean index (**exit 0**) and on an index carrying a real
+   C2 finding, an AWS access key (**non-zero**).
+4. Run the real `git commit` on the same two indexes and assert the same exit codes, plus the hook's
+   own output: `COMMIT BLOQUEADO` when it refuses, and its gate banner when it accepts. An exit 0 with
+   no banner would mean git never ran the hook, which is the failure the step exists to catch.
+
+No `--no-verify` appears anywhere — a bypass would prove the opposite of the claim — and nothing is
+skipped or marked `continue-on-error`. The script is plain `bash` because that is the shell Git for
+Windows uses for hooks; the same commands run unchanged on macOS and Linux, which is how the exit
+codes below were established before the Windows runner ever saw them:
+
+| Command | Local (macOS) exit code |
+|---|---|
+| `node tools/open-sdd/templates/hooks/pre-commit.mjs` (clean index) | `0` |
+| `node tools/open-sdd/templates/hooks/pre-commit.mjs` (staged AWS key) | `1` |
+| `git commit` through `core.hooksPath` (staged AWS key) | `1` |
+| `git commit` through `core.hooksPath` (clean index) | `0` |
+
+What a green local run does **not** establish, and only the Windows runner can:
+
+- that Git for Windows honours the `#!/usr/bin/env node` shebang of an **extensionless** hook and
+  hands the file to Windows `node.exe` (POSIX hosts never exercise this path);
+- that Windows Node executes the hook file and the CLI it spawns, including the `process.platform ===
+  'win32'` branches (`PATH` + `PATHEXT` resolution, rejection of `.cmd` bin shims instead of feeding
+  them to Node, CRLF-tolerant reads);
+- that git's own `core.hooksPath` lookup finds the installed hook and propagates its non-zero exit
+  back to `git commit`, so a refused commit is refused by the gate and not by a shell error;
+- that a Windows checkout (CRLF, no execute bit) of the hook still yields exit codes `1` and `0` in
+  the two cases above.
+
+Until that step has run on `windows-latest` and reported green, the portable-gate claim is proven for
+POSIX hosts only: the table above is a macOS measurement, and the same commands on the Windows runner
+are a prediction from it, not a measurement.
+
 ## Related
 
 - [`docs/PAPER-ALIGNMENT.md`](../PAPER-ALIGNMENT.md) — what each control actually implements.

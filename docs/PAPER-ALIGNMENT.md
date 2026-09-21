@@ -227,7 +227,7 @@ where coverage overstates).
 | The constitutional ratchet and expiring waivers (CSDD §3.4 apex; invariants I1/I6; REQ-MAT-005, REQ-MAT-012) | The pivot answers "how much of the authority the spec cites resolves today?"; the ratchet answers "is that worse than the last time?" A baseline per feature lives in `.sdd/state/adhesion.json` (alignment ratio, the ids of the principles **in force**, the constitution hash, the timestamp). The first run never fails; a descent is an `error` that names the principles that fell out and does **not** self-rebase; `--accept-drop "<reason>"` authorizes that specific descent and records who/what/when; a rise updates the baseline; corrupt state is a `warning` and a reset, never a silent pass. Separately, a security allow-list entry may carry `owner` and `expires`; an expired waiver stops applying and is named by the advisory surface (`waiver-expiring`). | `core/ratchet.ts` · `runAdhesionRatchet`, `readAdhesionState`, `hashConstitution`, `adhesionStatePath`, `ADHESION_STATE_FILE`; `core/securityAllowlist.ts` · `parseSecurityAllowlist`, `expiredWaivers`, `applySecurityAllowlist`; `core/constitutionAdvice.ts` · `adviseConstitution` (`waiver-expiring`, `evidence-expired`, `amendment-aged`); CLI `status [--accept-drop]`, `govern constitution --advise` | `construido` |
 | The audit evidence bundle and SARIF (CSDD §3.3 audit support; §9.6 "only `broken` halts publication"; REQ-MAT-006/REQ-MAT-007) | One command assembles the evidence an auditor reads — constitution, specs, gates, claims, alignment and rigor — with **one sha256 per artifact** in `manifest.json` and an explicit verdict; `audit sarif` emits SARIF 2.1.0 and validates its shape before writing. Exit codes are a contract: `0` pass · `1` blocking finding (gate FAIL or broken claim) · `2` the audit could not run. `action.yml` is the same contract as a native composite GitHub Action, building the CLI from `github.action_path` so the action and the gates cannot drift; the CI workflow uploads the bundle and the SARIF to code scanning. | `cli/commands/audit.ts` · `collectEvidence`, `writeBundle`, `buildSarifLog`, `validateSarifShape`, `AUDIT_EXIT_CODES`, `renderBundleSummary`; `action.yml`; `.github/workflows/gates.yml`; CLI `audit bundle [--out] [--sarif] [--profile]`, `audit sarif [--out]` | `construido` |
 | Reproducible container entry point (§16.1) | The `Dockerfile` is multi-stage and honest about what it ships: the build stage compiles TypeScript, the runtime stage copies only `dist`, `templates` and `package.json`, and no `node_modules` reaches the final image. `.github/workflows/gates.yml` now carries a `container` job that builds it for **`linux/amd64` and `linux/arm64`** with QEMU + Buildx and `push: false`, failing the job if either platform fails; nothing is pushed. | `Dockerfile`; `.github/workflows/gates.yml` · job `container` | `construido` (both platforms are built by the job definition) · **brecha declarada** (the multi-arch job has not yet executed on GitHub and no image is published — G-27) |
-| Reproducible distribution — the release pipeline (§16) | `@brujo2020/open-sdd` publishes from the repository root on a version tag. The publish step supports **two credential routes** and states which it attempts: a granular `NPM_TOKEN` (Bypass 2FA) passed as `NODE_AUTH_TOKEN`, or OIDC trusted publishing with `id-token: write` when the secret is empty. `workflow_dispatch.dry_run` exercises install → build → test → gate chain → claims → `npm pack --dry-run` and publishes nothing. | `.github/workflows/publish.yml`; `docs/guides/publish.md` | `construido` (the artifact: 3.1.1 on the registry, from a manual OTP publish) · **brecha declarada** (no CI credential route has yet produced a green publish — G-28) |
+| Reproducible distribution — the release pipeline (§16) | `@brujo2020/open-sdd` publishes from the repository root on a version tag. The publish step supports **two credential routes** and states which it attempts: a granular `NPM_TOKEN` (Bypass 2FA) passed as `NODE_AUTH_TOKEN`, or OIDC trusted publishing with `id-token: write` when the secret is empty. `workflow_dispatch.dry_run` exercises install → build → test → gate chain → claims → `npm pack --dry-run` and publishes nothing. | `.github/workflows/publish.yml`; `docs/guides/publish.md` | `construido` (the artifact: 3.1.1 is the last published version; 3.2.0 is prepared, to be published by the owner with the manual OTP path) · **brecha declarada** (no CI credential route has yet produced a green publish — G-28) |
 | The portable commit gate (§6.3 Table 19 levels A–D; §16.1; REQ-MAT-003) | The level-B boundary is a **Node** hook (`pre-commit.mjs`), so it runs on a non-POSIX host; a POSIX `/bin/sh` fallback (`pre-commit`) fails **closed** with a diagnosis when Node cannot be honoured, because a commit gate that silently degrades to "no checks" is worse than none. It judges the **staged index** (`--staged`) with C1 (advisory), C2 (blocking: secrets and destructive commands) and C3 (blocking: a completed task with no captured `_Evidence:`); when the CLI is missing it prints the three ways to fix it. `doctor` reports whether the installed hook is our current version and whether it depends on a POSIX shell. | `templates/hooks/pre-commit.mjs`, `templates/hooks/pre-commit`; `scripts/install-hooks.mjs`; `core/floorInstallation.ts` · `detectInstalledFloor`; `core/doctor.ts` · `inspectCommitHook`, `runDoctor`; CLI `floor install\|status`, `doctor` | `construido` · **brecha declarada** (level A is still a ceiling; the Windows job that would prove the portable path has never executed — G-26) |
 | Installation self-diagnosis and guided first run (spec-kit's onboarding surface, reimplemented; *Manual Maestro* v3.0 EGTAV) | `doctor` turns every startup assumption into a named check with the exact fixing command — Node range, CLI reachability, the commit hook and its portability, declared rigor, constitution, specs and the offline posture — and never reports `ok` for something it could not inspect. `tour` teaches by doing: it runs the real commands through their real handlers and stops at the human decision (ratifying a constitution is never automated). `context` is the terminal face of the MCP context pack, so a host and a terminal read the same object. | `core/doctor.ts` · `runDoctor`, `renderDoctor`, `inspectCommitHook`; `cli/commands/tour.ts` · `handleTourCommand`, `handleContextCommand`; CLI `doctor`, `tour`, `context [--json]` | `construido` |
 | The demo, the synthetic bench and the measurements (§14.3 risk-lab discipline — applied to this repository's **own** instrument, not to the paper's benches) | `scripts/demo-60s.sh` creates a throwaway repository, injects four real incoherences (an untraced delta requirement, a completed task with no `_Evidence:`, an unfilled `{{…}}` marker, a declared contract that does not exist), runs the **pinned** `tools/open-sdd/dist/cli.js` and exits non-zero if the engine fails to name any of them — a demo that cannot fail is marketing. `bench/harness.mjs` builds ten synthetic repositories from a verified-clean baseline, injects exactly one documented class per repo and reports injected/caught/missed per class; it exits `1` on a dirty baseline or a miss. `docs/MEASUREMENTS.md` records the numbers with the exact command, tool version and seed. | `scripts/demo-60s.sh`; `bench/harness.mjs`; `bench/README.md`; `docs/MEASUREMENTS.md`; `docs/guides/quickstart-60s.md` | `medido` (10/10 synthetic classes caught, reproducible offline from a clone) · **brecha declarada** (these are **synthetic** honesty numbers, not field data; the paper's κ/FPR/latency figures remain the prototype's — G-29) |
@@ -753,45 +753,54 @@ run, not only a code fact. There is still **no published image anywhere**: the g
 "CI proves both platforms build" sense, not in the "there is a multi-arch image a reader can pull"
 sense.
 
-### G-28 — The package is published (v3.1.1); no CI credential route has yet produced a green publish
+### G-28 — No CI credential route has yet produced a green publish (this release is prepared as v3.2.0)
 
-Paper: §16 (reproducible distribution). The package **is** published: `@brujo2020/open-sdd` carries
-**v3.1.1** (published 2026-09-20T21:29:22Z) with **v3.1.0** (2026-09-20T20:57:44Z) and **v2.0.0**
-(2026-09-17) as the previous versions, and `dist-tags.latest` is **3.1.1**, matching the root
-`package.json` v3.1.1 — so `npx @brujo2020/open-sdd@latest` runs this artifact. The unscoped name
-`open-sdd` still does not exist (HTTP 404), so `npx open-sdd@latest` is **not** this project and remains
-the wrong invocation. What is still a gap is the *path*, not the artifact, and it is now narrower and
-better instrumented:
+Paper: §16 (reproducible distribution). The package **is** published: the registry's **last published
+version is v3.1.1** (2026-09-20T21:29:22Z), with **v3.1.0** (2026-09-20T20:57:44Z) and **v2.0.0**
+(2026-09-17) before it, and `dist-tags.latest` is **3.1.1**. This repository prepares **v3.2.0** — the
+root `package.json` is bumped and `CHANGELOG.md` carries its section — but **v3.2.0 is not on the
+registry yet**: the owner publishes it by hand (`docs/guides/publish.md`, §0 step 4), and only then do
+`npm view @brujo2020/open-sdd version` and `dist-tags.latest` report `3.2.0`. Until that publish,
+`npx @brujo2020/open-sdd@latest` still runs 3.1.1. The unscoped name `open-sdd` does not exist
+(HTTP 404), so `npx open-sdd@latest` is **not** this project and remains the wrong invocation. What is
+still a gap is the *path*, not the artifact:
 
-- **Two credential routes are supported by `.github/workflows/publish.yml`.** The publish step passes
-  `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` and routes explicitly. When the secret carries a value,
-  npm publishes with that **granular access token** — which the owner must generate with
-  **Bypass 2FA**, because the account has 2FA and a token under `auth-and-writes` otherwise demands a
-  one-time password CI cannot supply. When the secret is absent the step **unsets** the variable and
-  attempts **OIDC trusted publishing**, which `permissions: id-token: write` makes possible; an empty
-  secret is treated as no secret rather than as a blank token. The step prints `Publish route: …`
-  before it touches the registry, so the credential in play is recorded in the log instead of
-  inferred, and `workflow_dispatch`'s `dry_run=true` runs the whole pipeline and stops at
-  `npm pack --dry-run`, publishing nothing.
-- **The route that shipped 3.1.0 and 3.1.1 is the manual OTP publish, not either CI route.** The owner
-  published by hand with an interactive one-time password
-  (`npm publish --access public --provenance --otp <code>`), which is what put those versions on the
-  registry without a successful workflow run; 3.1.1 landed at 21:29:22Z, roughly a minute after
-  `publish.yml` run `35538813623` (21:28:32Z, tag `v3.1.1`) had already failed. The **OIDC
-  trusted-publishing path has never succeeded**: every recorded `publish.yml` run is red at the publish
-  step, the latest (`35538813623`, 2026-09-20T21:28Z) included, and its failure is at that step alone —
-  the package was already on the registry by then, so the 404 is an authorisation failure (npm returns
-  404 instead of 403 for one) and not a missing package. The `dad42b0` account of it (the OIDC exchange
-  needs npm ≥ 11.5.1 and Node 20 bundled npm 10.x) is addressed by pinning `node-version: '24'`, but
-  **no run has yet gone green on it**.
-- **The token route is supported but unexercised.** No recorded `publish.yml` run has published
-  through `NPM_TOKEN`, and whether the secret is configured is an owner-side action not recorded in
-  this report; no secret was added by this change. So the CI path is **unexercised for the token
-  route and still never green for OIDC** — it is not proven either way, and the manual publish
-  remains the fallback until one of the two routes produces a green workflow run.
+- **Two credential routes are implemented in `.github/workflows/publish.yml`, and neither is proven.**
+  The publish step passes `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` and routes explicitly. When the
+  secret carries a value, npm would publish with that **granular access token** — which the owner must
+  generate with **Bypass 2FA**, because the account has 2FA and a token under `auth-and-writes`
+  otherwise demands a one-time password CI cannot supply. When the secret is absent the step **unsets**
+  the variable and attempts **OIDC trusted publishing**, which `permissions: id-token: write` makes
+  possible; an empty secret is treated as no secret rather than as a blank token. The step prints
+  `Publish route: …` before it touches the registry, so the credential in play is recorded in the log
+  instead of inferred, and `workflow_dispatch`'s `dry_run=true` runs the whole pipeline and stops at
+  `npm pack --dry-run`, publishing nothing. Configuration is not evidence: a route that has not carried
+  a version to the registry is reported here as unexercised, not as working.
+- **Route A (the granular token) is implemented but unexercised.** No recorded `publish.yml` run has
+  published through `NPM_TOKEN`; whether the secret is configured is an owner-side action not recorded
+  in this report, and no secret was added by this change. The route is reachable in code and has never
+  published anything.
+- **Route B (OIDC trusted publishing) has never produced a green publish.** Every recorded
+  `publish.yml` run is red at the publish step, the latest being `35538813623`
+  (2026-09-20T21:28Z, tag `v3.1.1`) — and its failure is at that step alone. The package was already on
+  the registry by then, so the 404 is an **authorisation failure** (npm returns 404 instead of 403 for
+  one) and not a missing package. The `dad42b0` account of it (the OIDC exchange needs npm ≥ 11.5.1 and
+  Node 20 bundled npm 10.x) is addressed by pinning `node-version: '24'`, but **no run has yet gone
+  green on it**.
+- **The route that shipped 3.1.0 and 3.1.1, and the one 3.2.0 uses, is the manual OTP publish, not
+  either CI route.** The owner publishes by hand with an interactive one-time password
+  (`npm publish --access public --otp <code>`), which is what put 3.1.0 and 3.1.1 on the registry
+  without a successful workflow run; 3.1.1 landed at 21:29:22Z, roughly a minute after `publish.yml`
+  run `35538813623` (21:28:32Z, tag `v3.1.1`) had already failed. For 3.2.0 the documented order is the
+  manual publish **first** and the tag **after** it (`git tag -a v3.2.0`), precisely because the
+  tag-triggered CI publish is unproven; the CI run the tag starts is expected to fail at the publish
+  step and does not carry the version.
 
-The report therefore no longer claims the registry carries only v2.0.0, and the "install in one
-command" promise in the documentation now resolves to the registry.
+The honest summary: the artifact path (a published, installable package) is real and the registry is
+the proof; the **CI publishing path is unproven on both routes**, and until one of them produces a
+green workflow run that actually carries a version, the manual OTP publish remains the release
+mechanism. This report therefore does not claim either route works because it is configured, and it
+does not claim v3.2.0 is published before the owner's publish puts it there.
 
 ### G-29 — `docs/MEASUREMENTS.md` is synthetic honesty data, not field data, and the paper's figures are still not ours
 

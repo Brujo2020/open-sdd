@@ -198,6 +198,16 @@
       "owner": "mantenimiento (tests y plantillas)",
       "actor": "spec:tool-maturity",
       "expires": "2027-03-31"
+    },
+    {
+      "path": ".github/workflows/gates.yml",
+      "ids": [
+        "aws-access-key"
+      ],
+      "reason": "FIXTURE del paso G-26: el workflow escribe la clave de EJEMPLO que la propia documentacion publica de AWS (no una credencial real, nunca fue valida) en un fixture temporal FUERA del repositorio, para probar que el hook portatil bloquea un secreto en el indice y que el commit se detiene. Sin ese literal el paso no probaria nada; declararlo con motivo es el canal que el propio control prescribe en vez de silenciarlo o debilitar el paso. El literal NO se repite aqui: escribir la clave dentro del motivo la volvia a introducir en el indice, y el escaner la detectaba en este mismo fichero.",
+      "owner": "CI (paso G-26 del job windows)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
     }
   ]
 }

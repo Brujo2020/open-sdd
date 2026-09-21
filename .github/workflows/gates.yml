@@ -9,6 +9,10 @@
 # The chain runs against the PULL REQUEST DIFF via `--base`. A gate run that inspects nothing is
 # activation without measurement, and a green badge over an empty scan is precisely the false
 # assurance this architecture exists to prevent.
+#
+# The file also carries two jobs that are not the merge boundary: the Windows host proof and the
+# container build. Both live here because this is the workflow that actually runs; the container
+# job publishes to GHCR on `main` and on a version tag, which is why `on.push` lists tags too.
 
 name: gates
 
@@ -17,6 +21,9 @@ on:
     types: [opened, synchronize, reopened]
   push:
     branches: [main]
+    # Version tags exist here for the `container` job: a distribution nobody can pull is a promise,
+    # not a distribution (see docs/guides/ci-integration.md).
+    tags: ['v*.*.*']
   workflow_dispatch:
 
 permissions:
@@ -27,6 +34,11 @@ permissions:
 jobs:
   gates:
     runs-on: ubuntu-latest
+    # Tags were added to `on.push` for the container job below. The merge boundary keeps exactly the
+    # trigger set it had before: pull requests, `main`, and manual dispatch. Nothing is lost on a
+    # tag — `publish.yml` runs this same suite, the gate chain and the claims registry against the
+    # release tree, and the tag's job here would only repeat them.
+    if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
         with:
@@ -136,6 +148,9 @@ jobs:
   # guard. Fixing them belongs to whoever owns `tools/open-sdd/test/**`.
   windows:
     runs-on: windows-latest
+    # See the `gates` job: tags exist for the container job only, so the Windows proof keeps its
+    # original trigger set and is not billed for a duplicate of `publish.yml`'s suite.
+    if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
 
@@ -155,18 +170,166 @@ jobs:
         working-directory: tools/open-sdd
         run: npm test
 
-  # ── Container: one image, both architectures ──────────────────────────────────────────────────
+      # ── GAP G-26: execute the hook on Windows, and let GIT be the one that invokes it ──────────
+      # The suite runs the hook's *code* through Node on this host, which is not the same thing as
+      # the hook git actually invokes at commit time. This step closes that difference: a real
+      # `git init` fixture, `core.hooksPath` pointing at the hook installed exactly as the installer
+      # lays it out (`<hooksDir>/pre-commit`, no extension), and a real `git commit`.
+      #
+      # Both outcomes are asserted, because one alone proves nothing:
+      #   * a staged index carrying a real C2 finding (an AWS access key) -> non-zero, with the
+      #     hook's own refusal in the output;
+      #   * a clean staged index -> zero, with the hook's gate banner in the output (an exit 0 from
+      #     a hook git never ran would otherwise read as a pass).
+      # `--no-verify` appears nowhere: a bypass would prove the opposite of the claim. The hook is
+      # also run directly through Node, so "Node can execute it here" and "git invokes it here" are
+      # two separately reported facts, not one inference.
+      #
+      # `shell: bash` is the host's own shell for git: Git for Windows runs hooks through its
+      # bundled shell, which is what honours the hook's `#!/usr/bin/env node` shebang and hands the
+      # file to Windows Node. The same script is executable on macOS/Linux, which is how it was
+      # proven before this ever reached the Windows runner.
+      - name: Execute the portable commit hook on Windows (G-26)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FIXTURE="$(mktemp -d)"
+          LOGS="$(mktemp -d)"
+          trap 'rm -rf "$FIXTURE" "$LOGS"' EXIT
+
+          git init -q "$FIXTURE"
+          git -C "$FIXTURE" config user.email "gate@open-sdd.test"
+          git -C "$FIXTURE" config user.name "open-sdd gate"
+          git -C "$FIXTURE" config commit.gpgsign false
+
+          # The production layout, not a shortcut: the installer copies the portable gate to
+          # <hooksDir>/pre-commit with no extension, and git resolves it through core.hooksPath.
+          mkdir -p "$FIXTURE/.githooks"
+          cp tools/open-sdd/templates/hooks/pre-commit.mjs "$FIXTURE/.githooks/pre-commit"
+          git -C "$FIXTURE" config core.hooksPath .githooks
+
+          # A valid triad, so the blocking gates judge a real repository and C3 is not vacuously
+          # satisfied by the absence of anything to inspect.
+          mkdir -p "$FIXTURE/.sdd/specs/governance"
+          printf '# Requisitos\n\nEl sistema describe el comportamiento esperado en prosa.\n' \
+            > "$FIXTURE/.sdd/specs/governance/requirements.md"
+          printf '# Plan\n\nArquitectura de referencia del fixture.\n' \
+            > "$FIXTURE/.sdd/specs/governance/plan.md"
+          printf '# Tareas\n\n- [ ] T1 hacer algo\n' \
+            > "$FIXTURE/.sdd/specs/governance/tasks.md"
+
+          # The hook resolves its CLI from the checkout; OPEN_SDD_CLI takes an absolute path, and
+          # `node -p` prints it in this host's own format (POSIX `/...`, Windows `D:\...`) with no
+          # cygpath shim. The fixture itself is outside the repository, so the exit codes below
+          # cannot be explained by the repository's own hook.
+          OPEN_SDD_CLI="$(node -p "require('node:path').resolve('tools/open-sdd/dist/cli.js')")"
+          HOOK="$(node -p "require('node:path').resolve('tools/open-sdd/templates/hooks/pre-commit.mjs')")"
+          export OPEN_SDD_CLI
+
+          echo "open-sdd G-26: fixture=${FIXTURE}"
+          echo "open-sdd G-26: hooksPath=$(git -C "$FIXTURE" config core.hooksPath)"
+          echo "open-sdd G-26: CLI=${OPEN_SDD_CLI}"
+          echo "open-sdd G-26: hook=${HOOK}"
+
+          # 1. The hook file directly, clean index: exit 0.
+          git -C "$FIXTURE" add -A
+          cd "$FIXTURE"
+          set +e
+          node "$HOOK" > "$LOGS/direct-clean.log" 2>&1
+          DIRECT_CLEAN=$?
+          set -e
+          cat "$LOGS/direct-clean.log"
+          echo "open-sdd G-26: direct node <hook>.mjs on a clean index exit=${DIRECT_CLEAN}"
+          if [ "$DIRECT_CLEAN" -ne 0 ]; then
+            echo "::error title=G-26::node could not run the portable hook on a clean index (exit ${DIRECT_CLEAN})"
+            exit 1
+          fi
+
+          # 2. The hook file directly, staged secret: non-zero.
+          printf 'aws_access_key_id = "AKIAIOSFODNN7EXAMPLE"\n' > "$FIXTURE/leak.txt"
+          git -C "$FIXTURE" add -A
+          set +e
+          node "$HOOK" > "$LOGS/direct-dirty.log" 2>&1
+          DIRECT_DIRTY=$?
+          set -e
+          cat "$LOGS/direct-dirty.log"
+          echo "open-sdd G-26: direct node <hook>.mjs on a staged secret exit=${DIRECT_DIRTY}"
+          if [ "$DIRECT_DIRTY" -eq 0 ]; then
+            echo "::error title=G-26::the portable hook approved a staged AWS key (exit 0)"
+            exit 1
+          fi
+          if ! grep -q "COMMIT BLOQUEADO" "$LOGS/direct-dirty.log"; then
+            echo "::error title=G-26::the hook failed, but not with its own refusal message"
+            exit 1
+          fi
+
+          # 3. GIT invokes the hook: a staged index with a real problem is refused.
+          set +e
+          git -C "$FIXTURE" commit -m "must be refused" > "$LOGS/git-dirty.log" 2>&1
+          GIT_DIRTY=$?
+          set -e
+          cat "$LOGS/git-dirty.log"
+          echo "open-sdd G-26: git commit with a staged secret exit=${GIT_DIRTY}"
+          if [ "$GIT_DIRTY" -eq 0 ]; then
+            echo "::error title=G-26::git committed a staged AWS key: the hook did not block it (exit 0)"
+            exit 1
+          fi
+          if ! grep -q "COMMIT BLOQUEADO" "$LOGS/git-dirty.log"; then
+            echo "::error title=G-26::git refused the commit, but not because the hook ran"
+            exit 1
+          fi
+
+          # 4. GIT invokes the hook: a clean staged index is accepted.
+          rm "$FIXTURE/leak.txt"
+          git -C "$FIXTURE" add -A
+          set +e
+          git -C "$FIXTURE" commit -m "clean commit" > "$LOGS/git-clean.log" 2>&1
+          GIT_CLEAN=$?
+          set -e
+          cat "$LOGS/git-clean.log"
+          echo "open-sdd G-26: git commit with a clean index exit=${GIT_CLEAN}"
+          if [ "$GIT_CLEAN" -ne 0 ]; then
+            echo "::error title=G-26::a clean staged index was refused (exit ${GIT_CLEAN})"
+            exit 1
+          fi
+          # exit 0 is not enough: it must be the HOOK that let it through, not a hook git never ran.
+          if ! grep -q "C2 seguridad" "$LOGS/git-clean.log"; then
+            echo "::error title=G-26::the commit succeeded but the hook never ran (no gate banner in the output)"
+            exit 1
+          fi
+
+          echo "open-sdd G-26: HEAD after the clean commit — $(git -C "$FIXTURE" log --oneline -1)"
+          echo "open-sdd G-26: PASS — the hook blocked a real finding and accepted a clean index on this host"
+
+  # ── Container: one image, both architectures, published where a human can pull it ────────────
   # Added for gap G-27. Until now the `Dockerfile` was only ever built by hand, on the author's
   # arm64 host, so no recorded amd64 image existed and a `docker run` on another architecture was
-  # unverified. This job builds the image for `linux/amd64` AND `linux/arm64` with no push, and a
-  # failing platform fails the job: a build that cannot run is worse than no build. It is
-  # independent of the `gates` and `windows` jobs above and does not touch them.
+  # unverified. This job builds the image for `linux/amd64` AND `linux/arm64`, and a failing
+  # platform fails the job: a build that cannot run is worse than no build. It is independent of the
+  # `gates` and `windows` jobs above and does not touch them.
   #
   # QEMU is what lets the amd64 runner *execute* the arm64 layers; Buildx alone selects the platform
-  # but cannot run foreign binaries. Nothing is published, so this proves the Dockerfile is valid
-  # for both targets without inventing a registry target the release does not have.
+  # but cannot run foreign binaries.
+  #
+  # It also PUBLISHES. A multi-architecture build that nobody can pull is a promise, not a
+  # distribution, so on `main` and on a version tag the same job logs in to GHCR and pushes both
+  # platforms under tags a human can pull: `:<version>` read from package.json, `:latest` on the
+  # default branch, and `:sha-<commit>` to pin the exact bytes. On a pull request the event/ref
+  # guard keeps `push: false`, so the build check still runs and a pull request — from a fork or
+  # not — can never write to the registry. `packages: write` is scoped to THIS job: the `gates` and
+  # `windows` jobs above never hold it. See docs/guides/ci-integration.md for the pull command.
   container:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The only privilege this job adds, and it is granted to the job, not the workflow.
+      packages: write
+    env:
+      # One guard, two consumers: the GHCR login and the build's `push` input. A pull request is
+      # `refs/pull/<n>/merge`, never a branch or a tag, so this is false there by construction — a
+      # fork cannot publish even before GitHub withholds write tokens from fork PRs.
+      PUSH_IMAGE: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -176,12 +339,44 @@ jobs:
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build the image for linux/amd64 and linux/arm64 (no push)
+      # The version comes from package.json, so the tag a reader pulls is the version this tree
+      # declares — not a version re-typed into the workflow. The reference is `github.repository`
+      # lower-cased because GHCR rejects uppercase repository names (GitHub spells the account
+      # `Brujo2020`; the pullable name is `ghcr.io/brujo2020/open-sdd`).
+      - name: Resolve the pullable image reference and its tags
+        id: image
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/$(printf '%s' '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          VERSION="$(node -p "require('./package.json').version")"
+          {
+            echo "reference=${IMAGE}"
+            echo "tags<<OPEN_SDD_TAGS"
+            echo "${IMAGE}:${VERSION}"
+            echo "${IMAGE}:sha-${GITHUB_SHA:0:12}"
+            if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+              echo "${IMAGE}:latest"
+            fi
+            echo "OPEN_SDD_TAGS"
+          } >> "$GITHUB_OUTPUT"
+          echo "open-sdd: image=${IMAGE} version=${VERSION} push=${PUSH_IMAGE}"
+
+      # No credentials are even requested when the run cannot publish.
+      - name: Log in to GHCR (only when this run may publish)
+        if: env.PUSH_IMAGE == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (and push on main / a version tag) for linux/amd64 and linux/arm64
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: false
+          push: ${{ env.PUSH_IMAGE }}
+          tags: ${{ steps.image.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

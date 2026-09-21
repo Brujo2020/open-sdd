@@ -170,11 +170,12 @@ export const HOST_COMMAND_TEMPLATES: HostCommandConvention[] = [
     dir: '.codex/prompts',
     fileName: flatMarkdown,
     format: 'markdown',
-    invocation: (id) => `$sdd-${id}`,
+    invocation: (id) => `/prompts:sdd-${id}`,
     argumentSyntax: '$ARGUMENTS',
     verified: false,
     evidence:
-      'NOT VERIFIED: this repository\'s own agent registry marks `.codex/prompts/` as removed — "Codex no longer supports `.codex/prompts/`". The directory is not read, so `--write` refuses it; use the Codex skills install instead.',
+      'NOT VERIFIED as a repository-scoped convention: `https://learn.chatgpt.com/docs/custom-prompts.md` (fetched) documents custom prompts as DEPRECATED and only in the user home — `~/.codex/prompts/*.md`, top-level Markdown files only, invoked `/prompts:<name>` — and states they "live in your local Codex home directory (for example, `~/.codex`), so they\'re not shared through your repository". `https://learn.chatgpt.com/docs/customization/overview.md` (fetched) documents the repository-scoped surface as skills in `.agents/skills/` (global `~/.agents/skills/`), with no project commands directory. No project-scoped `.codex/prompts/` is documented, so `--write` refuses it; use the Codex skills install instead.',
+    docUrl: 'https://learn.chatgpt.com/docs/custom-prompts.md',
   },
   {
     id: 'windsurf',
@@ -184,33 +185,36 @@ export const HOST_COMMAND_TEMPLATES: HostCommandConvention[] = [
     format: 'markdown',
     invocation: (id) => `/sdd-${id}`,
     argumentSyntax: '$ARGUMENTS',
-    verified: false,
+    verified: true,
     evidence:
-      'NOT VERIFIED: the Windsurf documentation now redirects to docs.devin.ai and this change could not re-confirm the workflow file layout or its frontmatter. `--write` refuses it until the convention is verified.',
+      'Windsurf documentation (docs.windsurf.com now 308-redirects to docs.devin.ai) documents workflows as Markdown files in `.windsurf/workflows/`, each carrying a title/description and a series of steps, invoked in Cascade as `/[name-of-workflow]`. The same page documents the global location `~/.codeium/windsurf/global_workflows/` and the OS-specific system locations, and a 12,000-character per-file limit that every shipped template stays under. `.windsurf/workflows/` is the legacy path but is still read; the migration page names `.devin/workflows/` as the newer preferred path.',
+    docUrl: 'https://docs.devin.ai/desktop/cascade/workflows.md',
   },
   {
     id: 'qwen-code',
     label: 'Qwen Code',
     dir: '.qwen/commands',
-    fileName: (id) => `sdd-${id}.toml`,
-    format: 'toml',
+    fileName: flatMarkdown,
+    format: 'markdown',
     invocation: (id) => `/sdd-${id}`,
     argumentSyntax: '{{args}}',
-    verified: false,
+    verified: true,
     evidence:
-      'NOT VERIFIED: Qwen Code is a Gemini CLI fork and this repository installs prompt mode into `.qwen/commands/`, but the fork\'s own command file format was not re-confirmed from its documentation in this change, so `--write` refuses it.',
+      'Qwen Code documents custom commands as Markdown files with optional YAML frontmatter (`description`) under `<project root>/.qwen/commands/` (flat file `sdd-<id>.md` becomes `/sdd-<id>`; a subdirectory would namespace it `/dir:name`), with `{{args}}` for parameter injection and project commands taking priority over `~/.qwen/commands/`. The documentation states TOML is deprecated but still supported pending automatic migration, so this matrix now writes Markdown (`sdd-<id>.md`) rather than the deprecated `sdd-<id>.toml`.',
+    docUrl: 'https://raw.githubusercontent.com/QwenLM/qwen-code/main/docs/users/features/commands.md',
   },
   {
     id: 'antigravity',
     label: 'Google Antigravity',
-    dir: '.agent/workflows',
+    dir: '.agents/workflows',
     fileName: flatMarkdown,
     format: 'markdown',
     invocation: (id) => `/sdd-${id}`,
     argumentSyntax: '$ARGUMENTS',
-    verified: false,
+    verified: true,
     evidence:
-      'NOT VERIFIED: Antigravity\'s skills layout is verified by this repository\'s installer, but its workflow/command directory is not documented on a page this change could read (the docs site is JavaScript-rendered). `--write` refuses it.',
+      'Antigravity documents legacy workflows as single Markdown files with YAML frontmatter (`name`, `description`) plus a step body, at `.agents/workflows/<name>.md` (workspace) or `~/.gemini/config/workflows/<name>.md` (global), invoked in chat as `/<workflow-name>`, limited to 12,000 characters each. Note the documented directory is the PLURAL `.agents/workflows/`, not the `.agent/workflows/` this matrix previously assumed. The same page deprecates workflows with a stated retirement of 2026-11-01 in favour of Agent Skills at `.agents/skills/<name>/SKILL.md`; the Antigravity skills layout this repository already ships is that successor.',
+    docUrl: 'https://antigravity.google/docs/migration/workflows-to-skills.md',
   },
   {
     id: 'zed',
@@ -222,7 +226,8 @@ export const HOST_COMMAND_TEMPLATES: HostCommandConvention[] = [
     argumentSyntax: 'n/a',
     verified: false,
     evidence:
-      'NOT VERIFIED and no documented commands directory: Zed uses file mentions over rules files, not `/` commands. Use a host that installs skills, or reference the workflow from AGENTS.md.',
+      'NOT VERIFIED and no documented prompt/command directory: `https://zed.dev/docs/ai/skills.md` (fetched) documents Zed\'s slash commands as coming from Agent Skills (`SKILL.md` bundles, project or user scope), and `https://zed.dev/docs/ai/instructions.md` (fetched) documents `AGENTS.md` plus legacy `.rules` files as the instruction surface. Neither page documents a directory of Markdown prompt/command files, so there is nothing for the prompt-template installer to write and `--write` refuses it; use the Zed skills layout or reference the workflow from AGENTS.md.',
+    docUrl: 'https://zed.dev/docs/ai/skills.md',
   },
   {
     id: 'cline',
@@ -234,7 +239,8 @@ export const HOST_COMMAND_TEMPLATES: HostCommandConvention[] = [
     argumentSyntax: '$ARGUMENTS',
     verified: false,
     evidence:
-      'NOT VERIFIED: Cline\'s current documentation steers customization to Skills; the legacy `.clinerules/workflows` layout is no longer the documented convention, so no directory is declared and `--write` refuses it.',
+      'NOT VERIFIED and no documented prompt/command directory: `https://docs.cline.bot/core-workflows/using-commands.md` (fetched) lists only built-in slash commands (`/newtask`, `/smol`, `/newrule`, `/deep-planning`, `/reportbug`) plus enabled skills triggered by slash command; `https://docs.cline.bot/customization/skills.md` (fetched) documents the customization surface as skill directories in `.cline/skills/` (or `.clinerules/skills/`, global `~/.cline/skills/`) with a `SKILL.md` each; `https://docs.cline.bot/customization/cline-rules.md` (fetched) documents `.clinerules/` and `.cline/rules/` for rules only. No `.clinerules/workflows/` prompt directory is documented, so no directory is declared and `--write` refuses it.',
+    docUrl: 'https://docs.cline.bot/core-workflows/using-commands.md',
   },
 ];
 

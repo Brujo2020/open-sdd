@@ -17,13 +17,64 @@ Always publish from the repository root.
 
 ---
 
+## 0. This release: 3.2.0 — the exact order the owner runs
+
+The version is **already bumped** to `3.2.0` in the root `package.json`: do **not** run `npm version`,
+and do **not** create the tag first. The manual, OTP-bearing publish is the path that is known to
+work in this repository (no CI credential route has produced a green publish — see G-28 and §7), so
+the tag is created **after** the artifact is on the registry, to record the release.
+
+Run these steps, in this order, from the repository root:
+
+```bash
+# 0. Preconditions. The working tree is the release commit: version bumped, CHANGELOG written,
+#    dist/ rebuilt and tracked. Walk the checklist in §1 first.
+node -p "require('./package.json').version"          # must print 3.2.0
+
+# 1. Stage the release. Review what you are about to commit.
+git add -A
+git status --short                                   # read it: this commit is the release
+
+# 2. Commit.
+git commit -m "release: v3.2.0"
+
+# 3. Push the commit.
+git push origin main
+
+# 4. Publish by hand, with the one-time password. THIS is the step that puts 3.2.0 on the
+#    registry. `--access public` is required for a scoped package; `--otp` is the interactive
+#    code. No `--provenance`: it needs GitHub Actions OIDC and a local publish cannot produce it.
+npm publish --access public --otp <code>
+
+# 5. Prove it, before tagging. THIS is the step that decides success.
+npm view @brujo2020/open-sdd version                 # must print 3.2.0
+npm view @brujo2020/open-sdd dist-tags.latest        # must print 3.2.0
+
+# 6. Record the release in git.
+git tag -a v3.2.0 -m "v3.2.0"
+git push origin v3.2.0
+```
+
+**Which step proves success: step 5.** `npm view @brujo2020/open-sdd version` must print `3.2.0`
+**and** `dist-tags.latest` must move to `3.2.0`. A zero exit from `npm publish` or a green
+`git push` is not the proof — the registry is. If step 4 fails, apply the matching row of the table
+in §7 and re-run step 4; never create a tag for a version that is not on the registry.
+
+Pushing the tag in step 6 triggers `.github/workflows/publish.yml`. That run attempts its own
+publish and will fail at the publish step — with the authorisation 404 of route B, or with
+`version already exists` if a token is configured and step 4 already landed the version. That is
+expected and is exactly what G-28 records: the tag records the release, it is not how 3.2.0 goes out.
+Do not re-push a tag to try to overwrite a published version.
+
+---
+
 ## 1. What must be true first
 
 Do not run the publish command until every line below is true and verified on the release commit.
 
 - [ ] **Tests are green.** From a clean install:
       `npm --prefix tools/open-sdd ci && npm --prefix tools/open-sdd run build && npm --prefix tools/open-sdd test`
-      Baseline at the time of writing: **111 test files / 1224 tests, all passing**.
+      Baseline at the time of writing: **126 test files / 1462 tests, all passing**.
 - [ ] **The build is current.** `npm run build` at the root, and `git status` shows no unexpected
       change under `tools/open-sdd/dist/` (the compiled CLI is tracked and is what ships).
 - [ ] **The version is bumped** in the root `package.json`. One version, one release:
@@ -79,13 +130,14 @@ prints `Publish route: …` and `Publish dry run: …`, and publishes **nothing*
 
 ## 3. The tag
 
-The publish workflow (`.github/workflows/publish.yml`) triggers on a version tag. Creating and
-pushing the tag is what asks CI to publish — so **the tag is part of the release decision**, not a
-formality.
+For **3.2.0**, the tag is created **after** the manual publish (§0, step 6), not before it: pushing
+the tag only asks CI to attempt its own publish, and no CI credential route has produced a green
+publish here (G-28). The tag's job in this release is to record the version that is already on the
+registry.
 
 ```bash
-git tag -a v3.0.2 -m "the version you just published"
-git push origin v3.0.2
+git tag -a v3.2.0 -m "v3.2.0"
+git push origin v3.2.0
 ```
 
 Tag name must match the version exactly (`v` + `package.json.version`). If the tag does not match,
@@ -138,10 +190,12 @@ An **empty** secret is treated as *no secret*: when `NPM_TOKEN` is empty the ste
 about the route actually attempted. Provenance is requested explicitly with `--provenance`; it is
 what makes the published artifact verifiable against this repository and this workflow.
 
-### (a) Route A — granular access token (the route that has actually shipped a release)
+### (a) Route A — granular access token (implemented, never exercised by a recorded run)
 
-This is the route that published 3.1.0 from a human terminal. Setting it up is the **owner's**
-action, once:
+The token route is implemented in `publish.yml` and selected whenever `NPM_TOKEN` is present, but no
+recorded workflow run has ever published through it. The versions that actually shipped — 3.1.0 and
+3.1.1 — went out by hand with `npm publish --access public --otp <code>`. Setting route A up is the
+**owner's** action, once:
 
 1. Sign in to [npmjs.com](https://www.npmjs.com/) as the owner of `@brujo2020/open-sdd`.
 2. Click the account avatar → **Access Tokens** → **Generate New Token** → **Granular Access
@@ -196,34 +250,45 @@ unproven.
   npm 10.x, which could not perform the OIDC exchange at all.
 - **The repository is public** and the workflow has `id-token: write` (it does).
 
-## 5. The final command — the owner runs this, or CI does
+## 5. The final command — the owner runs this for 3.2.0
+
+The known-to-work path is the manual, OTP-bearing publish — the same one that shipped 3.1.0 and
+3.1.1. **This is the command §0, step 4 tells the owner to run:**
+
+```bash
+npm publish --access public --otp <code>
+```
+
+- `--access public` is required because scoped packages default to private. It is mirrored by
+  `publishConfig.access` in `package.json`.
+- `--otp <code>` is the interactive one-time password from the owner's authenticator. It is what
+  satisfies the account's 2FA, which is in `auth-and-writes` mode.
+- **No `--provenance` here.** Provenance is produced from GitHub Actions OIDC; a local publish cannot
+  generate it, so requesting it only adds a step that cannot succeed. The CI step in `publish.yml`
+  does pass `--provenance`, and that path has never gone green (G-28).
+- **The owner runs this.** It is not run by this repository's other workflows, by agents, or by
+  anyone without the owner's credentials.
+
+A CI route would run the same thing without `--otp`:
 
 ```bash
 npm publish --access public --provenance
 ```
 
-- `--access public` is required because scoped packages default to private. It is mirrored by
-  `publishConfig.access` in `package.json`.
-- `--provenance` attaches the signed build attestation produced from GitHub Actions OIDC.
-- **The owner runs this, or pushes the tag in §3 to let the owner's CI run it.** It is not run by
-  this repository's other workflows, by agents, or by anyone without the owner's credentials.
-
-If the owner publishes by hand with 2FA, the interactive form is:
-
-```bash
-npm publish --access public --provenance --otp <code>
-```
-
-That manual, OTP-bearing publish is what put **3.1.0** on the registry; the CI route has not yet
-reproduced it.
+Neither CI route is proven here, so for 3.2.0 the manual command above is the one to use and the tag
+is pushed afterwards (§0, step 6; §3), not to trigger a publish.
 
 ## 6. Verify the published artifact
 
-After the publish succeeds:
+After the publish succeeds, this is the proof that the release landed. Both lines must be true — the
+version **and** the moving `latest` tag:
 
 ```bash
-# The version that is actually on the registry
+# The version that is actually on the registry — must print 3.2.0
 npm view @brujo2020/open-sdd version
+
+# The dist-tag that `npx @brujo2020/open-sdd@latest` resolves — must have moved to 3.2.0
+npm view @brujo2020/open-sdd dist-tags
 
 # The exact artifact digest and any attestations
 npm view @brujo2020/open-sdd dist.integrity
@@ -234,9 +299,11 @@ WORK="$(mktemp -d)"; cd "$WORK"
 npx --yes @brujo2020/open-sdd@latest --version
 ```
 
-Expected: `the version you just published`. If the version printed is not the version you published,
-you are resolving a different package or a cached one — check `npm view @brujo2020/open-sdd version`
-again rather than assuming the release failed.
+Expected for this release: `npm view @brujo2020/open-sdd version` prints **`3.2.0`** and
+`dist-tags.latest` is **`3.2.0`** (before the publish it is `3.1.1`, the last published version). If
+the version printed is not the version you published, you are resolving a different package or a
+cached one — check `npm view @brujo2020/open-sdd version` again rather than assuming the release
+failed.
 
 To verify a **CI run** rather than a hand publish:
 
@@ -268,8 +335,9 @@ changing anything:
 | `EPUBLISHCONFLICT` / `Cannot publish over previously published version` / `version already exists` | That exact version is already on the registry. npm does not allow overwriting a published version. | Bump the version in the root `package.json`, commit, and tag the **new** version. Never re-push an existing tag hoping to overwrite; the artifact is immutable. |
 
 If the step reports route B and fails with 404, that is the unproven route: either finish the
-trusted-publisher configuration (§4b) or add the bypass-2FA `NPM_TOKEN` (§4a), which is the route
-that has shipped a release.
+trusted-publisher configuration (§4b) or add the bypass-2FA `NPM_TOKEN` (§4a). Neither has shipped a
+release yet — the manual OTP publish (§0, step 4; §5) is the path that has. Until a CI run goes
+green, use the manual command and treat the CI routes as configured but unproven (G-28).
 
 ---
 
@@ -278,7 +346,7 @@ that has shipped a release.
 npm does not allow re-publishing the same version. If a published version is wrong:
 
 ```bash
-npm deprecate @brujo2020/open-sdd@latest "superseded by 3.0.3: <reason>"
+npm deprecate @brujo2020/open-sdd@latest "superseded by 3.2.1: <reason>"
 ```
 
 then fix, bump, and publish a new patch version. Never try to overwrite history; deprecate and move
