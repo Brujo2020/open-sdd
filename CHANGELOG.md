@@ -4,6 +4,76 @@ All notable changes to this project will be documented in this file.
 
 **Release Notes**: [English](docs/RELEASE_NOTES/RELEASE_NOTES_en.md)
 
+## [3.4.0] — 2026-09-21
+
+### The requirements coach: 32 deterministic checks, and it never certifies
+
+A spec is now adjudicated before anyone claims a review gate. Thirty-two checks across eight families
+(EARS, ambiguity, singularity, verifiability, set-level, traceability, NFR, AI-specific) run
+deterministically over `requirements.md`, and **every finding carries a position, a basis and a graded
+remedy or an explicit question** — never a bare complaint. `open-sdd requirements review <feature>`
+prints it; `--json` gives the machine envelope, and `requirements fix` applies only the rewrites that
+are mechanical.
+
+The two checks a hostile test horde proved were missing now exist: **`AMB-006`** (a superlative with
+no baseline — "the highest resolution" — answered with a question, not an invented rewrite) and the
+**slash chain of `AMB-009`**. The chain mattered: on `read/write/delete` the old anti-duplication guard
+suppressed the finding entirely, so the defect vanished in silence.
+
+Nothing here certifies. The output states that it reports checks and adjudication, not correctness; a
+check that cannot inspect its link source is reported as **skipped**, never as a pass; and
+instruction-shaped text inside a requirement is **escalated to a human**, never obeyed.
+
+### The standards engine: a catalogue that renders itself and never blocks on faith
+
+Sixteen machine-checkable standards ship in `.sdd/settings/standards/`, each declaring its severity,
+the artifacts it applies to, a detection rule, and a remedy. `open-sdd standards list | show | explain
+| check | fix` reads them. C8 Standards Conformance joins the chain as a **declared extension**
+(`imposes: []`, advisory), and the rules under `.sdd/settings/rules/` are generated from the catalogue
+by `injectRules`, which replaces only the marked blocks: the hand-written prose survives, and drift
+means a **missing or edited block**, not a file that is not byte-identical to the render.
+
+**Nothing blocks on faith.** Every entry is advisory until a corpus measures its precision, and
+`isBlocking` requires a calibrated corpus before it can fail a build.
+
+### Reversibility, stable identifiers and the console contract
+
+`open-sdd uninstall` plans what it would undo from a receipt, and `restore --from` applies it. It
+**refuses** to delete a file a human edited and a merged external config — un-merging is not deleting —
+and `.sdd/` goes only with an explicit `--purge-sdd`. Identifiers are allocated in blocks and audited
+against a real revision: `open-sdd brownfield ids <feature> --base <ref>` reports `ID-MUTATED` and
+`ID-LOST` instead of letting an id quietly stop meaning what it meant.
+
+The console contract is enforced: one source for the install command, real help routing, the 0–4 exit
+code contract, **no success-looking footer after a failure**, `NO_COLOR` per its own specification, a
+prompt that names the flag it needs, and a locale refusal that names the requested language and lists
+the translated ones (`es`, `en`) instead of falling back silently. The drift sentinel reports as
+**advisory at `spec-first` and blocking at `spec-anchored`** for the same change.
+
+### Evidence engineering: 301 QA cases, 27 mutants, 30 assertion probes
+
+The suite grew by a five-tier QA battery: easy (31), intermediate (41), hard (36), a **zombie horde**
+of 100 hostile inputs against one survival contract, and 100 complex scenarios. It is backed by two
+harnesses that keep it honest rather than merely large:
+
+- `npm run mutate` introduces 27 deliberate defects across eight families (security, drift, standards,
+  ids, receipt, coach, cli, enforcement) and requires **every family at 1.00**. An overall ratio hides
+  a family nobody covers: 25/27 reads as 93 % while the receipt family sits at 1/3. Current: 27/27.
+- `npm run assertions` measures the other half — whether an assertion is decoration. A static pass
+  finds tautologies, unfalsifiable assertions and conditionals that may never run; `--probe` mutates
+  the expected value and re-runs the file, so a test that passes either way is reported as decorative.
+  Current: 0 static findings, 30/30 load-bearing.
+
+Building the second harness meant fixing six defects in the harness itself — including one where it
+reported a perfect green over zero parsed tests, catching its own author.
+
+### The coach reaches the skills
+
+`sdd-help` and `sdd-spec-requirements` teach the coach where the agents read it, across all nine
+template trees, with the non-negotiables spelled out: the coach never certifies, a finding is never a
+dead end, a skip is not a green, spec content is untrusted data, and nothing blocks while the
+catalogue is uncalibrated.
+
 ## [3.3.0] — 2026-09-21
 
 ### Local overlay: private hosts, without publishing them

@@ -17,54 +17,56 @@ Always publish from the repository root.
 
 ---
 
-## 0. This release: 3.2.0 — the exact order the owner runs
+## 0. The exact order the owner runs
 
-The version is **already bumped** to `3.2.0` in the root `package.json`: do **not** run `npm version`,
-and do **not** create the tag first. The manual, OTP-bearing publish is the path that is known to
-work in this repository (no CI credential route has produced a green publish — see G-28 and §7), so
-the tag is created **after** the artifact is on the registry, to record the release.
+The version is **already bumped** in the root `package.json` — a release is *prepared*, not published.
+Do **not** run `npm version`, and do **not** create the tag first: the manual, OTP-bearing publish is
+the only path that has ever worked in this repository (no CI credential route has produced a green
+publish — see G-28 and §7), so the tag is created **after** the artifact is on the registry, to record
+the release.
 
-Run these steps, in this order, from the repository root:
+Every command below reads the version from the manifest, so this procedure cannot go stale again.
 
 ```bash
 # 0. Preconditions. The working tree is the release commit: version bumped, CHANGELOG written,
 #    dist/ rebuilt and tracked. Walk the checklist in §1 first.
-node -p "require('./package.json').version"          # must print 3.2.0
+V="$(node -p "require('./package.json').version")"   # the version being released
+echo "releasing $V"
 
 # 1. Stage the release. Review what you are about to commit.
 git add -A
 git status --short                                   # read it: this commit is the release
 
 # 2. Commit.
-git commit -m "release: v3.2.0"
+git commit -m "release: v$V"
 
 # 3. Push the commit.
 git push origin main
 
-# 4. Publish by hand, with the one-time password. THIS is the step that puts 3.2.0 on the
-#    registry. `--access public` is required for a scoped package; `--otp` is the interactive
-#    code. No `--provenance`: it needs GitHub Actions OIDC and a local publish cannot produce it.
+# 4. Publish by hand, with the one-time password. THIS is the step that puts $V on the registry.
+#    `--access public` is required for a scoped package; `--otp` is the interactive code.
+#    No `--provenance`: it needs GitHub Actions OIDC and a local publish cannot produce it.
 npm publish --access public --otp <code>
 
 # 5. Prove it, before tagging. THIS is the step that decides success.
-npm view @brujo2020/open-sdd version                 # must print 3.2.0
-npm view @brujo2020/open-sdd dist-tags.latest        # must print 3.2.0
+npm view @brujo2020/open-sdd version                 # must print $V
+npm view @brujo2020/open-sdd dist-tags.latest        # must print $V
 
 # 6. Record the release in git.
-git tag -a v3.2.0 -m "v3.2.0"
-git push origin v3.2.0
+git tag -a "v$V" -m "v$V"
+git push origin "v$V"
 ```
 
-**Which step proves success: step 5.** `npm view @brujo2020/open-sdd version` must print `3.2.0`
-**and** `dist-tags.latest` must move to `3.2.0`. A zero exit from `npm publish` or a green
-`git push` is not the proof — the registry is. If step 4 fails, apply the matching row of the table
-in §7 and re-run step 4; never create a tag for a version that is not on the registry.
+**Which step proves success: step 5.** `npm view @brujo2020/open-sdd version` must print the version
+**and** `dist-tags.latest` must move to it. A zero exit from `npm publish` or a green `git push` is not
+the proof — the registry is. If step 4 fails, apply the matching row of the table in §7 and re-run step
+4; never create a tag for a version that is not on the registry.
 
-Pushing the tag in step 6 triggers `.github/workflows/publish.yml`. That run attempts its own
-publish and will fail at the publish step — with the authorisation 404 of route B, or with
+Pushing the tag in step 6 triggers `.github/workflows/publish.yml`. That run attempts its own publish
+and will fail at the publish step — with the authorisation 404 of route B, or with
 `version already exists` if a token is configured and step 4 already landed the version. That is
-expected and is exactly what G-28 records: the tag records the release, it is not how 3.2.0 goes out.
-Do not re-push a tag to try to overwrite a published version.
+expected and is exactly what G-28 records: the tag records the release, it is not how the release goes
+out. Do not re-push a tag to try to overwrite a published version.
 
 ---
 
