@@ -64,5 +64,7 @@ export * from './standards.js';
 export * from './standardsRender.js';
 // Stable identifiers: allocate in blocks, audit against a base, never renumber.
 export * from './stableIds.js';
+// The drift sentinel: every changed path is covered by a declared requirement, or knowingly accepted.
+export * from './driftCheck.js';
 // Reversibility: the receipt of what this tool wrote, so an install can be undone.
 export * from './receipt.js';

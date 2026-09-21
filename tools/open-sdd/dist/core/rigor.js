@@ -47,7 +47,8 @@ import { parseTasksMarkdown, resolveSddDir } from './specManager.js';
 import { deltaSpecFileName, parseDeltaSpec, traceDelta, validateDeltaSpec, } from './deltaSpec.js';
 import { checkEvidenceLock, evaluateTriad } from './triad.js';
 import { auditFeature } from './auditEngine.js';
-import { isGitRepo } from './git.js';
+import { isGitRepo, getModifiedFiles } from './git.js';
+import { DRIFT_WAIVERS_FILE, checkDrift, collectDriftBindings, readDriftWaivers } from './driftCheck.js';
 /** The aspects every level is described in. Shared so reports and tests agree on the vocabulary. */
 export const RIGOR_ASPECTS = [
     'constitution',
@@ -878,17 +879,13 @@ export const assessRigor = async (cwd, options) => {
             });
         }
     }
-    // ── Detección de drift (nunca en spec-first) ────────────────────────────────────────────────
-    if (requires.drift === 'required' && specDirRel) {
-        if (!isGitRepo(cwd)) {
-            findings.push({
-                aspect: 'drift',
-                severity: 'info',
-                artifact: specDirRel,
-                message: 'Detección de drift no evaluable: no es un repositorio git (la comparación código↔spec exige un índice).',
-            });
-        }
-        else {
+    // ── Detección de drift ──────────────────────────────────────────────────────────────────────
+    // El binding por requisito se reporta SIEMPRE que haya una feature y un índice: a spec-first como
+    // AVISO (REQ-STD-010: mientras el nivel es spec-first, el chequeo reporta advisory) y a
+    // spec-anchored como BLOQUEO. El drift AMBIENTAL sigue siendo solo de spec-anchored hacia arriba.
+    const driftBlocking = requires.drift === 'required';
+    if (specDirRel && isGitRepo(cwd)) {
+        if (driftBlocking) {
             try {
                 const audit = await auditFeature(cwd, feature, { sddDir });
                 const driftIssues = audit.issues.filter((i) => i.code === 'AMBIENT_CODE_DRIFT');
@@ -910,6 +907,79 @@ export const assessRigor = async (cwd, options) => {
                 });
             }
         }
+        // ── Binding por requisito y waivers ───────────────────────────────────────────────────────
+        // El drift ambiental dice «algo se movió»; esto dice QUÉ requisito lo cubría y si alguien lo
+        // aceptó a sabiendas. Sin ficheros modificados conocidos NO se reporta «sin drift»: un checkout
+        // limpio no es un aprobado, es una lista vacía.
+        const modified = getModifiedFiles(cwd);
+        if (modified.length === 0) {
+            findings.push({
+                aspect: 'drift',
+                severity: 'info',
+                artifact: specDirRel,
+                message: 'Binding de cobertura no evaluable: no hay ficheros modificados conocidos en el árbol de trabajo. En un checkout limpio esto NO es un aprobado, es una lista vacía.',
+            });
+        }
+        else {
+            const { bindings, problems } = await collectDriftBindings(cwd, sddDir);
+            const { waivers, problem: waiverProblem } = await readDriftWaivers(cwd);
+            const report = checkDrift({
+                files: modified,
+                bindings,
+                waivers,
+                problems: waiverProblem ? [...problems, waiverProblem] : problems,
+            });
+            const uncovered = report.findings.filter((item) => item.state === 'uncovered');
+            const expired = report.findings.filter((item) => item.state === 'expired-waiver');
+            for (const problem of report.problems) {
+                findings.push({ aspect: 'drift', severity: 'info', artifact: specDirRel, message: problem });
+            }
+            if (uncovered.length > 0) {
+                findings.push({
+                    aspect: 'drift',
+                    severity: driftBlocking ? 'error' : 'info',
+                    artifact: specDirRel,
+                    message: `${uncovered.length} fichero(s) cambiaron sin que ningún requisito declare cubrirlos: ${uncovered
+                        .slice(0, 5)
+                        .map((item) => item.file)
+                        .join(', ')}. Declara la frontera en la tarea que corresponda, o acepta el cambio con un waiver en ${DRIFT_WAIVERS_FILE}.${driftBlocking ? '' : ' (Advisory en el nivel spec-first: informa, no bloquea.)'}`,
+                });
+            }
+            if (expired.length > 0) {
+                findings.push({
+                    aspect: 'drift',
+                    severity: driftBlocking ? 'error' : 'info',
+                    artifact: specDirRel,
+                    message: `${expired.length} waiver(s) de drift CADUCARON y por tanto no cubren: ${expired
+                        .map((item) => `${item.file} (${item.waiver?.owner ?? 'sin dueño declarado'})`)
+                        .join(', ')}. Renueva o retira.`,
+                });
+            }
+            if (report.waived > 0) {
+                findings.push({
+                    aspect: 'drift',
+                    severity: 'info',
+                    artifact: specDirRel,
+                    message: `${report.waived} cambio(s) fuera de cobertura aceptados con un waiver vigente.`,
+                });
+            }
+            if (uncovered.length === 0 && expired.length === 0 && report.problems.length === 0) {
+                findings.push({
+                    aspect: 'drift',
+                    severity: 'info',
+                    artifact: specDirRel,
+                    message: `${report.files} fichero(s) modificados, todos cubiertos por ${report.bindings} binding(s) declarados.`,
+                });
+            }
+        }
+    }
+    else if (driftBlocking && specDirRel) {
+        findings.push({
+            aspect: 'drift',
+            severity: 'info',
+            artifact: specDirRel,
+            message: 'Detección de drift no evaluable: no es un repositorio git (la comparación código↔spec exige un índice).',
+        });
     }
     // ── Regeneración (spec-as-source) ───────────────────────────────────────────────────────────
     if (requires.regeneration === 'required') {
