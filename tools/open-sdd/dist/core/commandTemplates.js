@@ -526,6 +526,15 @@ const AGENT_HOST = {
     codebuddy: 'codebuddy',
 };
 export const hostForAgent = (agent) => AGENT_HOST[agent];
+/**
+ * Teach the matrix that an agent id belongs to a host row declared outside the repository.
+ *
+ * Only the local overlay calls this. It is a mutator on purpose: the mapping is a lookup table, and a
+ * private agent must be reachable exactly like a shipped one without the table being rewritten in code.
+ */
+export const mapAgentToHost = (agent, host) => {
+    AGENT_HOST[agent] = host;
+};
 // ---------------------------------------------------------------------------------------------
 // Rendering: template file -> host artifact
 // ---------------------------------------------------------------------------------------------

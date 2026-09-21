@@ -200,6 +200,44 @@ no public documentation. The method is the same one the public rows follow, with
 - **A fork earns its own verification.** `forkOf` records the parent, but a fork is never verified *by
   inheritance*: it must cite its own artifact, because what a fork changes is exactly what the parent
   cannot tell you.
+### The local overlay, for hosts that must not be published
+
+A private row is loaded from **outside the repository**, by construction: the CLI reads
+`$OPEN_SDD_LOCAL_HOSTS`, or `$XDG_CONFIG_HOME/open-sdd/local-hosts.json`
+(`%APPDATA%\open-sdd\local-hosts.json` on Windows), and **never a path inside the working tree**. A
+private row therefore cannot be committed by accident, because no code path would read one from the
+repository at all.
+
+```json
+{
+  "hosts": [
+    {
+      "id": "internal-agent",
+      "label": "Internal Agent",
+      "dir": ".internal/workflows",
+      "invocation": "/sdd-<id>",
+      "verified": true,
+      "sourceArtifact": "internal-agent-1.0.0.vsix (publisher acme, name internal-agent)",
+      "evidence": "SOURCE-VERIFIED against the package the owning team supplied",
+      "agent": { "commandsDir": ".internal/workflows", "docFile": "AGENTS.md" },
+      "mcp": { "configPaths": { "linux": ".internal/mcp.json" }, "snippetRef": "mcpServers", "verified": false }
+    }
+  ]
+}
+```
+
+```bash
+OPEN_SDD_LOCAL_HOSTS=/path/to/local-hosts.json open-sdd init . --agent internal-agent --write
+open-sdd integrate --list              # the private row appears, marked NO VERIFICADA unless it says otherwise
+```
+
+The rules the overlay cannot be talked out of: a row is **refused by default**; `"verified": true`
+demands `sourceArtifact`, because the artifact the owning team supplies is the only evidence a private
+host can have; a private row may **never shadow a published one** (the public row wins and the
+collision is reported); and a broken file degrades into a named skip instead of a CLI that will not
+start. `mcp.snippetRef` must name one of the shapes the tool already ships, so a local file cannot
+invent a shape nobody verified.
+
 - **Keep the specifics local.** Paths, filenames and internal conventions of a privately distributed
   host belong to the team that owns it, not to an MIT repository. If they cannot be published, the row
   stays refused and says the evidence is held by the owning team — a declared hole, not a leak.

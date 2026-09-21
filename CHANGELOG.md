@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ## [3.3.0] — 2026-09-21
 
+### Local overlay: private hosts, without publishing them
+
+A host that must not be shared can now be wired from **outside the repository**. The CLI reads
+`$OPEN_SDD_LOCAL_HOSTS` or `$XDG_CONFIG_HOME/open-sdd/local-hosts.json` and **never a path inside the
+working tree**, so a private row cannot be committed by accident: no code path would read one from the
+repository at all. `open-sdd init . --agent <id> --write` installs that host's workflow files exactly
+like a shipped one, `integrate --list` shows it, and the shipped matrices stay untouched.
+
+The overlay refuses what it cannot justify: a row is refused by default, `"verified": true` requires
+`sourceArtifact`, a private row may never shadow a published one, `mcp.snippetRef` must name a shape
+the tool already ships, and a broken file degrades into a named skip rather than a CLI that will not
+start. Only the CLI entry point loads it, so importing the matrices in a test still sees the published
+matrix and nothing else.
+
+
 ### Silence is not a verdict: thirteen refusals, each with the URL that failed
 
 Eight hosts that the research investigated had no row at all in the command matrix — neither verified

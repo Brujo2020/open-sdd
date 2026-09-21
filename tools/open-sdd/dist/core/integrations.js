@@ -39,6 +39,34 @@ import { stat } from 'node:fs/promises';
 import path from 'node:path';
 /** The name our server registers under in every host config. */
 export const MCP_SERVER_NAME = 'open-sdd';
+/** `{"mcpServers": {"open-sdd": {"command": "node", "args": ["<cli>", "mcp"]}}}` */
+const mcpServersSnippet = (cliPath) => jsonDoc({ mcpServers: { [MCP_SERVER_NAME]: { command: 'node', args: [cliPath, 'mcp'] } } });
+/** VS Code's `.vscode/mcp.json`: a `servers` object whose entries declare `type: "stdio"`. */
+const vscodeServersSnippet = (cliPath) => jsonDoc({ servers: { [MCP_SERVER_NAME]: { type: 'stdio', command: 'node', args: [cliPath, 'mcp'] } } });
+/** OpenCode's `opencode.json`: an `mcp` object whose entries declare `type: "local"` and an ARRAY `command`. */
+const opencodeSnippet = (cliPath) => jsonDoc({
+    $schema: 'https://opencode.ai/config.json',
+    mcp: { [MCP_SERVER_NAME]: { type: 'local', command: ['node', cliPath, 'mcp'] } },
+});
+/** Zed's `context_servers` entry: STRING `command` plus a sibling `args` array (not `{ path, args }`). */
+const zedSnippet = (cliPath) => jsonDoc({
+    context_servers: { [MCP_SERVER_NAME]: { command: 'node', args: [cliPath, 'mcp'], env: {} } },
+});
+/** Codex's `config.toml`. */
+const codexSnippet = (cliPath) => [
+    `[mcp_servers.${MCP_SERVER_NAME}]`,
+    'command = "node"',
+    `args = [${tomlString(cliPath)}, "mcp"]`,
+    '',
+].join('\n');
+const VERIFIED_JSON_MCP_SERVERS = 'Forma VERIFICADA: objeto JSON de primer nivel `mcpServers` con una entrada por servidor, `command` + `args` para stdio. Es la forma documentada de este anfitrión y la que escribe su propio comando de alta.';
+// Documentation pages the snippets above were checked against. A `docUrl` is EVIDENCE: it is the
+// page a reader (or a future session) can fetch to re-confirm the exact key/shape, so it is set only
+// where the shape was actually read from that page.
+const DOC_COPILOT = 'https://code.visualstudio.com/docs/copilot/chat/mcp-servers';
+const DOC_OPENCODE = 'https://opencode.ai/docs/mcp-servers/';
+const DOC_ZED = 'https://zed.dev/docs/assistant/model-context-protocol';
+const DOC_ANTIGRAVITY = 'https://antigravity.google/docs/mcp';
 // ---------------------------------------------------------------------------------------------
 // Snippet builders — the exact bytes that go into the host's own file.
 // ---------------------------------------------------------------------------------------------
@@ -73,37 +101,24 @@ const continueYamlSnippet = (cliPath) => [
     '      - mcp',
     '',
 ].join('\n');
-/** `{"mcpServers": {"open-sdd": {"command": "node", "args": ["<cli>", "mcp"]}}}` */
-const mcpServersSnippet = (cliPath) => jsonDoc({ mcpServers: { [MCP_SERVER_NAME]: { command: 'node', args: [cliPath, 'mcp'] } } });
-/** VS Code's `.vscode/mcp.json`: a `servers` object whose entries declare `type: "stdio"`. */
-const vscodeServersSnippet = (cliPath) => jsonDoc({ servers: { [MCP_SERVER_NAME]: { type: 'stdio', command: 'node', args: [cliPath, 'mcp'] } } });
-/** OpenCode's `opencode.json`: an `mcp` object whose entries declare `type: "local"` and an ARRAY `command`. */
-const opencodeSnippet = (cliPath) => jsonDoc({
-    $schema: 'https://opencode.ai/config.json',
-    mcp: { [MCP_SERVER_NAME]: { type: 'local', command: ['node', cliPath, 'mcp'] } },
-});
-/** Zed's `context_servers` entry: STRING `command` plus a sibling `args` array (not `{ path, args }`). */
-const zedSnippet = (cliPath) => jsonDoc({
-    context_servers: { [MCP_SERVER_NAME]: { command: 'node', args: [cliPath, 'mcp'], env: {} } },
-});
-/** Codex's `config.toml`. */
-const codexSnippet = (cliPath) => [
-    `[mcp_servers.${MCP_SERVER_NAME}]`,
-    'command = "node"',
-    `args = [${tomlString(cliPath)}, "mcp"]`,
-    '',
-].join('\n');
-const VERIFIED_JSON_MCP_SERVERS = 'Forma VERIFICADA: objeto JSON de primer nivel `mcpServers` con una entrada por servidor, `command` + `args` para stdio. Es la forma documentada de este anfitrión y la que escribe su propio comando de alta.';
-// Documentation pages the snippets above were checked against. A `docUrl` is EVIDENCE: it is the
-// page a reader (or a future session) can fetch to re-confirm the exact key/shape, so it is set only
-// where the shape was actually read from that page.
-const DOC_COPILOT = 'https://code.visualstudio.com/docs/copilot/chat/mcp-servers';
-const DOC_OPENCODE = 'https://opencode.ai/docs/mcp-servers/';
-const DOC_ZED = 'https://zed.dev/docs/assistant/model-context-protocol';
-const DOC_ANTIGRAVITY = 'https://antigravity.google/docs/mcp';
-// ---------------------------------------------------------------------------------------------
-// The matrix
-// ---------------------------------------------------------------------------------------------
+/**
+ * The snippet builders addressed BY NAME, so a row declared outside the repository (the local overlay)
+ * can ask for one without shipping code. The map is the only vocabulary a local file may use: it cannot
+ * invent a shape, which is what keeps a private file from writing something nobody verified.
+ */
+export const MCP_SNIPPETS = {
+    mcpServers: mcpServersSnippet,
+    vscodeServers: vscodeServersSnippet,
+    opencode: opencodeSnippet,
+    zed: zedSnippet,
+    codex: codexSnippet,
+    localArray: localArraySnippet,
+    mcpKey: mcpKeySnippet,
+    zcode: zcodeSnippet,
+    amp: ampSnippet,
+    stdioTyped: stdioTypedSnippet,
+    continueYaml: continueYamlSnippet,
+};
 export const HOST_INTEGRATIONS = [
     {
         id: 'claude-code',

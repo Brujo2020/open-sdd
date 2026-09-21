@@ -713,3 +713,17 @@ export const getAgentDefinition = (agent: AgentType): AgentDefinition => {
 };
 
 export const agentList = Object.keys(agentDefinitions) as AgentType[];
+
+/**
+ * Install an agent declared OUTSIDE the repository, so `init --agent <id> --write` works for a host
+ * nobody may publish. Returns false when the id is already taken: a local file never shadows a shipped
+ * agent.
+ */
+export const registerLocalAgent = (id: string, definition: AgentDefinition): boolean => {
+  const table = agentDefinitions as unknown as Record<string, AgentDefinition>;
+  if (table[id]) return false;
+  table[id] = definition;
+  const list = agentList as string[];
+  if (!list.includes(id)) list.push(id);
+  return true;
+};
