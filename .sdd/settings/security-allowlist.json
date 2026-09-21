@@ -248,6 +248,26 @@
       "owner": "mantenimiento (tests del coach de requisitos)",
       "actor": "spec:requirements-coach",
       "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/qaTier2Intermediate.test.ts",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "FIXTURE adversarial de la bateria QA: el caso comprueba que AI-002 escala una spec que intenta dar ordenes en vez de obedecerla. El literal es el objeto de la prueba, no una instruccion dirigida a un modelo; se declara con motivo, dueno y caducidad en vez de silenciarse, y no se repite aqui para no reintroducirlo en el indice.",
+      "owner": "mantenimiento (bateria QA)",
+      "actor": "spec:requirements-coach",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/qaTier3Hard.test.ts",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "FIXTURE adversarial del nivel duro: tres formas de contenido dirigido a un agente dentro de una spec, para demostrar que AI-002 las escala, que nada se obedece y que no se escribe ningun fichero. El literal es el objeto de la prueba, no una instruccion dirigida a un modelo; se declara con motivo, dueno y caducidad.",
+      "owner": "mantenimiento (bateria QA)",
+      "actor": "spec:requirements-coach",
+      "expires": "2027-03-31"
     }
   ]
 }
