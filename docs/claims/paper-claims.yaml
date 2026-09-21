@@ -207,9 +207,9 @@
 
 - id: CLM-027
   section: "§6.4"
-  statement_es: 'El repositorio envía 168 ficheros SKILL.md (8 variantes de agente × 21 skills) bajo tools/open-sdd/templates/agents/.'
-  statement_en: 'The repository ships 168 SKILL.md files (8 agent variants × 21 skills) under tools/open-sdd/templates/agents/.'
-  verifier: 'test "$(find tools/open-sdd/templates/agents -name SKILL.md | wc -l | tr -d " ")" = 168'
+  statement_es: 'El repositorio envía 189 ficheros SKILL.md (9 árboles × 21 skills: 8 variantes de agente más el árbol neutro compartido `_shared`) bajo tools/open-sdd/templates/agents/.'
+  statement_en: 'The repository ships 189 SKILL.md files (9 trees × 21 skills: 8 agent variants plus the shared neutral `_shared` tree) under tools/open-sdd/templates/agents/.'
+  verifier: 'test "$(find tools/open-sdd/templates/agents -name SKILL.md | wc -l | tr -d " ")" = 189'
   expectation: pass
 
 - id: CLM-028
@@ -431,9 +431,9 @@
 
 - id: CLM-059
   section: "§6.4 / Manual Maestro v3.0 (the workflow is taught where the agents read it)"
-  statement_es: 'El flujo brownfield se ensena donde los agentes lo leen: el skill sdd-brownfield existe para los 8 agentes basados en skills y las 8 copias son identicas byte a byte.'
-  statement_en: 'The brownfield workflow is taught where the agents read it: the sdd-brownfield skill exists for all 8 skills-based agents and the 8 copies are byte-identical.'
-  verifier: 'node -e "const fs=require(''fs''),cp=require(''crypto'');const base=''tools/open-sdd/templates/agents'';const dirs=fs.readdirSync(base).filter(d=>fs.existsSync(base+''/''+d+''/skills/sdd-brownfield/SKILL.md''));const hashes=dirs.map(d=>cp.createHash(''md5'').update(fs.readFileSync(base+''/''+d+''/skills/sdd-brownfield/SKILL.md'')).digest(''hex''));process.exit(dirs.length===8&&new Set(hashes).size===1?0:1)"'
+  statement_es: 'El flujo brownfield se ensena donde los agentes lo leen: el skill sdd-brownfield existe para los 8 agentes basados en skills y para el arbol neutro compartido, y las 9 copias son identicas byte a byte.'
+  statement_en: 'The brownfield workflow is taught where the agents read it: the sdd-brownfield skill exists for all 8 skills-based agents and for the shared neutral tree, and the 9 copies are byte-identical.'
+  verifier: 'node -e "const fs=require(''fs''),cp=require(''crypto'');const base=''tools/open-sdd/templates/agents'';const dirs=fs.readdirSync(base).filter(d=>fs.existsSync(base+''/''+d+''/skills/sdd-brownfield/SKILL.md''));const hashes=dirs.map(d=>cp.createHash(''md5'').update(fs.readFileSync(base+''/''+d+''/skills/sdd-brownfield/SKILL.md'')).digest(''hex''));process.exit(dirs.length===9&&new Set(hashes).size===1?0:1)"'
   expectation: pass
 
 - id: CLM-060

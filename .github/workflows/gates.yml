@@ -138,14 +138,18 @@ jobs:
   # `continue-on-error` here, because a suite that is green only where it is convenient proves
   # nothing. If a test is genuinely POSIX-only it fails loudly and is reported as a finding.
   #
-  # Expected, pre-existing failures (reported, not hidden) — three assertions read POSIX execute
-  # bits from `stat().mode`, and Windows files carry none:
-  #   tools/open-sdd/test/enforcementFloor.test.ts:170
-  #   tools/open-sdd/test/cliInit.test.ts:389
-  #   tools/open-sdd/test/coreDoctor.test.ts:601
-  # The repository already guards this class elsewhere with
-  # `it.skipIf(process.platform === 'win32')` (coreDoctor.test.ts:344); these three predate that
-  # guard. Fixing them belongs to whoever owns `tools/open-sdd/test/**`.
+  # GAP G-26 — reported, not hidden. The three POSIX execute-bit assertions this comment used to list
+  # (enforcementFloor, cliInit, coreDoctor) now carry `it.skipIf(process.platform === 'win32')` and
+  # skip here, as they should; they are not the current failure. The current Windows failure is
+  # elsewhere and is not a skip:
+  #   tools/open-sdd/test/coreCommandTemplates.test.ts
+  #     - installCommandTemplates > writes into each newly documented host at the exact path its own
+  #       docs name
+  #     - installCommandTemplates > renders TOML for Gemini CLI and Markdown for the rest
+  # Both fail with `AssertionError: expected false to be true` on windows-latest while the macOS suite
+  # is green on the same tree, so the failure is Windows-specific and unsolved. It blocks the hook
+  # step below, which is why that step has never executed. Fixing it belongs to whoever owns
+  # `tools/open-sdd/test/**` and can run the suite on Windows.
   windows:
     runs-on: windows-latest
     # See the `gates` job: tags exist for the container job only, so the Windows proof keeps its
