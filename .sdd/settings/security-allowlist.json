@@ -208,6 +208,16 @@
       "owner": "CI (paso G-26 del job windows)",
       "actor": "spec:tool-maturity",
       "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/cliGatesArgs.test.ts",
+      "ids": [
+        "aws-access-key"
+      ],
+      "reason": "FIXTURE de prueba o plantilla: el valor con forma de amenaza es necesario para probar el mecanismo que la detecta, o es la guia que el producto copia a cada proyecto. Se declara con motivo, dueño y caducidad en vez de silenciarse.",
+      "owner": "mantenimiento (tests y plantillas)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
     }
   ]
 }

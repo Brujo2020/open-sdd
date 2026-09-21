@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { colors } from '../ui/colors.js';
-import { LOGICAL_GATES, buildCrosswalk, computeResidue, catalogSummary, resolveGateChain, getExecutableGate, detectSignals, } from '../../core/gateCatalog.js';
+import { LOGICAL_GATES, EXECUTABLE_CHAIN, buildCrosswalk, computeResidue, catalogSummary, resolveGateChain, getExecutableGate, detectSignals, } from '../../core/gateCatalog.js';
 import { ENFORCEMENT_LEVELS, TOOL_ENFORCEMENT, resolveFloor, DEFAULT_SENTINEL, interpretSentinel, } from '../../core/enforcement.js';
 import { INVARIANTS, CONFORMITY_LEVELS, assessConformity } from '../../core/invariants.js';
 import { HITL_DEFAULTS } from '../../core/hitl.js';
@@ -148,10 +148,90 @@ const countSourceFiles = async (dir, depth = 0) => {
     }
     return count;
 };
+/**
+ * Read a value flag in both spellings (`--flag value` and `--flag=value`).
+ *
+ * Returns `undefined` when the flag is absent OR present with no value; the caller decides whether
+ * that is a silent default (`gates chain`) or an error. It NEVER returns the token after the flag
+ * when that token is itself a flag, so a value can never be fabricated out of the next option.
+ */
+const readFlagValue = (args, long, short) => {
+    for (let i = 0; i < args.length; i += 1) {
+        const token = args[i];
+        const eq = token.indexOf('=');
+        const name = eq > -1 ? token.slice(0, eq) : token;
+        if (name !== long && (short === undefined || name !== short))
+            continue;
+        if (eq > -1)
+            return token.slice(eq + 1);
+        const next = args[i + 1];
+        return next !== undefined && !next.startsWith('-') ? next : undefined;
+    }
+    return undefined;
+};
 const parseProfile = (args) => {
-    const idx = args.findIndex((a) => a === '--profile' || a === '-p');
-    const value = idx >= 0 ? args[idx + 1] : undefined;
+    const value = readFlagValue(args, '--profile', '-p');
     return value === 'team' || value === 'regulated' ? value : 'solo';
+};
+/** Boolean flags `gates run` accepts. Anything else that starts with `-` is an error, not a gate. */
+const GATES_RUN_BOOLEAN_FLAGS = new Set(['--staged', '--strict']);
+/** Value flags `gates run` accepts. Their value is consumed and can never become a gate id. */
+const GATES_RUN_VALUE_FLAGS = new Set(['--base', '--profile', '-p']);
+/**
+ * Parse `gates run`'s own argv (everything after the subcommand).
+ *
+ * The defect this replaces read the gate list as `args.slice(1).filter(a => !a.startsWith('-'))`,
+ * so the VALUE of a value flag became a gate id: `gates run --base main` resolved the chain to a
+ * single pseudo-control called `main` that the runner self-authorized, and the command printed
+ * "La cadena pasa" without running C1/C2/C3. The rule here is fail-closed in both directions:
+ * a flag's value is never a positional, and a token that is neither a known flag nor a known
+ * catalog id is an error the caller reports by name — never a control invented to fill the gap.
+ */
+const parseGatesRunArgs = (args) => {
+    const gateIds = [];
+    let base;
+    let staged = false;
+    let strict = false;
+    let profile = 'solo';
+    for (let i = 1; i < args.length; i += 1) {
+        const token = args[i];
+        const eq = token.startsWith('-') ? token.indexOf('=') : -1;
+        const name = eq > -1 ? token.slice(0, eq) : token;
+        const inline = eq > -1 ? token.slice(eq + 1) : undefined;
+        if (GATES_RUN_VALUE_FLAGS.has(name)) {
+            const value = inline !== undefined ? inline : args[i + 1];
+            if (value === undefined || value === '' || (inline === undefined && value.startsWith('-'))) {
+                return { ok: false, error: `La opción ${name} exige un valor.` };
+            }
+            if (inline === undefined)
+                i += 1;
+            if (name === '--base') {
+                base = value;
+            }
+            else if (value === 'solo' || value === 'team' || value === 'regulated') {
+                profile = value;
+            }
+            else {
+                return { ok: false, error: `Perfil desconocido: "${value}". Admitidos: solo, team, regulated.` };
+            }
+            continue;
+        }
+        if (GATES_RUN_BOOLEAN_FLAGS.has(token)) {
+            if (token === '--staged')
+                staged = true;
+            else
+                strict = true;
+            continue;
+        }
+        if (token.startsWith('-')) {
+            return {
+                ok: false,
+                error: `Opción desconocida: ${token}. Admitidas: --staged, --strict, --base <ref>, --profile <solo|team|regulated>, y los ids del catálogo (C1…C7, O1…O7).`,
+            };
+        }
+        gateIds.push(token);
+    }
+    return { ok: true, value: { gateIds, base, staged, strict, profile } };
 };
 // ---------------------------------------------------------------------------------------------
 // gates
@@ -273,14 +353,32 @@ export const handleGatesCommand = async (args, io, cwd) => {
         return 0;
     }
     if (sub === 'run') {
-        const ids = args.slice(1).filter((a) => !a.startsWith('-'));
-        const gateIds = ids.length > 0 ? ids : chain.declared;
+        const parsed = parseGatesRunArgs(args);
+        if (!parsed.ok) {
+            io.error(colors.red(parsed.error));
+            return 1;
+        }
+        const { gateIds: requestedIds, base, staged, strict: strictFlag, profile: runProfile } = parsed.value;
+        // An id that is not in the executable catalog is never "unknown, therefore self-authorized":
+        // the runner would emit `Control "main" no reconocido` and then let the chain PASS, which is a
+        // green verdict over a control that does not exist. The typo is named and the command fails.
+        const unknownIds = requestedIds.filter((id) => getExecutableGate(id) === undefined);
+        if (unknownIds.length > 0) {
+            io.error(colors.red(`Control(es) no reconocido(s): ${unknownIds.join(', ')}. Ids válidos: ${EXECUTABLE_CHAIN.map((g) => g.id).join(', ')}.`));
+            return 1;
+        }
+        const gateIds = requestedIds.length > 0 ? requestedIds : chain.declared;
         const root = await findRepoRoot(cwd);
         const feature = process.env.SDD_FEATURE ?? (await firstSpec(cwd)) ?? 'governance';
-        const staged = args.includes('--staged');
-        const baseIdx = args.findIndex((a) => a === '--base');
-        const base = baseIdx >= 0 ? args[baseIdx + 1] : undefined;
-        const strict = args.includes('--strict') || profile === 'regulated';
+        const strict = strictFlag || runProfile === 'regulated';
+        // A base ref that does not resolve makes `git diff base...HEAD` fail, and `gitLines` reports an
+        // empty change set for a failed command — so the chain would inspect nothing and PASS. The same
+        // silent pass over an empty scan this command exists to prevent, one layer down: the ref is
+        // resolved before anything runs, and a typo is an error instead of a green verdict.
+        if (base !== undefined && runGit(root, ['rev-parse', '--verify', '--quiet', `${base}^{commit}`]).status !== 0) {
+            io.error(colors.red(`La referencia base "${base}" no existe en este repositorio: la cadena no puede juzgar un cambio que no puede resolver.`));
+            return 1;
+        }
         // Which files the chain judges. A run that inspects nothing is activation without measurement,
         // so the mode is explicit: the staged index (pre-commit), a base...HEAD diff (CI), or nothing.
         let changedFiles = [];
@@ -311,7 +409,7 @@ export const handleGatesCommand = async (args, io, cwd) => {
             securityAllowlist: allowlist.entries,
         };
         io.log('');
-        io.log(heading(`Ejecutando la cadena resuelta (${gateIds.length} control(es), perfil ${profile}, régimen ${strict ? 'estricto' : 'flexible'})`));
+        io.log(heading(`Ejecutando la cadena resuelta (${gateIds.length} control(es), perfil ${runProfile}, régimen ${strict ? 'estricto' : 'flexible'})`));
         io.log(`  ${dim(staged
             ? `modo: índice (staged), ${changedFiles.length} fichero(s)`
             : base
