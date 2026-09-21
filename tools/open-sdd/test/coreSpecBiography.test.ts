@@ -9,7 +9,7 @@
  * orden «más reciente primero» sea una propiedad del fixture y no del reloj de la máquina.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -25,6 +25,32 @@ import {
   renderBiography,
   specBiography,
 } from '../src/core/specBiography.js';
+
+/**
+ * Fachada de `git rev-parse --show-toplevel`: en Windows git anuncia la raíz como `D:/a/…`
+ * mientras el `cwd` que conoce Node es `D:\a\…`. La suite no puede ejecutar Windows, así que la
+ * fachada devuelve esa forma para el subcomando exacto y delega TODO lo demás al git real; es la
+ * forma en que el job `windows` veía la raíz, y el único modo de reproducirlo fuera de Windows.
+ * `null` desactiva la fachada: el resto de la suite corre contra el git real sin cambios.
+ */
+const toplevelShim = vi.hoisted(() => ({ path: null as string | null }));
+
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:child_process')>();
+  const shimmed = (file: unknown, args: unknown, options: unknown): unknown => {
+    const argv = Array.isArray(args) ? (args as string[]) : [];
+    if (
+      toplevelShim.path !== null &&
+      file === 'git' &&
+      argv[0] === 'rev-parse' &&
+      argv[1] === '--show-toplevel'
+    ) {
+      return toplevelShim.path;
+    }
+    return (actual.execFileSync as (...a: unknown[]) => unknown)(file, args, options);
+  };
+  return { ...actual, execFileSync: shimmed as typeof actual.execFileSync };
+});
 
 const tempDirs: string[] = [];
 
@@ -337,5 +363,75 @@ describe('specBiography — el alma de la especificación', () => {
     expect(rendered.join('\n')).toContain(ACTIVITY_IS_NOT_QUALITY);
     expect(rendered.join('\n')).toMatch(/RITMO, no CALIDAD/);
     expect(rendered.join('\n')).toContain('puede ser correcta');
+  });
+});
+
+describe('specBiography — el límite con git no depende de cómo el anfitrión escriba las rutas', () => {
+  /**
+   * Regresión del job `windows` (7 de 12 tests en rojo): la raíz que anuncia git y el `cwd` que
+   * conoce Node venían de dos mundos distintos y el módulo las comparaba como rutas absolutas
+   * (`realpathSync` + `path.relative`). En Windows git escribe `D:/a/…` y el `cwd` es `D:\a\…`;
+   * cuando no encajaban, una spec DENTRO del árbol se declaraba «fuera del árbol» y la biografía
+   * entera salía como `unknown`. La fachada de `--show-toplevel` reproduce esa respuesta aquí.
+   */
+  slowIt('mide la biografía aunque git anuncie la raíz en la forma del anfitrión', async () => {
+    const dir = await makeRepo();
+    await write(dir, `${specPath}/requirements.md`, requirements(1));
+    commitAll(dir, 'spec: nace');
+    for (let i = 1; i <= 3; i += 1) {
+      await write(dir, `src/module-${i}.ts`, `export const v${i} = ${i};\n`);
+      commitAll(dir, `code: cambio ${i}`);
+    }
+
+    toplevelShim.path = 'D:/open-sdd-windows-fixture-does-not-exist/root\r\n';
+    try {
+      const bio = await specBiography({ cwd: dir, feature: 'bio' });
+
+      expect(bio.breathing).toBe('stale');
+      expect(bio.breathingReason).toContain('3');
+      expect(bio.activity).toEqual({ specCommits: 1, codeCommits: 3, sinceDays: expect.any(Number) });
+      expect(bio.born).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(bio.lastChange).toBe(bio.born);
+      expect(bio.events).toHaveLength(1);
+      expect(bio.events[0]).toMatchObject({
+        subject: 'spec: nace',
+        artifact: 'requirements',
+        added: 4,
+        removed: 0,
+      });
+      expect(bio.complete).toBe(false);
+    } finally {
+      toplevelShim.path = null;
+    }
+  });
+
+  /** El mismo contenido con finales de línea CRLF, como un checkout de Windows (RC-C). */
+  const crlf = (text: string): string => text.replace(/\n/g, '\r\n');
+
+  slowIt('una fixture escrita con CRLF produce la misma biografía que la escrita con LF', async () => {
+    const measure = async (eol: (text: string) => string) => {
+      const dir = await makeRepo();
+      await write(dir, `${specPath}/requirements.md`, eol(requirements(1)));
+      commitAll(dir, 'spec: nace');
+      for (let i = 1; i <= 3; i += 1) {
+        await write(dir, `src/module-${i}.ts`, eol(`export const v${i} = ${i};\n`));
+        commitAll(dir, `code: cambio ${i}`);
+      }
+      return specBiography({ cwd: dir, feature: 'bio' });
+    };
+
+    const lf = await measure((text) => text);
+    const windows = await measure(crlf);
+
+    expect(lf.breathing).toBe('stale');
+    expect(windows.breathing).toBe(lf.breathing);
+    expect(windows.breathingReason).toContain('3');
+    expect(windows.activity.specCommits).toBe(1);
+    expect(windows.activity.codeCommits).toBe(3);
+    expect(windows.activity.specCommits).toBe(lf.activity.specCommits);
+    expect(windows.activity.codeCommits).toBe(lf.activity.codeCommits);
+    expect(windows.events.map((event) => event.subject)).toEqual(lf.events.map((event) => event.subject));
+    expect(windows.events[0]).toMatchObject({ artifact: 'requirements', added: 4, removed: 0 });
+    expect(windows.events[0].added).toBe(lf.events[0].added);
   });
 });

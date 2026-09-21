@@ -52,7 +52,6 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { realpathSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Constitution } from './constitution.js';
@@ -397,42 +396,58 @@ export const specBiography = async (input: {
     );
   }
 
-  const root = gitOut(cwd, ['rev-parse', '--show-toplevel'])?.trim();
-  if (!root) {
+  // ── La ruta de la spec, relativa a la RAÍZ del repositorio ───────────────────────────────────
+  // La calcula git (`rev-parse --show-prefix`), no este módulo comparando rutas absolutas. La raíz
+  // que imprime git y el `cwd` que conoce Node vienen de dos mundos distintos y no siempre se pueden
+  // reconciliar: en Windows git escribe la raíz como `D:/a/…` y `realpathSync`/`path.relative` no
+  // garantizan devolver la misma forma; el caso simétrico en macOS es un `cwd` con distinta caja,
+  // que `realpathSync` tampoco canoniza. Cuando no encajaban, una spec DENTRO del árbol se declaraba
+  // «fuera del árbol» y la biografía entera se devolvía como `unknown`. `--show-prefix` ya viene
+  // relativo a la raíz y con separadores `/`; el único `path.relative` que queda es entre dos rutas
+  // derivadas del MISMO `cwd`, que sí es consistente.
+  const prefixOut = gitOut(cwd, ['rev-parse', '--show-prefix']);
+  if (prefixOut === null) {
     return unknown('git está presente pero no se pudo resolver la raíz del repositorio: no hay historia que leer.');
   }
+  const prefix = toPosix(prefixOut.trim()).replace(/\/+$/, '');
 
-  // Rutas reales en ambos lados: `git rev-parse --show-toplevel` resuelve los enlaces simbólicos
-  // (en macOS `/tmp` es `/private/tmp` y `tmpdir()` es `/var/folders/…`), así que comparar contra
-  // el `cwd` sin resolver reportaba una spec dentro del repositorio como si estuviera fuera de él.
-  let specRel = '';
-  try {
-    const realRoot = realpathSync(root);
-    const realCwd = realpathSync(cwd);
-    specRel = toPosix(path.relative(realRoot, path.resolve(realCwd, sddDir, 'specs', feature)));
-  } catch {
-    return unknown('no se pudo resolver la ruta real del repositorio o del directorio de trabajo: no hay historia que medir.');
-  }
-  if (!specRel || specRel.startsWith('..') || path.isAbsolute(specRel)) {
+  /** Ruta relativa al `cwd`, en forma POSIX. */
+  const fromCwd = (target: string): string => toPosix(path.relative(cwd, path.resolve(cwd, target)));
+  /** La misma ruta relativa a la raíz: lo que imprime `--numstat` y lo que espera `<rev>:<path>`. */
+  const fromRoot = (target: string): string =>
+    path.posix.normalize(path.posix.join(prefix, fromCwd(target)));
+
+  /**
+   * Pathspec de git anclado a la RAÍZ (`:(top)`) y literal (`literal`). Sin `:(top)` git lo lee
+   * relativo al `cwd`, y `..` NO se resuelve dentro de un pathspec: un `sddDir` absoluto fuera del
+   * `cwd` no encontraba ni un commit. Con `:(top)` el pathspec no depende del `cwd` en absoluto.
+   */
+  const atTop = (rootRel: string): string => `:(top,literal)${rootRel}`;
+
+  const specTarget = path.join(sddDir, 'specs', feature);
+  const specRel = fromRoot(specTarget);
+  if (!specRel || specRel === '.' || specRel.startsWith('..') || path.posix.isAbsolute(specRel)) {
     return unknown(
       'el directorio de la especificación queda fuera del árbol de trabajo de git: no hay historia que medir para esta feature.',
     );
   }
 
-  const constitutionRels = [
-    toPosix(path.join(sddDir, 'steering', 'constitution.md')),
-    toPosix(path.join(sddDir, 'constitution.md')),
+  const constitutionTargets = [
+    path.join(sddDir, 'steering', 'constitution.md'),
+    path.join(sddDir, 'constitution.md'),
   ];
-  const specSystemPaths = [specRel, ...constitutionRels];
+  const constitutionRels = constitutionTargets.map(fromRoot);
+  const specPathspec = atTop(specRel);
+  const specSystemPathspecs = [specRel, ...constitutionRels].map(atTop);
 
   // ── Nacimiento y último cambio ───────────────────────────────────────────────────────────────
-  const bornLog = gitOut(root, ['log', '--reverse', '--format=%H|%h|%aI', '--', specRel]);
+  const bornLog = gitOut(cwd, ['log', '--reverse', '--format=%H|%h|%aI', '--', specPathspec]);
   const bornLine = bornLog?.split('\n').map((line) => line.trim()).find((line) => line.length > 0) ?? null;
   const bornSha = bornLine?.split('|')[0] ?? null;
   const born = bornLine?.split('|')[2] ?? null;
 
   const lastLine =
-    gitOut(root, ['log', '-n', '1', '--format=%H|%h|%aI', '--', specRel])
+    gitOut(cwd, ['log', '-n', '1', '--format=%H|%h|%aI', '--', specPathspec])
       ?.split('\n')
       .map((line) => line.trim())
       .find((line) => line.length > 0) ?? null;
@@ -443,21 +458,21 @@ export const specBiography = async (input: {
   let activity = { specCommits: 0, codeCommits: 0, sinceDays: 0 };
   let codeSinceLastChange = 0;
   if (bornSha) {
-    const headCount = countCommits(root, ['HEAD']);
-    const hasParent = gitOut(root, ['rev-parse', '--verify', '--quiet', `${bornSha}^`]) !== null;
-    const beforeBorn = hasParent ? countCommits(root, [`${bornSha}^`]) : 0;
+    const headCount = countCommits(cwd, ['HEAD']);
+    const hasParent = gitOut(cwd, ['rev-parse', '--verify', '--quiet', `${bornSha}^`]) !== null;
+    const beforeBorn = hasParent ? countCommits(cwd, [`${bornSha}^`]) : 0;
     const sinceBorn = Math.max(0, headCount - beforeBorn);
     const specSystemSinceBorn = hasParent
-      ? countCommits(root, [`${bornSha}^..HEAD`, '--', ...specSystemPaths])
-      : countCommits(root, ['HEAD', '--', ...specSystemPaths]);
-    const specCommits = countCommits(root, ['HEAD', '--', specRel]);
+      ? countCommits(cwd, [`${bornSha}^..HEAD`, '--', ...specSystemPathspecs])
+      : countCommits(cwd, ['HEAD', '--', ...specSystemPathspecs]);
+    const specCommits = countCommits(cwd, ['HEAD', '--', specPathspec]);
     const codeCommits = Math.max(0, sinceBorn - specSystemSinceBorn);
     const parsedBorn = born ? Date.parse(born) : Number.NaN;
     const sinceDays = Number.isFinite(parsedBorn)
       ? Math.max(0, Math.floor((Date.now() - parsedBorn) / 86_400_000))
       : 0;
     activity = { specCommits, codeCommits, sinceDays };
-    if (lastSha) codeSinceLastChange = countCommits(root, [`${lastSha}..HEAD`]);
+    if (lastSha) codeSinceLastChange = countCommits(cwd, [`${lastSha}..HEAD`]);
   }
 
   // ── Eventos: un evento por fichero cambiado y commit, más reciente primero ────────────────────
@@ -474,7 +489,7 @@ export const specBiography = async (input: {
     return 'other';
   };
 
-  const log = gitOut(root, [
+  const log = gitOut(cwd, [
     'log',
     '-n',
     String(limit),
@@ -482,7 +497,7 @@ export const specBiography = async (input: {
     '--format=@@%H|%h|%aI|%an|%s',
     '--numstat',
     '--',
-    ...specSystemPaths,
+    ...specSystemPathspecs,
   ]);
 
   const allEvents: SpecEvent[] = [];
@@ -522,7 +537,7 @@ export const specBiography = async (input: {
   for (const event of events) {
     if (event.artifact !== 'spec.json' || seenCommits.has(event.commit)) continue;
     seenCommits.add(event.commit);
-    const content = gitOut(root, ['show', `${event.commit}:${specRel}/spec.json`]);
+    const content = gitOut(cwd, ['show', `${event.commit}:${specRel}/spec.json`]);
     if (content === null) continue;
     const phase = readDeclaredPhase(content);
     if (phase) phaseHistory.push({ date: event.date, commit: event.commit, phase });
