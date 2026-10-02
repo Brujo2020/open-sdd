@@ -8,7 +8,7 @@
  * scaffolds and validates a delta makes the correct artifact the easy one.
  */
 
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { statSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -351,6 +351,12 @@ export const handleDeltaCommand = async (args: string[], io: CliIO, cwd: string)
     // rewrites the base specification, and it refuses to write anything without `--write`.
     const write = args.includes('--write');
     const json = args.includes('--json');
+    const archive = args.includes('--archive');
+    if (archive && !write) {
+      io.error(colors.red('error[usage]: `--archive` moves the delta only after a written merge'));
+      io.error(`  = help: run \`open-sdd delta merge ${feature} --write --archive\``);
+      return 2;
+    }
     // The delta may declare a different base (`Base: <feature>`); honour it when that spec exists,
     // otherwise merge into the feature's own requirements.md.
     const declaredBase = delta.base?.trim();
@@ -416,10 +422,22 @@ export const handleDeltaCommand = async (args: string[], io: CliIO, cwd: string)
     }
 
     if (!report.changed) {
+      // Already folded into the base: `--archive` can still retire a delta whose every entry is merged.
+      const archived = archive && delta.status === 'merged' ? await archiveDelta(root, feature) : null;
+      const archivedRel = archived ? path.relative(root, archived).split(path.sep).join('/') : null;
       if (json) {
         io.log(
           JSON.stringify(
-            { feature: report.feature, changed: false, applied: [], unchanged: report.unchanged, refusals: [], detail: report.detail, written: false },
+            {
+              feature: report.feature,
+              changed: false,
+              applied: [],
+              unchanged: report.unchanged,
+              refusals: [],
+              detail: report.detail,
+              written: false,
+              ...(archivedRel ? { archived: archivedRel } : {}),
+            },
             null,
             2,
           ),
@@ -428,6 +446,8 @@ export const handleDeltaCommand = async (args: string[], io: CliIO, cwd: string)
       }
       io.log('');
       io.log(`  ${colors.green(report.detail)}`);
+      if (archivedRel) io.log(`  ${colors.green('✓')} delta archivada: ${archivedRel}`);
+      else if (archive) io.log(dim('  La delta no está marcada como merged: no se archiva.'));
       io.log('');
       return 0;
     }
@@ -441,6 +461,8 @@ export const handleDeltaCommand = async (args: string[], io: CliIO, cwd: string)
       entries: delta.entries.map((entry) => (appliedIds.has(entry.id) ? { ...entry, merged: true } : entry)),
     };
     await writeFile(deltaPath(root, feature), renderDeltaSpec(merged), 'utf8');
+    const archivedPath = archive ? await archiveDelta(root, feature) : null;
+    const archivedRel = archivedPath ? path.relative(root, archivedPath).split(path.sep).join('/') : null;
 
     if (json) {
       io.log(
@@ -454,7 +476,8 @@ export const handleDeltaCommand = async (args: string[], io: CliIO, cwd: string)
             detail: report.detail,
             written: true,
             base: path.relative(root, basePath).split(path.sep).join('/'),
-            delta: path.relative(root, deltaPath(root, feature)).split(path.sep).join('/'),
+            delta: archivedRel ?? path.relative(root, deltaPath(root, feature)).split(path.sep).join('/'),
+            ...(archivedRel ? { archived: archivedRel } : {}),
           },
           null,
           2,
@@ -473,13 +496,34 @@ export const handleDeltaCommand = async (args: string[], io: CliIO, cwd: string)
     io.log('');
     io.log(`  ${colors.green('✓')} ${path.relative(root, basePath)} reescrito (${report.applied.length} entrada(s))`);
     io.log(`  ${colors.green('✓')} delta marcada como merged: ${appliedIds.size} entrada(s) con Merged: true`);
+    if (archivedRel) io.log(`  ${colors.green('✓')} delta archivada: ${archivedRel}`);
+    else io.log(dim(`  Para retirar la delta ya fusionada: open-sdd delta merge ${feature} --write --archive`));
     io.log(`  ${dim(report.detail)}`);
     io.log('');
     return 0;
   }
 
-  io.log(`Subcomando desconocido: ${sub}. Usa: init | validate | status | render | merge [--write] [--json]`);
+  io.log(`Subcomando desconocido: ${sub}. Usa: init | validate | status | render | merge [--write] [--archive] [--json]`);
   return 1;
+};
+
+/**
+ * `delta merge --write --archive` (OpenSpec's archive-as-merge-back): once the base specification
+ * carries the change, the delta stops being the live contract of change. It moves to
+ * `.sdd/specs/<feature>/archive/<YYYY-MM-DD>-delta.md`, so the spec tree does not accumulate dead
+ * proposals and the history stays in git. Never overwrites an earlier archive of the same day.
+ */
+const archiveDelta = async (root: string, feature: string, now: Date = new Date()): Promise<string> => {
+  const source = deltaPath(root, feature);
+  const archiveDir = path.join(root, '.sdd', 'specs', feature, 'archive');
+  await mkdir(archiveDir, { recursive: true });
+  const day = now.toISOString().slice(0, 10);
+  let target = path.join(archiveDir, `${day}-delta.md`);
+  for (let n = 2; (await stat(target).catch(() => null)) !== null; n += 1) {
+    target = path.join(archiveDir, `${day}-delta-${n}.md`);
+  }
+  await rename(source, target);
+  return target;
 };
 
 // ---------------------------------------------------------------------------------------------

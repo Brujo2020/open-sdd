@@ -27,6 +27,7 @@ import {
   type Receipt,
   type UninstallPlan,
 } from '../../core/receipt.js';
+import { applyLegacyUninstall, planLegacyUninstall } from '../../core/legacyUninstall.js';
 
 /** Valor de un flag con valor (`--from x` o `--from=x`); `undefined` si no está. */
 const flagValue = (args: string[], name: string): string | undefined => {
@@ -38,7 +39,8 @@ const flagValue = (args: string[], name: string): string | undefined => {
   return next === undefined || next.startsWith('-') ? '' : next;
 };
 
-const KNOWN_FLAGS = new Set(['--write', '--purge-sdd', '--json', '--from']);
+// `--no-footer` is a GLOBAL flag (the dispatcher reads it); refusing it here made `uninstall --no-footer` a usage error.
+const KNOWN_FLAGS = new Set(['--write', '--purge-sdd', '--json', '--from', '--legacy', '--no-footer']);
 
 const renderPlan = (plan: UninstallPlan, command: string): string[] => {
   const lines: string[] = [];
@@ -52,6 +54,7 @@ const renderPlan = (plan: UninstallPlan, command: string): string[] => {
   if (!plan.hasReceipt) {
     lines.push('  No hay recibo: no se elimina nada con seguridad.');
     lines.push(`  ${colors.dim('La próxima escritura lo registra; hoy no hay constancia de qué era nuestro.')}`);
+    lines.push('  = help: ¿instalación anterior a los recibos? `open-sdd uninstall --legacy` lista lo que se puede PROBAR nuestro');
     return lines;
   }
 
@@ -105,6 +108,36 @@ export const handleUninstallCommand = async (
   const json = rest.includes('--json');
   const write = rest.includes('--write');
   const purgeSdd = rest.includes('--purge-sdd');
+
+  if (!restore && rest.includes('--legacy')) {
+    if (purgeSdd) {
+      io.error('error: `--legacy` never removes .sdd/; drop `--purge-sdd`');
+      return 2;
+    }
+    const legacy = await planLegacyUninstall(cwd);
+    const removable = legacy.entries.filter((entry) => entry.state === 'remove');
+    if (!write) {
+      if (json) {
+        io.log(JSON.stringify(jsonEnvelope({ command: 'uninstall --legacy (plan)', data: legacy, warnings: legacy.notCovered }), null, 2));
+        return 0;
+      }
+      io.log(formatHeading('Desinstalación sin recibo (--legacy) — solo lo que se puede probar nuestro'));
+      if (legacy.entries.length === 0) io.log(`  ${colors.dim('nada de open-sdd detectado')}`);
+      for (const entry of legacy.entries) {
+        const mark = entry.state === 'remove' ? colors.green('-') : colors.yellow('!');
+        io.log(`    ${mark} ${entry.path}  ${colors.dim(`(${entry.reason})`)}`);
+      }
+      for (const note of legacy.notCovered) io.log(`  ${colors.dim(`· ${note}`)}`);
+      if (removable.length > 0) io.log(`  ${colors.dim('Plan solamente. Aplícalo con: open-sdd uninstall --legacy --write')}`);
+      return 0;
+    }
+    const applied = await applyLegacyUninstall(cwd, legacy);
+    for (const rel of applied.removed) io.log(`  ${colors.green('-')} ${rel}`);
+    for (const failure of applied.failed) io.error(`  ${colors.red('!')} ${failure.path}: ${failure.reason}`);
+    io.log(`uninstall --legacy: ${applied.removed.length} eliminado(s)${applied.failed.length > 0 ? `, ${applied.failed.length} fallo(s)` : ''} · .sdd/ conservado`);
+    if (json) io.log(JSON.stringify(jsonEnvelope({ command: 'uninstall --legacy', data: { plan: legacy, result: applied }, errors: applied.failed.map((f) => `${f.path}: ${f.reason}`) }), null, 2));
+    return applied.failed.length > 0 ? 1 : 0;
+  }
 
   let plan: UninstallPlan;
   if (restore) {

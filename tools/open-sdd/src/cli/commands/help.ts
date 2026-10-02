@@ -215,14 +215,14 @@ export const COMMANDS: CommandDoc[] = [
     name: 'floor',
     group: 'console',
     summary: 'The enforcement floor: commit hook plus the PR gate matrix',
-    usage: 'open-sdd floor <status|install> [target] [--ci]',
-    indexLines: ['  floor [status|install] [target] [--ci]       Enforcement floor: commit hook + PR gate matrix'],
+    usage: 'open-sdd floor <status|install> [target] [--ci [github|gitlab]]',
+    indexLines: ['  floor [status|install] [target] [--ci [github|gitlab]]  Enforcement floor: commit hook (CLI pinned) + PR/MR gate matrix'],
     subcommands: [
       SUB('status', 'is the commit/merge floor installed here?'),
       SUB('install', 'install the commit hook and the CI workflow'),
     ],
     strictSubcommands: true,
-    examples: ['open-sdd floor status', 'open-sdd floor install . --ci'],
+    examples: ['open-sdd floor status', 'open-sdd floor install . --ci', 'open-sdd floor install . --ci gitlab'],
   },
   {
     name: 'standards',
@@ -385,7 +385,7 @@ export const COMMANDS: CommandDoc[] = [
       '  delta validate <feature>                      Validate ids, EARS, targets, contracts and traceability',
       '  delta status <feature>                        Change counts, strangulation progress, traceability',
       '  delta render <feature>                        Render the delta spec',
-      '  delta merge <feature> [--write]               Merge the delta into the base spec',
+      '  delta merge <feature> [--write] [--archive]   Merge the delta into the base spec (--archive retires it to archive/)',
     ],
     subcommands: [
       SUB('init', 'scaffold a delta spec (ADDED/MODIFIED/REMOVED/RENAMED)'),
@@ -396,7 +396,7 @@ export const COMMANDS: CommandDoc[] = [
       SUB('merge-back', 'alias of `merge`'),
     ],
     strictSubcommands: true,
-    examples: ['open-sdd delta init stripe-billing "Add billing"', 'open-sdd delta validate stripe-billing', 'open-sdd delta merge stripe-billing --write'],
+    examples: ['open-sdd delta init stripe-billing "Add billing"', 'open-sdd delta validate stripe-billing', 'open-sdd delta merge stripe-billing --write --archive'],
   },
   {
     name: 'tour',
@@ -412,9 +412,12 @@ export const COMMANDS: CommandDoc[] = [
     name: 'context',
     group: 'experience',
     summary: 'The context pack the MCP server serves, in the terminal',
-    usage: 'open-sdd context [feature] [--lang es|en] [--json]',
-    indexLines: ['  context [feature] [--lang es|en] [--json]        The context pack the MCP server serves, in the terminal'],
-    examples: ['open-sdd context', 'open-sdd context stripe-billing --json'],
+    usage: 'open-sdd context [feature] [--lang es|en] [--json] | context --report [--budget <tokens>]',
+    indexLines: [
+      '  context [feature] [--lang es|en] [--json]        The context pack the MCP server serves, in the terminal',
+      '  context --report [--budget <tokens>] [--json]   The context tax of the installed skills/rules per host (exit 1 over budget)',
+    ],
+    examples: ['open-sdd context', 'open-sdd context stripe-billing --json', 'open-sdd context --report --budget 8000'],
   },
   {
     name: 'integrate',
@@ -522,13 +525,57 @@ export const COMMANDS: CommandDoc[] = [
     examples: ['open-sdd impl stripe-billing', 'open-sdd impl stripe-billing --review inline'],
   },
   {
+    name: 'up',
+    group: 'adoption',
+    summary: 'One command from zero to a governed, verified repository',
+    usage: 'open-sdd up [target] [--write] [--agent <id>] [--level <rigor>] [--lang es|en] [--ci github|gitlab|none] [--json]',
+    indexLines: ['  up [target] [--write]                        Detect host + CI, plan init + hook + CI, then verify with doctor (plan only without --write)'],
+    details: [
+      'Detects the AI hosts already present (.claude/, .cursor/, .github/, .agents/, …) and the CI (GitHub Actions or GitLab CI), and composes `init`, `floor install` and `doctor` into one run.',
+      'Without `--write` it only prints the plan. With `--write` it applies it and finishes by running `doctor`, so the last thing you read is a verified verdict.',
+    ],
+    examples: ['open-sdd up', 'open-sdd up --write', 'open-sdd up . --write --agent cursor --ci none'],
+  },
+  {
+    name: 'route',
+    group: 'daily',
+    summary: 'How much process does this change need? S / M / L with the evidence',
+    usage: 'open-sdd route "<intent>" [--files a,b] [--no-forecast] [--json]',
+    indexLines: ['  route "<intent>" [--files a,b]               Right-size the ceremony: S (commit), M (delta), L (full triad) with the evidence'],
+    details: [
+      'Deterministic and read-only. Without `--files` it uses `brownfield forecast` to size the change; when the size cannot be determined the answer is never S.',
+    ],
+    examples: ['open-sdd route "fix typo in README" --files README.md', 'open-sdd route "add password reset"', 'open-sdd route "migrate billing schema" --json'],
+  },
+  {
+    name: 'approve',
+    group: 'daily',
+    summary: 'Record a human approval bound to the artifact sha256, and detect stale ones',
+    usage: 'open-sdd approve <feature> --gate requirements|design|tasks [--by <name>] [--note <text>] | approve <feature> [--check] [--strict] [--json]',
+    indexLines: [
+      '  approve <feature> --gate <g> --by "<name>"   Approve requirements|design|tasks; the approval is bound to the file sha256',
+      '  approve <feature> --check [--strict]         Exit 1 when an artifact changed after its approval (STALE)',
+    ],
+    details: [
+      'The ledger is `.sdd/specs/<feature>/approvals.json`. Gates follow the triad order: design needs a fresh requirements approval, tasks a fresh design approval.',
+      '`--by` defaults to `git config user.name`; an approval with no named human is refused. `spec.json` approval flags are kept in sync.',
+    ],
+    examples: ['open-sdd approve auth --gate requirements --by "Ana"', 'open-sdd approve auth --check', 'open-sdd approve auth --check --strict --json'],
+  },
+  {
     name: 'uninstall',
     group: 'reversibility',
     summary: 'Plan (and with `--write`, apply) the removal of everything a run wrote',
-    usage: 'open-sdd uninstall [--write] [--purge-sdd] [--json]',
-    indexLines: ['  uninstall [--write] [--purge-sdd] [--json]   Plan first; `--write` applies; `.sdd/` is kept unless --purge-sdd'],
-    details: ['Without `--write` nothing is removed. `.sdd/` is the user’s data and is removed only with an explicit `--purge-sdd`.'],
-    examples: ['open-sdd uninstall', 'open-sdd uninstall --write', 'open-sdd uninstall --write --purge-sdd'],
+    usage: 'open-sdd uninstall [--write] [--purge-sdd] [--legacy] [--json]',
+    indexLines: [
+      '  uninstall [--write] [--purge-sdd] [--json]   Plan first; `--write` applies; `.sdd/` is kept unless --purge-sdd',
+      '  uninstall --legacy [--write]                 No receipt (installs before 3.4)? Remove only what is provably ours',
+    ],
+    details: [
+      'Without `--write` nothing is removed. `.sdd/` is the user’s data and is removed only with an explicit `--purge-sdd`.',
+      '`--legacy` works without a receipt: our commit hook (restoring a preserved foreign one), its CLI pin, and shipped skills whose name and file set match. Anything with an extra file is refused and listed.',
+    ],
+    examples: ['open-sdd uninstall', 'open-sdd uninstall --write', 'open-sdd uninstall --legacy', 'open-sdd uninstall --write --purge-sdd'],
   },
   {
     name: 'restore',

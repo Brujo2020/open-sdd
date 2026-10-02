@@ -628,7 +628,16 @@ the write path agree. The entry is kept in the numbering because a gap that clos
 report's own history; the remaining limit is only that the seed exists when `--focus` is given (without
 a focus there is no slug to name), which the plan states.
 
-### G-21 — Multi-module discovery is Node-only
+### G-21 — RESOLVED: multi-module discovery covers Maven, Gradle, Go, Rust, Python and .NET
+
+**Resolution (2026-10-02).** The text below described the state before `reverseEngineering.ts` gained
+`detectMavenModules`, Gradle `include`, `go.work`/nested `go.mod`, Cargo `[workspace] members`
+(globs, `exclude`), Python (uv workspace and declaration-less monorepos) and `.sln`/`.slnx` readers.
+Evidence: `test/coreMultiLanguage.test.ts` (18 tests, one per ecosystem plus the unreadable-manifest
+cases), and `brownfield survey` on a Cargo workspace fixture reports "raíz + 2 módulo(s) declarado(s):
+Rust/Cargo". A manifest that cannot be read is still reported as unknown, never as single-module.
+The original wording is kept for the record:
+
 
 Paper: §12 / spec-kit issue #1436 (the concept is adopted and reimplemented on our engine; the language
 coverage is not). `reverseEngineering.ts` · `scanProject` builds its workspace roots from `package.json`
@@ -1035,7 +1044,22 @@ migration to Kiro — so it is a bridge and not a destination. In every case the
 recorded in the row or in the report, so a later increment starts from evidence instead of starting
 over.
 
-### G-36 — The commit hook resolves the CLI through PATH, so a stale global install makes it fail open
+### G-36 — RESOLVED: the commit hook runs a pinned CLI and refuses an unverified PATH install
+
+**Resolution (2026-10-02).** `floor install` (and `init --write`, which delegates to it, and
+`doctor --fix`) now writes `open-sdd-cli.json` beside the hook — per clone, never in the committed
+tree — recording the installing CLI and its version (`core/hookPin.ts`). `templates/hooks/pre-commit.mjs`
+resolves `OPEN_SDD_CLI` → the pin → the project candidates, and a `PATH` CLI **last and only after its
+`--version` is at least the pinned version** (or `MIN_CLI_VERSION` 3.4.0 with no pin). Anything older,
+or a CLI that cannot state its version, makes the hook fail CLOSED with the upgrade command. `doctor`
+reports `warn` when the pinned CLI is gone or older than the CLI running the diagnosis. Evidence:
+`test/hookPin.test.ts` — a fake global `open-sdd` reporting 2.0.0 is asked its version and never runs
+its gate (exit 1, "demasiado antiguo"); a 9.0.0 one is accepted; the pin wins over a lenient `PATH`
+CLI; a vanished pin still demands its version from `PATH`; and `test/coreDoctor.test.ts` covers the
+disagreement. The hook's fix line no longer names the unpublishable `npm install -D open-sdd`.
+
+The measured state that motivated it is kept below.
+
 
 Paper: §6.3, Table 19 (levels A–D: a commit gate that silently degrades to "no checks" is worse than
 none); §9.2 (`default-FAIL`). `templates/hooks/pre-commit.mjs` resolves the CLI in this order:
@@ -1070,6 +1094,18 @@ project-relative candidate resolves first). A fix would have `init` record the r
 time (`.sdd/settings/hook.json`) and make the hook prefer it, leaving the `PATH` shim as a last resort
 **only after verifying its version** — an unpinned `PATH` lookup is not a resolution strategy for a
 security gate.
+
+### G-37 — RESOLVED: `floor status` reported "not installed" in every target project
+
+Paper: §6.3 (levels B/C: the floor is the guarantee a programme can make on day one). `floorInstallation.ts`
+· `detectInstalledFloor` required `tools/open-sdd/templates/hooks/pre-commit` to exist **inside the
+inspected repository** — true only in this checkout. In any project that installed the tool, `floor
+install . --ci` followed by `floor status` printed "Suelo declarado pero NO instalado: hook no incluido
+en el repositorio" and exited 1, and the shipped CI templates run `floor status` themselves. Measured on
+2026-10-02 in a fresh `git init` fixture. Fix: an installed hook carrying the gate's own header counts as
+the shipped hook; GitLab CI (`.gitlab-ci.yml` or `.gitlab/*.yml` running `gates run` on
+`merge_request_event`) now counts as level C, and `floor install --ci gitlab` installs it. Evidence:
+`test/adoptionFlow.test.ts`.
 
 ---
 

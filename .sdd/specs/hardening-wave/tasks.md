@@ -1,0 +1,24 @@
+# Implementation Plan — hardening-wave
+
+## Tasks
+
+- [x] 1. Pin the hook's CLI and verify any PATH fallback — _Requirements: REQ-HRD-001_ — _Boundary:_ `tools/open-sdd/templates/hooks/pre-commit.mjs`, `tools/open-sdd/src/core/hookPin.ts`, `tools/open-sdd/src/cli/commands/paper.ts`, `tools/open-sdd/test/hookPin.test.ts`
+  - _Evidence: test/hookPin.test.ts 8 tests green — a fake global open-sdd reporting 2.0.0 is asked only its version and the hook exits 1 with "demasiado antiguo" and the upgrade command; a 9.0.0 one runs; the pin wins over a lenient PATH CLI; a vanished pin still demands its version; floor install writes the pin beside the hook and nothing in the committed tree._
+- [x] 2. Doctor reports hook/CLI disagreement and re-pins on --fix — _Requirements: REQ-HRD-002_ — _Boundary:_ `tools/open-sdd/src/core/doctor.ts`, `tools/open-sdd/test/coreDoctor.test.ts`
+  - _Evidence: test/coreDoctor.test.ts "G-36: avisa…" green — a pin to v0.0.1 gives warn with "v0.0.1" and a floor install fix; a pin to a missing file gives warn "ya no existe"; the 44 existing doctor tests stay green (doctor --fix writes the pin through resolveSelfCli)._
+- [x] 3. Approval ledger bound to sha256 — _Requirements: REQ-HRD-003_ — _Boundary:_ `tools/open-sdd/src/core/approvals.ts`, `tools/open-sdd/src/cli/commands/approve.ts`, `tools/open-sdd/test/approvals.test.ts`
+  - _Evidence: test/approvals.test.ts 7 tests green — records by/at/file/sha256 and syncs both spec.json shapes; an edit after approval is STALE and --check exits 1; design is refused before a fresh requirements approval with the unblocking command; --strict fails on missing; usage errors exit 2._
+- [x] 4. Route a change to S/M/L — _Requirements: REQ-HRD-004_ — _Boundary:_ `tools/open-sdd/src/core/route.ts`, `tools/open-sdd/src/cli/commands/route.ts`, `tools/open-sdd/test/route.test.ts`
+  - _Evidence: test/route.test.ts 8 tests green — typo on one file is S; an unsized non-cosmetic intent is M with the unknown stated; two risk signals, >10 files or a radius >25 are L; --json is an envelope; no intent exits 2._
+- [x] 5. `up`: one-command adoption ending on doctor — _Requirements: REQ-HRD-005_ — _Boundary:_ `tools/open-sdd/src/cli/commands/up.ts`, `tools/open-sdd/test/adoptionFlow.test.ts`
+  - _Evidence: test/adoptionFlow.test.ts — `up` without --write leaves no .sdd/; `up --write` on a fresh repository with .github/ prints "9 ok · 0 aviso(s) · 0 fallo(s)", writes the workflow and the pin; an unknown --ci exits 2; with a foreign hook it exits 1 naming it (never overwrites)._
+- [x] 6. `delta merge --archive` — _Requirements: REQ-HRD-006_ — _Boundary:_ `tools/open-sdd/src/cli/commands/brownfield.ts`, `tools/open-sdd/test/coreDeltaMerge.test.ts`
+  - _Evidence: test/coreDeltaMerge.test.ts 19 tests green, 3 new — --write --archive moves the merged delta to archive/<date>-delta.md; --archive without --write exits 2 and changes nothing; an already merged delta is archived on a later run._
+- [x] 7. Context tax report with a budget — _Requirements: REQ-HRD-007_ — _Boundary:_ `tools/open-sdd/src/core/contextBudget.ts`, `tools/open-sdd/src/cli/commands/contextReport.ts`, `tools/open-sdd/test/contextBudget.test.ts`
+  - _Evidence: test/contextBudget.test.ts 4 tests green — CLAUDE.md counted always (100 tokens for 400 chars), skill description always and body on demand; --budget 50 exits 1, 5000 exits 0, a non-integer exits 2; the rule "an estimate, not a tokenizer" is printed._
+- [x] 8. `uninstall --legacy` — _Requirements: REQ-HRD-008_ — _Boundary:_ `tools/open-sdd/src/core/legacyUninstall.ts`, `tools/open-sdd/src/cli/commands/uninstall.ts`, `tools/open-sdd/test/adoptionFlow.test.ts`
+  - _Evidence: test/adoptionFlow.test.ts — after up + floor install over a team hook, a skill with an extra MY-NOTES.md is refused, a shipped one removed, the team hook restored byte-for-byte, the pin removed and .sdd/ kept; a foreign hook alone is refused._
+- [x] 9. No score footer after tool-level commands — _Requirements: REQ-HRD-009_ — _Boundary:_ `tools/open-sdd/src/index.ts`, `tools/open-sdd/test/cliSddScore.test.ts`
+  - _Evidence: test/cliSddScore.test.ts 10 tests green — help, help exit-codes, explain C1 and uninstall exit 0 with zero footer lines; status still prints exactly one._
+- [x] 10. Truthful floor report and GitLab CI — _Requirements: REQ-HRD-010_ — _Boundary:_ `tools/open-sdd/src/core/floorInstallation.ts`, `tools/open-sdd/templates/hooks/open-sdd-gates.gitlab-ci.yml`, `tools/open-sdd/src/cli/commands/paper.ts`, `tools/open-sdd/test/adoptionFlow.test.ts`
+  - _Evidence: test/adoptionFlow.test.ts — floor status exits 0 right after floor install . --ci in a target project (it exited 1 before: G-37); --ci gitlab writes the job and the include, `gitlab` is not taken as the target, an existing .gitlab-ci.yml is left byte-identical._

@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file.
 
 **Release Notes**: [English](docs/RELEASE_NOTES/RELEASE_NOTES_en.md)
 
+## [Unreleased]
+
+### Hardening: a gate that cannot fail open, an approval bound to its bytes, and one command to adopt
+
+- **G-36 closed — the commit hook can no longer fail open through a stale global CLI.** `floor install`
+  pins the installing CLI beside the hook (`.git/hooks/open-sdd-cli.json`, per clone). The hook prefers
+  the pin and accepts a `PATH` CLI only after its `--version` proves it is at least the pinned one;
+  otherwise the commit is refused with the upgrade command. `doctor` warns when the hook and the CLI
+  diagnosing it disagree, and `doctor --fix` re-pins. The fix line stops naming the unpublishable
+  `npm install -D open-sdd`.
+- **G-37 closed — `floor status` works in your project.** It reported "not installed" (exit 1) in every
+  target repository right after `floor install . --ci`, including inside the CI templates that run it.
+- **`open-sdd up [--write]`** — one command: detects the host and the CI, runs `init --skills`, installs
+  the CI gate matrix, and ends on `doctor`, so the last line is a measured verdict (9 ok / 0 fail on a
+  fresh repository).
+- **`open-sdd approve <feature> --gate requirements|design|tasks`** — an approval records who, when and
+  the artifact's sha256 in `.sdd/specs/<feature>/approvals.json`; `approve --check` exits 1 when a file
+  changed after its approval. Gates follow the triad order. `spec.json` flags stay in sync.
+- **`open-sdd route "<intent>" [--files a,b]`** — right-sizes the process: S (commit + gate), M (delta +
+  requirements approval), L (full triad + three approvals + contracts), with the evidence; an unsized
+  change is never S.
+- **`delta merge --write --archive`** — folds the delta into the base and retires it to
+  `archive/<date>-delta.md` (OpenSpec's archive-as-merge-back).
+- **`context --report [--budget N]`** — the context tax of the installed skills and instruction files per
+  host, split into always-loaded and on-demand (estimated as characters/4, stated as an estimate).
+- **`uninstall --legacy [--write]`** — an exit for installs that predate receipts: removes only what is
+  provably ours (our hook, restoring a preserved foreign one; its pin; shipped skills whose name and
+  file set match) and refuses anything a human extended.
+- **`floor install --ci gitlab`** — a real GitLab CI template (`.gitlab/open-sdd-gates.gitlab-ci.yml`),
+  counted as level C by `floor status`; an existing `.gitlab-ci.yml` is never edited.
+- **Quieter console:** no score footer after `help`, `explain`, `mcp`, `uninstall` and `restore`;
+  `uninstall` accepts the global `--no-footer`.
+- **Docs truth:** G-21 (multi-language discovery) is marked resolved with its evidence, and the README
+  stops claiming discovery is Node-only.
+
 ## [3.4.0] — 2026-09-21
 
 ### The requirements coach: 32 deterministic checks, and it never certifies

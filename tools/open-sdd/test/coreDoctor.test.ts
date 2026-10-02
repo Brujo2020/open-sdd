@@ -345,6 +345,28 @@ describe('doctor — hook de commit', () => {
     expect(check(report, 'hook-portability').detail).not.toContain('depende de un shell POSIX');
   });
 
+  it('G-36: avisa cuando el hook está fijado a un CLI más antiguo que el que diagnostica', async () => {
+    const dir = await makeRoot();
+    await gitInit(dir);
+    const portable = await readFile(shippedPortableHookPath, 'utf8').catch(() => null);
+    if (portable === null) return;
+    await installHook(dir, portable);
+    const hooksDir = path.join(dir, '.git', 'hooks');
+    const fakeCli = path.join(dir, 'old-cli.js');
+    await writeFile(fakeCli, '// old\n', 'utf8');
+    await writeFile(path.join(hooksDir, 'open-sdd-cli.json'), JSON.stringify({ cli: fakeCli, version: '0.0.1' }), 'utf8');
+
+    const stale = check(await runDoctor(dir), 'hook');
+    expect(stale.status).toBe('warn');
+    expect(stale.detail).toContain('v0.0.1');
+    expect(stale.fix).toContain('floor install');
+
+    await writeFile(path.join(hooksDir, 'open-sdd-cli.json'), JSON.stringify({ cli: path.join(dir, 'gone.js'), version: '99.0.0' }), 'utf8');
+    const gone = check(await runDoctor(dir), 'hook');
+    expect(gone.status).toBe('warn');
+    expect(gone.detail).toContain('ya no existe');
+  });
+
   it.skipIf(process.platform === 'win32')('hook no ejecutable → fail con el chmod exacto', async () => {
     const dir = await makeRoot();
     await gitInit(dir);

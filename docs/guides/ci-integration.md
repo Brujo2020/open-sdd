@@ -154,6 +154,18 @@ the verdict with code the repository does not contain.
 
 ## GitLab CI
 
+**In a project that uses the published package**, install the job with one command:
+
+```bash
+npx @brujo2020/open-sdd floor install . --ci gitlab
+```
+
+It writes `.gitlab/open-sdd-gates.gitlab-ci.yml` (the merge-request gate matrix, running the pinned
+devDependency through `npx --no-install`), creates `.gitlab-ci.yml` with the `include:` when there is
+none, and **never edits an existing one** — it prints the include line instead. `floor status` counts
+it as level C. `open-sdd up --write` does the same automatically when it finds a `.gitlab-ci.yml`.
+
+The fuller job below (evidence bundle and SARIF) is for this checkout or a customised pipeline.
 GitLab has no composite-action equivalent, so the job runs the CLI directly. Same contract, same
 exit codes, same artifacts:
 

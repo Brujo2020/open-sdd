@@ -143,6 +143,16 @@ describe('cli/sddScore — el pie aparece en cada comando', () => {
     expect(lines[0].match(/open-sdd [a-z-]/g)).toHaveLength(1);
   });
 
+  it('los comandos sobre la herramienta (help, explain, uninstall) no imprimen el pie', async () => {
+    const cwd = await seedComplete();
+    for (const argv of [['help'], ['help', 'exit-codes'], ['explain', 'C1'], ['uninstall']]) {
+      const ctx = makeIO();
+      const code = await runCli(argv, runtime, ctx.io, {}, { cwd });
+      expect(code, argv.join(' ')).toBe(0);
+      expect(footerLines(ctx.logs), argv.join(' ')).toHaveLength(0);
+    }
+  });
+
   it('--no-footer lo apaga sin tocar el veredicto del comando', async () => {
     const cwd = await seedComplete();
     const ctx = makeIO();

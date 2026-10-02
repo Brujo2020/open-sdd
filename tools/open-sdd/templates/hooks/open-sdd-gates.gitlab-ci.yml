@@ -1,0 +1,35 @@
+# open-sdd | merge-request gate matrix for GitLab CI (enforcement level C — "merge").
+#
+# Installed by `open-sdd floor install . --ci gitlab` at `.gitlab/open-sdd-gates.gitlab-ci.yml`.
+# Include it from the project's `.gitlab-ci.yml`:
+#
+#   include:
+#     - local: .gitlab/open-sdd-gates.gitlab-ci.yml
+#
+# Same contract as the GitHub workflow: the chain runs against the MERGE REQUEST DIFF (`--base`), not
+# the working tree, and the CLI is the project's pinned devDependency (`npx --no-install`), never a
+# global install whose version the repository does not control (G-36).
+#
+# Add the project's own build and test jobs in their own stages: this job gates, it does not replace
+# the pipeline.
+
+open-sdd-gates:
+  stage: test
+  image: node:20
+  variables:
+    GIT_DEPTH: '0' # the diff against the base commit needs the history
+  before_script:
+    - npm ci
+  script:
+    - npx --no-install open-sdd gates chain
+    - |
+      if [ -n "$CI_MERGE_REQUEST_DIFF_BASE_SHA" ]; then
+        BASE="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+      else
+        BASE="HEAD~1"
+      fi
+      npx --no-install open-sdd gates run --base "$BASE"
+    - npx --no-install open-sdd floor status
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
