@@ -1,0 +1,13 @@
+{
+  "name": "learning-path",
+  "title": "Learning path: a help that starts small, a guided workflow, and no learner traps",
+  "language": "en",
+  "phase": "implemented-awaiting-review",
+  "approvals": {
+    "requirements": false,
+    "design": false,
+    "tasks": false
+  },
+  "created": "2026-10-02",
+  "description": "The README concedes spec-kit a gentler learning curve. The cause measured here: `--help` is one 120-line index of 70 commands with no order of use, and three traps met on a first run (a marketing heading, `init <feature> --write` failing without naming the spec command, an audit bundle stamped with a stale version). No gate-chain change: decision 4 of docs/EVOLUTION-PLAN.md stands."
+}

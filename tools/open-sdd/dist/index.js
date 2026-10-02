@@ -27,7 +27,7 @@ import { handleContextReportCommand } from './cli/commands/contextReport.js';
 import { handleUpCommand } from './cli/commands/up.js';
 import { handleStandardsCommand } from './cli/commands/standards.js';
 import { handleRequirementsCommand } from './cli/commands/requirements.js';
-import { EXIT, KNOWN_COMMANDS, STRICT_SUBCOMMANDS, handleHelpCommand, renderCommandHelp, renderExplain, renderFullHelp, suggestCommands, } from './cli/commands/help.js';
+import { EXIT, KNOWN_COMMANDS, STRICT_SUBCOMMANDS, handleHelpCommand, renderCommandHelp, renderExplain, renderFullHelp, renderEssentialHelp, suggestCommands, } from './cli/commands/help.js';
 import { handleImplCommand } from './cli/commands/impl.js';
 import { handleGatesCommand, handleGovernCommand, handleAssureCommand, handleWavesCommand, handleFloorCommand, } from './cli/commands/paper.js';
 import { handleDeltaCommand, handleBrownfieldCommand } from './cli/commands/brownfield.js';
@@ -188,7 +188,7 @@ const runScoreDoor = async (io, cwd) => {
         const report = await computeSddScore(cwd);
         io.log(renderScoreFooter(report));
         io.log(`Por qué: ${explainNextAction(report)}`);
-        io.log('todos los comandos: open-sdd --help');
+        io.log('aprende el flujo: open-sdd help workflow · comandos esenciales: open-sdd --help');
         return 0;
     }
     catch (error) {
@@ -410,7 +410,7 @@ const emitUsageError = (io, message, suggestions, runFor) => {
     for (const suggestion of suggestions) {
         io.error(`  = help: did you mean \`${suggestion}\`? Run \`${runFor(suggestion)}\``);
     }
-    io.error('  = help: run `open-sdd --help` to list every command, or `open-sdd help exit-codes`');
+    io.error('  = help: run `open-sdd --help --all` to list every command, or `open-sdd help workflow` for the path');
 };
 /**
  * Un subcomando desconocido es un error de USO (2), nunca un fallo de gobernanza (1) y nunca el
@@ -455,7 +455,7 @@ export const runCli = async (rawArgv, runtime = { platform: process.platform, en
                 return EXIT.PASSED;
             }
         }
-        io.log(renderFullHelp());
+        io.log(argv.includes('--all') ? renderFullHelp() : renderEssentialHelp());
         return EXIT.PASSED;
     }
     if (argv.includes('--version') || argv.includes('-v')) {
@@ -531,7 +531,7 @@ export const runCli = async (rawArgv, runtime = { platform: process.platform, en
         // Un error de argumentos es un error de USO (2), no un fallo de gobernanza (1): el contrato de
         // códigos de salida existe para que un script distinga «escribiste mal» de «tu repositorio falló».
         io.error(formatError(`error[usage]: ${msg}`));
-        io.error('  = help: run `open-sdd --help` to list every command and flag, or `open-sdd help exit-codes`');
+        io.error('  = help: run `open-sdd --help --all` to list every command and flag, or `open-sdd help workflow` for the path');
         return EXIT.USAGE;
     }
     parsedArgs.agent = await ensureAgentSelection(parsedArgs.agent ?? loadedConfig.agent, io);

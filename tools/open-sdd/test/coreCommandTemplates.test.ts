@@ -146,7 +146,7 @@ let helpText: string | null = null;
 const cliHelp = async (): Promise<string> => {
   if (helpText !== null) return helpText;
   const ctx = makeIO();
-  await runCli(['--help'], { platform: process.platform, env: process.env }, ctx.io);
+  await runCli(['--help', '--all'], { platform: process.platform, env: process.env }, ctx.io);
   helpText = ctx.text();
   return helpText;
 };

@@ -911,6 +911,10 @@ const handleProjectInit = async (args: string[], io: CliIO, cwd: string): Promis
     });
   } catch (error) {
     io.error(colors.red(`Error: ${(error as Error).message}`));
+    // REQ-LRN-008: `init <slug> --write` reads the slug as a target directory. Name what was meant.
+    if (positional && /^[a-z0-9][a-z0-9-]*$/.test(positional) && !existsSync(path.resolve(cwd, positional))) {
+      io.error(`  = help: to create the spec \`${positional}\`, run \`open-sdd init ${positional}\` (without --write)`);
+    }
     return 1;
   }
 
@@ -1069,6 +1073,7 @@ export const handleSpecInitCommand = async (
     io.log(`  1. Edit requirements in: ${colors.dim(`${result.specDir}/requirements.md`)}`);
     io.log(`  2. In your agent chat, run: ${colors.bold(`/sdd-spec-requirements ${featureArg}`)}`);
     io.log(`  3. Check status anytime with: ${colors.bold(`open-sdd status ${featureArg}`)}`);
+    io.log(`  4. The whole path, step by step: ${colors.bold('open-sdd help workflow')}`);
     io.log('');
     return 0;
   } catch (error) {

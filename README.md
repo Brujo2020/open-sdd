@@ -66,7 +66,9 @@ next action, with one line of why.
 ```bash
 open-sdd                 # SDD score, phase and the single next action
 open-sdd status          # the same state as a full panel
-open-sdd --help          # every command
+open-sdd --help          # the essentials, in the order you use them
+open-sdd help workflow   # one guided path per situation: new feature, existing code, small fix…
+open-sdd --help --all    # every command
 ```
 
 The console messages are currently Spanish; `--lang en` fully translates `open-sdd tour` and

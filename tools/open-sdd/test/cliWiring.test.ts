@@ -390,7 +390,7 @@ describe('cli wiring — la ayuda no puede envejecer', () => {
     const cwd = await makeProject();
 
     const helpCtx = makeIO();
-    expect(await runCli(['--help'], runtime, helpCtx.io, {}, { cwd })).toBe(0);
+    expect(await runCli(['--help', '--all'], runtime, helpCtx.io, {}, { cwd })).toBe(0);
     const invocations = parseHelpCommands(helpCtx.logs.join('\n'));
     // Un mínimo de cordura: si el parser dejara de ver comandos, esta prueba no probaría nada.
     expect(invocations.length).toBeGreaterThan(40);

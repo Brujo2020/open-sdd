@@ -256,12 +256,12 @@ export const COMMANDS = [
         name: 'help',
         group: 'console',
         summary: 'This help, the help of one command, or a topic',
-        usage: 'open-sdd help [command|exit-codes|rigor|formatting]',
+        usage: 'open-sdd help [command|workflow|exit-codes|rigor|formatting] [--all]',
         indexLines: ['  help [command]                               This help, or the help of one command'],
         details: [
             '`--help` and `help` read the SAME table: a command that is routed has help, and a test enforces it.',
         ],
-        examples: ['open-sdd help', 'open-sdd help gates', 'open-sdd help exit-codes'],
+        examples: ['open-sdd help', 'open-sdd help workflow', 'open-sdd help --all', 'open-sdd help gates'],
     },
     {
         name: 'init',
@@ -614,7 +614,7 @@ const SKILLS_LINES = [
 ];
 const HELP_SECTIONS = [
     { group: 'templates', heading: 'Command templates (the DEFAULT integration: 22 workflows, no MCP and no network):' },
-    { group: 'skills', heading: 'In-Chat Skills (The Apple-grade Experience):', staticLines: SKILLS_LINES },
+    { group: 'skills', heading: 'In-chat skills (installed with --skills or `up --write`):', staticLines: SKILLS_LINES },
     { group: 'console', heading: 'Zero-Trust console (reference architecture):' },
     { group: 'brownfield', heading: 'Brownfield (existing code that is the de facto source of truth):' },
     { group: 'experience', heading: 'Experience layer (bilingual: --lang es|en, or OPEN_SDD_LANG):' },
@@ -655,6 +655,7 @@ const globalOptions = () => {
     ];
 };
 const quickExamples = () => [
+    `${INSTALL_COMMAND} up --write              Recommended: host + CI + commit hook, verified by doctor`,
     `${INSTALL_COMMAND}                         Install Claude Code skills (default)`,
     `${INSTALL_COMMAND} --cursor-skills         Install Cursor IDE skills`,
     `${INSTALL_COMMAND} --antigravity           Install Google Antigravity skills`,
@@ -662,6 +663,7 @@ const quickExamples = () => [
     `${INSTALL_COMMAND} --lang es -y            Install in Spanish without prompts`,
 ];
 const LEARN_MORE = [
+    '  · open-sdd help workflow       the path for your situation, step by step',
     '  · open-sdd help rigor          the three rigor levels and what each one demands',
     '  · open-sdd help exit-codes     the exit-code contract, including the host-loop sentinel',
     '  · open-sdd help formatting     color, NO_COLOR/FORCE_COLOR/--color and the machine surface',
@@ -686,6 +688,44 @@ export const renderFullHelp = () => {
     lines.push('', 'Note: In non-TTY environments, prompt mode falls back to skip.');
     return lines.join('\n');
 };
+/**
+ * La ayuda por defecto: los comandos del uso diario, en el orden en que se usan (REQ-LRN-001).
+ * El índice completo queda a un flag (`--help --all`). Cada comando nombrado aquí lo prueba
+ * `test/cliLearningPath.test.ts` contra el despacho real (REQ-LRN-004).
+ */
+export const renderEssentialHelp = () => [
+    'open-sdd — make an AI agent\'s "done" verifiable: specs, executable gates, evidence.',
+    'Usage: open-sdd <command> [options]   (no command: the score, the phase and the one next action)',
+    '',
+    'START (once per repository)',
+    '  open-sdd up                         the setup plan: host, CI, commit hook — writes nothing',
+    '  open-sdd up --write                 apply it; ends with the doctor verdict',
+    '  open-sdd tour                       a read-only guided first run on this repository',
+    '  open-sdd templates                  the 22 chat workflows (/sdd-specify …) and where each host reads them',
+    '',
+    'DAILY LOOP (one change)',
+    '  open-sdd route "<intent>"           size it: S (just commit) · M (delta) · L (full spec)',
+    '  open-sdd init <feature>             create .sdd/specs/<feature>/ with a requirements stub',
+    '  open-sdd requirements review <f>    every finding comes with a rewrite or a question',
+    '  open-sdd approve <f> --gate requirements --by "<name>"   approval bound to the file sha256',
+    '  open-sdd impl <feature>             implement the approved tasks, one at a time',
+    '  open-sdd verify <feature>           integration verification against the spec',
+    '  open-sdd status <feature> --check   done = exit 0',
+    '',
+    'EXISTING CODE',
+    '  open-sdd brownfield bootstrap       module map, code intelligence, a draft constitution',
+    '  open-sdd delta init <f> "<title>"   spec only what changes: ADDED/MODIFIED/REMOVED/RENAMED',
+    '  open-sdd brownfield impact <f>      what the change can break',
+    '',
+    'PROOF',
+    '  open-sdd gates run                  the gate chain of the declared rigor level',
+    '  open-sdd audit bundle <feature>     sha256 per artifact + SARIF; non-zero on a blocking finding',
+    '',
+    'NEXT',
+    '  open-sdd help workflow              the path for your situation, step by step',
+    '  open-sdd help <command>             one command, with its examples',
+    '  open-sdd --help --all               every command and option',
+].join('\n');
 /** La ayuda de UN comando, desde la misma tabla. `undefined` si el comando no está enrutado. */
 export const renderCommandHelp = (name) => {
     const doc = COMMAND_INDEX[name.toLowerCase()];
@@ -756,10 +796,55 @@ const FORMATTING_USAGE = () => {
     lines.push('');
     return lines.join('\n');
 };
+/** `help workflow`: un camino por situación, cada uno termina en el comando que lo verifica (REQ-LRN-003). */
+const WORKFLOW_USAGE = () => [
+    '',
+    formatHeading('WORKFLOW — the path for your situation'),
+    '',
+    '  Not sure which path? `open-sdd route "<what you want to change>"` answers S, M or L with its evidence.',
+    '  In the agent chat the same steps are /sdd-<name> commands, installed by `open-sdd up --write`.',
+    '',
+    '  1. A NEW FEATURE (route: L)',
+    '     open-sdd init <feature>                              creates .sdd/specs/<feature>/',
+    '     /sdd-specify <intent>, then /sdd-clarify             write and sharpen the EARS requirements',
+    '     open-sdd requirements review <feature>               findings with a rewrite or a question',
+    '     open-sdd approve <feature> --gate requirements --by "<name>"',
+    '     /sdd-plan, then /sdd-tasks                           the plan and the ordered task list',
+    '     open-sdd approve <feature> --gate design --by "<name>"   (then --gate tasks)',
+    '     /sdd-implement <feature>   or   open-sdd impl <feature>',
+    '     done when: open-sdd verify <feature>  and  open-sdd status <feature> --check  exit 0',
+    '',
+    '  2. A CHANGE TO EXISTING CODE (route: M)',
+    '     open-sdd brownfield bootstrap --write                once per repository',
+    '     open-sdd delta init <feature> "<title>"              spec the change, not the whole system',
+    '     open-sdd brownfield impact <feature>                 dependents, breaking changes, public API',
+    '     open-sdd brownfield contracts <feature>              the tests that protect the change',
+    '     implement, then: open-sdd delta validate <feature>',
+    '     done when: open-sdd delta merge <feature> --write --archive  exits 0',
+    '',
+    '  3. A SMALL FIX (route: S)',
+    '     add or update its test, then git commit              the commit hook runs the gates',
+    '     done when: the commit is accepted',
+    '',
+    '  4. COMING FROM spec-kit, Kiro OR cc-sdd',
+    '     open-sdd import spec-kit                             the mapping, and every skip with its reason',
+    '     open-sdd import spec-kit --write                     (or: import kiro, import cc-sdd)',
+    '     done when: open-sdd status  lists the imported specs',
+    '',
+    '  5. PROVING A CHANGE TO A REVIEWER',
+    '     open-sdd gates run --base main                       judge the change, not the whole repository',
+    '     open-sdd approve <feature> --check                   exit 1 if a file changed after its approval',
+    '     open-sdd audit bundle <feature>                      sha256 per artifact + SARIF',
+    '     done when: all three exit 0',
+    '',
+    '  = help: `open-sdd help <command>` for any step · `open-sdd help rigor` for how strict each level is',
+    '',
+].join('\n');
 export const HELP_TOPICS = {
     'exit-codes': { title: 'exit-codes', render: () => `\n${formatHeading('EXIT CODES — the contract')}\n\n${EXIT_CODES_BODY}\n` },
     rigor: { title: 'rigor', render: RIGOR_USAGE },
     formatting: { title: 'formatting', render: FORMATTING_USAGE },
+    workflow: { title: 'workflow', render: WORKFLOW_USAGE },
 };
 export const renderHelpTopic = (topic) => HELP_TOPICS[topic]?.render();
 /** Explicar un código de gate sin red: la misma tabla que lee `gates list`. */
@@ -795,13 +880,17 @@ const usageErrorLines = (message, suggestions, helpCommand) => {
     for (const suggestion of suggestions) {
         lines.push(`  = help: did you mean \`${suggestion}\`? Run \`${helpCommand} ${suggestion}\``);
     }
-    lines.push('  = help: run `open-sdd --help` to list every command, or `open-sdd help exit-codes`');
+    lines.push('  = help: `open-sdd --help --all` lists every command · `open-sdd help workflow` shows the path');
     return lines;
 };
 export const handleHelpCommand = async (argv, io) => {
     const topic = argv.find((arg) => !arg.startsWith('-'))?.toLowerCase();
-    if (!topic) {
+    if (argv.includes('--all') || topic === 'all') {
         io.log(renderFullHelp());
+        return EXIT.PASSED;
+    }
+    if (!topic) {
+        io.log(renderEssentialHelp());
         return EXIT.PASSED;
     }
     const topicText = renderHelpTopic(topic);
