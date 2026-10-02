@@ -36,7 +36,6 @@ bench/**/*.json
 # want to COPY documentation into the image.
 docs
 README.md
-README-OPENSDD.md
 CHANGELOG.md
 AGENTS.md
 CLAUDE.md

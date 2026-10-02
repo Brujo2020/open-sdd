@@ -1,9 +1,12 @@
 # Install
 
-Every way to get `open-sdd` onto a machine and into a repository, least friction first. The version
-this documentation describes is **v3.0.2** (`package.json` at the repository root). It is **not on the
-npm registry yet**; each path below says plainly whether it installs this version or the older one
-that is published.
+Every way to get `open-sdd` onto a machine and into a repository, least friction first. The package
+is published on npm as **`@brujo2020/open-sdd`**; the version this checkout describes is the one in the
+root `package.json` (`open-sdd --version` prints it).
+
+**Shortest path:** `npx @brujo2020/open-sdd up` prints the plan for your repository (host, CI, commit
+hook, skills) and `up --write` applies it and ends on `open-sdd doctor`. The sections below are the
+individual pieces.
 
 ## Prerequisites
 
@@ -105,6 +108,11 @@ node tools/open-sdd/dist/cli.js --version
 `tools/open-sdd/dist/` is tracked, so the CLI also runs before a build
 (`node tools/open-sdd/dist/cli.js --help`). Building first is the honest baseline: it is what the
 tests exercise.
+
+From that clone, `install.sh` installs into another repository: it builds the CLI if
+`tools/open-sdd/dist/cli.js` is missing, then runs it inside the target you pass first
+(`bash install.sh ~/projects/api --cursor-skills -y`; it exits `1` when the target is missing or not a
+directory). `install-global.sh` clones into `~/.open-sdd` and prints the alias to add.
 
 ---
 

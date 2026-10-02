@@ -32,16 +32,6 @@
       "expires": "2027-03-31"
     },
     {
-      "path": "Claude outputs/",
-      "ids": [
-        "curl-pipe-shell"
-      ],
-      "reason": "Legacy delivery documents restored from git history; they quote installer one-liners as usage examples.",
-      "actor": "spec:paper-alignment",
-      "owner": "mantenimiento (spec de registro)",
-      "expires": "2027-03-31"
-    },
-    {
       "path": "tools/open-sdd/README.md",
       "ids": [
         "curl-pipe-shell"
