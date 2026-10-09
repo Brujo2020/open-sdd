@@ -244,14 +244,15 @@ export const COMMANDS: CommandDoc[] = [
     name: 'requirements',
     group: 'console',
     summary: 'The requirements coach: quality review, an executable checklist and graded repairs',
-    usage: 'open-sdd requirements <review|checklist|fix> <feature> [--json] [--apply <id>]',
+    usage: 'open-sdd requirements <review|checklist|fix|gherkin> <feature> [--json] [--apply <id>] [--write]',
     indexLines: [
-      '  requirements [review|checklist|fix] <feature>  The requirements coach: findings with a rewrite or a question',
+      '  requirements [review|checklist|fix|gherkin] <feature>  The requirements coach: findings with a rewrite or a question',
     ],
     subcommands: [
       SUB('review', 'run the quality checks over the requirements and propose rewrites'),
       SUB('checklist', 'run the checklist predicates and record their digests'),
       SUB('fix', 'apply a graded remedy (`--apply <id>` only auto-applies the safe class)'),
+      SUB('gherkin', 'one Gherkin scenario per EARS statement (`--write` saves acceptance.feature, never overwrites a different one)'),
     ],
     strictSubcommands: true,
     examples: ['open-sdd requirements review stripe-billing', 'open-sdd requirements checklist stripe-billing', 'open-sdd requirements fix stripe-billing --apply REQ-RQC-001'],

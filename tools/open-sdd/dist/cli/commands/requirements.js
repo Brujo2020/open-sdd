@@ -20,9 +20,10 @@ import { jsonEnvelope } from '../jsonOut.js';
 import { colors, formatHeading } from '../ui/colors.js';
 import { DEFAULT_LOCALE, normalizeLocale, parseLangFlag, SUPPORTED_LOCALES } from '../i18n.js';
 import { readSpecMetadata, resolveSddDir } from '../../core/specManager.js';
-import { applyCoachFix, reviewRequirements, summarizeReview, } from '../../core/requirementsCoach.js';
+import { applyCoachFix, parseRequirements, reviewRequirements, summarizeReview, } from '../../core/requirementsCoach.js';
 import { parseChecklist, renderChecklistReport, verifyChecklist, } from '../../core/checklist.js';
 import { renderSpecReview, reviewSpec } from '../../core/specReview.js';
+import { buildFeature } from '../../core/gherkin.js';
 const ARTIFACT_NAMES = ['requirements.md', 'plan.md', 'design.md', 'tasks.md', 'brief.md'];
 const SPEC_MESSAGES = {
     en: {
@@ -51,6 +52,7 @@ const usage = (io, message) => {
     io.error('usage: open-sdd requirements review <feature> [--json] [--strict]');
     io.error('       open-sdd requirements checklist <feature> [--verify] [--json]');
     io.error('       open-sdd requirements fix <feature> --apply <id> [--json] [--dry-run] [--force]');
+    io.error('       open-sdd requirements gherkin <feature> [--write] [--json]');
     io.error('       open-sdd review <feature> --base <ref> [--json]');
     return 2;
 };
@@ -393,6 +395,63 @@ const runChangeReview = async (feature, flags, io, cwd, deps, locale) => {
     return result.exitCode;
 };
 /**
+ * `requirements gherkin <feature> [--write] [--json]` (REQ-SSP-001…004): one Gherkin scenario per
+ * EARS statement. Without `--write` it only prints; with `--write` it never overwrites an
+ * `acceptance.feature` whose content differs — a hand-edited feature file is not ours to clobber.
+ */
+const runGherkin = async (feature, flags, io, cwd) => {
+    const sddDir = await resolveSddDir(cwd);
+    const specRel = path.posix.join(sddDir, 'specs', feature);
+    const requirementsRel = `${specRel}/requirements.md`;
+    const targetRel = `${specRel}/acceptance.feature`;
+    const markdown = await readFile(path.join(cwd, requirementsRel), 'utf8').catch(() => null);
+    if (markdown === null) {
+        io.error(`requirements gherkin: ${requirementsRel} does not exist`);
+        return 1;
+    }
+    const meta = await readSpecMetadata(cwd, feature, sddDir);
+    const result = buildFeature({
+        feature,
+        requirements: parseRequirements('requirements.md', markdown),
+        language: meta?.language,
+    });
+    let written = false;
+    let refused = false;
+    if (hasFlag(flags, '--write')) {
+        const existing = await readFile(path.join(cwd, targetRel), 'utf8').catch(() => null);
+        if (existing !== null && existing !== result.text)
+            refused = true;
+        else {
+            await writeFile(path.join(cwd, targetRel), result.text, 'utf8');
+            written = true;
+        }
+    }
+    const refusal = `${targetRel} exists with different content; it was left unchanged (delete or move it to regenerate)`;
+    if (hasFlag(flags, '--json')) {
+        io.log(JSON.stringify(jsonEnvelope({
+            command: 'requirements gherkin',
+            data: { feature, target: targetRel, written, scenarios: result.scenarios, skipped: result.skipped, text: result.text },
+            errors: refused ? [{ id: 'GHERKIN_TARGET_DIFFERS', message: refusal, artifact: targetRel }] : [],
+            warnings: result.skipped.map((s) => ({ id: s.requirementId, message: `skipped: ${s.reason} — ${s.text}`, artifact: requirementsRel })),
+        }), null, 2));
+        return refused ? 1 : 0;
+    }
+    if (!written && !refused)
+        io.log(result.text);
+    io.log(colors.dim(`  ${result.scenarios.length} scenario(s), ${result.skipped.length} skipped`));
+    for (const s of result.skipped)
+        io.log(colors.dim(`  skipped ${s.requirementId}: ${s.reason} — ${s.text}`));
+    if (written)
+        io.log(`  wrote ${targetRel}`);
+    if (refused) {
+        io.error(`  ${refusal}`);
+        return 1;
+    }
+    if (!hasFlag(flags, '--write'))
+        io.log(colors.dim(`  add --write to save ${targetRel}`));
+    return 0;
+};
+/**
  * Dispatch `requirements review|checklist|fix` and the top-level `review`. `argv` carries its head
  * (`['requirements', ...]` or `['review', ...]`) so both routing lines share one handler.
  */
@@ -440,6 +499,11 @@ export const handleRequirementsCommand = async (argv, io, cwd = process.cwd(), d
                 return usage(io, 'requirements fix needs a <feature>');
             return runFix(feature, flags, io, cwd, deps, locale);
         }
+        if (group === 'gherkin') {
+            if (!feature || feature.startsWith('-'))
+                return usage(io, 'requirements gherkin needs a <feature>');
+            return runGherkin(feature, flags, io, cwd);
+        }
         return usage(io, `unknown requirements subcommand "${group}"`);
     }
     // Tolerate the bare form `handleRequirementsCommand(['<feature>', '--base', …])`.
@@ -448,5 +512,5 @@ export const handleRequirementsCommand = async (argv, io, cwd = process.cwd(), d
     if (feature && !feature.startsWith('-') && hasFlag(flags, '--base')) {
         return runChangeReview(feature, flags, io, cwd, deps, locale);
     }
-    return usage(io, 'requirements needs a subcommand: review, checklist or fix');
+    return usage(io, 'requirements needs a subcommand: review, checklist, fix or gherkin');
 };

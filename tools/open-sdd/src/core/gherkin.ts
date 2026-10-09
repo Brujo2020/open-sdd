@@ -1,0 +1,161 @@
+/**
+ * EARS → Gherkin: one acceptance scenario per EARS statement (REQ-SSP-001…003).
+ *
+ * Ported from the SteelForge SDD synthesis (`SDD-PARA-OPENSDD.md` §4) as a pure function. It reads
+ * the statements that `parseRequirements` (the one requirement parser) already extracted, so it
+ * never re-parses `requirements.md` on its own terms.
+ *
+ * ── Honesty ─────────────────────────────────────────────────────────────────────────────────────
+ * The converter only RESHAPES the approved wording: the `Then` keeps the subject and the `shall`
+ * verb, and a statement with no normative verb is skipped with a reason instead of being given a
+ * scenario nobody wrote. A generated scenario is a starting point for an executable test, not
+ * evidence that the requirement is correct or satisfied.
+ */
+
+export type GherkinPattern = 'ubiquitous' | 'event-driven' | 'state-driven' | 'optional' | 'unwanted' | 'complex';
+export type GherkinLanguage = 'en' | 'es';
+
+export interface GherkinScenario {
+  requirementId: string;
+  pattern: GherkinPattern;
+  given: string[];
+  when: string[];
+  then: string;
+  source: string;
+}
+
+export interface GherkinSkip {
+  requirementId: string;
+  text: string;
+  reason: string;
+}
+
+export interface GherkinRequirementInput {
+  id: string;
+  title: string;
+  statements: { text: string }[];
+}
+
+export interface GherkinFeature {
+  text: string;
+  scenarios: GherkinScenario[];
+  skipped: GherkinSkip[];
+}
+
+const NORMATIVE = /\b(shall|debe|deber[áa])\b/i;
+const CLAUSE_START = /^(when|while|where|if|cuando|mientras|donde|si)\s+/i;
+const KIND: Record<string, 'event' | 'state' | 'optional' | 'unwanted'> = {
+  when: 'event',
+  cuando: 'event',
+  while: 'state',
+  mientras: 'state',
+  where: 'optional',
+  donde: 'optional',
+  if: 'unwanted',
+  si: 'unwanted',
+};
+
+const KEYWORDS: Record<GherkinLanguage, { feature: string; scenario: string; given: string; when: string; then: string; and: string; running: string }> = {
+  en: { feature: 'Feature', scenario: 'Scenario', given: 'Given', when: 'When', then: 'Then', and: 'And', running: 'the system is running' },
+  es: { feature: 'Característica', scenario: 'Escenario', given: 'Dado que', when: 'Cuando', then: 'Entonces', and: 'Y', running: 'el sistema está en funcionamiento' },
+};
+
+/** Convert one statement. Returns a scenario, or the reason it was skipped. */
+export const earsToScenario = (
+  requirementId: string,
+  text: string,
+): { scenario: GherkinScenario } | { skip: string } => {
+  const source = text.trim().replace(/\s+/g, ' ');
+  const sentence = source.replace(/[.;]\s*$/, '');
+  if (!NORMATIVE.test(sentence)) return { skip: 'no normative verb (shall/debe): not an EARS statement' };
+
+  if (!CLAUSE_START.test(sentence)) {
+    return { scenario: { requirementId, pattern: 'ubiquitous', given: [], when: [], then: sentence, source } };
+  }
+
+  // Walk the comma segments: a segment opening with an EARS keyword starts a new condition; the
+  // response is the first later segment that opens without a keyword and carries the normative
+  // verb itself. A `shall` quoted inside a condition, or a comma inside one, stays in the condition.
+  const segments = sentence.split(/,\s*/);
+  const clauses: string[] = [];
+  let responseAt = -1;
+  for (let i = 0; i < segments.length; i += 1) {
+    const segment = segments[i];
+    if (CLAUSE_START.test(segment)) clauses.push(segment);
+    else if (i > 0 && NORMATIVE.test(segment.replace(/`[^`]*`/g, ''))) {
+      responseAt = i;
+      break;
+    } else if (clauses.length > 0) clauses[clauses.length - 1] += `, ${segment}`;
+  }
+  if (responseAt < 0) return { skip: 'trigger clause is not separated from the response by a comma' };
+  const response = segments
+    .slice(responseAt)
+    .join(', ')
+    .replace(/^(then|entonces)\s+/i, '');
+
+  const given: string[] = [];
+  const when: string[] = [];
+  const kinds: string[] = [];
+  for (const clause of clauses) {
+    const match = CLAUSE_START.exec(clause) as RegExpExecArray;
+    const kind = KIND[match[1].toLowerCase()];
+    const body = clause.slice(match[0].length).trim();
+    kinds.push(kind);
+    if (kind === 'state' || kind === 'optional') given.push(body);
+    else when.push(body);
+  }
+
+  const pattern: GherkinPattern =
+    kinds.length > 1
+      ? 'complex'
+      : kinds[0] === 'event'
+        ? 'event-driven'
+        : kinds[0] === 'state'
+          ? 'state-driven'
+          : kinds[0] === 'optional'
+            ? 'optional'
+            : 'unwanted';
+  return { scenario: { requirementId, pattern, given, when, then: response, source } };
+};
+
+const steps = (keyword: string, and: string, items: string[]): string[] =>
+  items.map((item, i) => `    ${i === 0 ? keyword : and} ${item}`);
+
+/** Build the whole `acceptance.feature`. Deterministic: same input, same bytes. */
+export const buildFeature = (input: {
+  feature: string;
+  requirements: GherkinRequirementInput[];
+  language?: string;
+}): GherkinFeature => {
+  const language: GherkinLanguage = input.language === 'es' ? 'es' : 'en';
+  const k = KEYWORDS[language];
+  const scenarios: GherkinScenario[] = [];
+  const skipped: GherkinSkip[] = [];
+  const lines: string[] = [];
+  if (language === 'es') lines.push('# language: es');
+  lines.push(`${k.feature}: ${input.feature}`);
+  lines.push('  Generated by `open-sdd requirements gherkin` from requirements.md. Edit the requirements, not this file.');
+
+  for (const requirement of input.requirements) {
+    let n = 0;
+    const title = requirement.title.replace(new RegExp(`^${requirement.id}\\s*[:.-]?\\s*`), '');
+    for (const statement of requirement.statements) {
+      const result = earsToScenario(requirement.id, statement.text);
+      if ('skip' in result) {
+        skipped.push({ requirementId: requirement.id, text: statement.text.trim(), reason: result.skip });
+        continue;
+      }
+      n += 1;
+      const s = result.scenario;
+      scenarios.push(s);
+      lines.push('');
+      lines.push(`  @${s.requirementId} @${s.pattern}`);
+      lines.push(`  ${k.scenario}: ${s.requirementId} ${title} (${n})`);
+      lines.push(...steps(k.given, k.and, s.given.length > 0 ? s.given : [k.running]));
+      lines.push(...steps(k.when, k.and, s.when));
+      // `Then The gateway…` → `Then the gateway…`; an acronym (`API shall…`) keeps its case.
+      lines.push(`    ${k.then} ${/^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]/.test(s.then) ? s.then[0].toLowerCase() + s.then.slice(1) : s.then}`);
+    }
+  }
+  return { text: `${lines.join('\n')}\n`, scenarios, skipped };
+};

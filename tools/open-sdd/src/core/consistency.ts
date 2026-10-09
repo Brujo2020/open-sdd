@@ -33,6 +33,7 @@ import { resolveBoundaries, scanProject } from './reverseEngineering.js';
 import type { DiscoveredProject } from './types.js';
 import { parseRequirementsMarkdown, parseTasksMarkdown, resolveSddDir } from './specManager.js';
 import { alignSpecWithConstitution } from './specConstitution.js';
+import { checkTaskGrammar } from './taskGrammar.js';
 import { findRepoRoot, loadConstitution } from './status.js';
 
 export interface ConsistencyFinding {
@@ -309,6 +310,13 @@ export const checkConsistency = async (input: ConsistencyInput): Promise<Consist
         });
       }
     }
+  }
+
+  // ── 1b. task grammar: dangling _Depends:_, duplicate numbers, (P) without boundary, orphan tasks ─
+  if (tasks !== null) {
+    const grammar = checkTaskGrammar(tasks, tasksRel);
+    findings.push(...grammar);
+    checked.push(`gramática de tareas (dependencias, numeración, (P) con frontera, tarea sin requisito): ${grammar.length} hallazgo(s)`);
   }
 
   // ── 2. delta targets that no changed file touches ─────────────────────────────────────────────

@@ -1,0 +1,13 @@
+{
+  "name": "sdd-synthesis-port",
+  "phase": "in-progress",
+  "approvals": {
+    "requirements": false,
+    "design": false,
+    "tasks": false
+  },
+  "language": "en",
+  "created_at": "2026-10-09T00:00:00.000Z",
+  "updated_at": "2026-10-09T00:00:00.000Z",
+  "description": "Port the deterministic pieces of the SteelForge SDD synthesis (SDD-PARA-OPENSDD.md) that open-sdd does not already own: an EARS→Gherkin acceptance generator and task-grammar checks inside the cross-artifact consistency report. Everything the guide proposes that open-sdd already implements, or that would fork an existing vocabulary, is declared out of scope with the owning module."
+}
