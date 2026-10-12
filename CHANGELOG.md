@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 **Release Notes**: [English](docs/RELEASE_NOTES/RELEASE_NOTES_en.md)
 
+## [Unreleased]
+
+### SDD modes and the modules from SteelForge — see docs/guides/sdd-modes.md
+- `open-sdd modes`: the six flows, the module matrix per rigor level (with `explore` as a throwaway mode outside the governed ladder) and, with `--projects`, which skills to use — and which to avoid — for each kind of project.
+- `open-sdd stages <feature>`: the sequential stage guide, with what each stage needs.
+- `open-sdd gherkin <feature> [--write]`: EARS acceptance criteria → `acceptance.feature`, one scenario per criterion tagged `@REQ-…`.
+- `consistency` runs five new task-structure checks: `TASK_DUPLICATE_ID`, `PARALLEL_WITHOUT_BOUNDARY`, `DEPENDS_ON_UNKNOWN_TASK`, `TASK_WITHOUT_VERIFICATION`, `REQUIREMENT_NOT_IN_PLAN`.
+- `open-sdd discovery lint|log`: a gate over `brief.md` (non-goals, measurable outcome, unconfirmed assumptions block, no secrets) and an append-only decision log.
+- `open-sdd archive <feature> [--confirm]`: verified specs move to `.sdd/archive/<date>-<feature>/`.
+- `open-sdd steering check`: inclusion modes, in-workspace `#[[file:…]]` references and unconfirmed inferences.
+- Six new skills in every skills tree (27 per host): `sdd-tiny`, `sdd-promote`, `sdd-bugfix`, `sdd-plan-only`, `sdd-refactor`, `sdd-characterize`; `sdd-help` documents the skills for each project type.
+
 ## [3.4.0] — 2026-09-21
 
 ### The requirements coach: 32 deterministic checks, and it never certifies

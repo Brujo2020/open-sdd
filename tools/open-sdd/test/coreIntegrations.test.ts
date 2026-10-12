@@ -477,9 +477,9 @@ describe('cross-tool skills — ONE neutral tree for every host that reads `.age
   const manifestPath = path.join(repoRoot, 'tools/open-sdd/templates/manifests/agents-skills.json');
   const sharedTree = path.join(repoRoot, 'tools/open-sdd/templates/agents/_shared/skills');
 
-  it('the shared tree ships the 21 skills, and the manifest installs IT rather than a per-host copy', () => {
+  it('the shared tree ships the 27 skills, and the manifest installs IT rather than a per-host copy', () => {
     const skills = readdirSync(sharedTree, { withFileTypes: true }).filter((entry) => entry.isDirectory());
-    expect(skills.length).toBe(21);
+    expect(skills.length).toBe(27);
     for (const skill of skills) {
       expect(existsSync(path.join(sharedTree, skill.name, 'SKILL.md')), `${skill.name} sin SKILL.md`).toBe(true);
     }
@@ -532,7 +532,7 @@ describe('cross-tool skills — ONE neutral tree for every host that reads `.age
     const dir = await makeRoot();
     const ctx = makeIO();
     expect(await handleIntegrateCommand(['trae', '--write'], ctx.io, dir)).toBe(0);
-    expect(readdirSync(path.join(dir, '.trae', 'skills'), { withFileTypes: true }).length).toBe(21);
+    expect(readdirSync(path.join(dir, '.trae', 'skills'), { withFileTypes: true }).length).toBe(27);
     expect(existsSync(path.join(dir, '.trae', 'mcp.json'))).toBe(true);
   });
 
@@ -542,7 +542,7 @@ describe('cross-tool skills — ONE neutral tree for every host that reads `.age
     expect(await handleIntegrateCommand(['roo-code', '--write'], ctx.io, dir)).toBe(0);
 
     const installed = readdirSync(path.join(dir, '.agents', 'skills'), { withFileTypes: true });
-    expect(installed.length).toBe(21);
+    expect(installed.length).toBe(27);
     expect(existsSync(path.join(dir, '.agents', 'skills', 'sdd-brownfield', 'SKILL.md'))).toBe(true);
     expect(existsSync(path.join(dir, 'AGENTS.md'))).toBe(true);
     // El MCP del anfitrion va a SU fichero, no al compartido.
