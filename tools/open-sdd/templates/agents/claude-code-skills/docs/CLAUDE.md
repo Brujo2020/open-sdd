@@ -51,6 +51,18 @@ Skills are located in `.claude/skills/sdd-*/SKILL.md`
 - `sdd-verify-completion` — fresh-evidence gate before success or completion claims
 - **If there is even a 1% chance a skill applies to the current task, invoke it.** Do not skip skills because the task seems simple.
 
+## Which commands for which kind of project
+Projects differ; pick the row first (`open-sdd modes --projects` prints the full table with what to avoid):
+- **Fuzzy idea** → `/sdd-discovery` → `open-sdd discovery lint <feature>` → spec only if the brief survives
+- **Spike / POC** (level `explore`) → `/sdd-tiny` → implement → `/sdd-promote` if it survives
+- **New product or feature** → `/sdd-steering` → `/sdd-spec-init` → `/sdd-spec-requirements` → `/sdd-spec-design` → `/sdd-spec-tasks` → `open-sdd gherkin <feature> --write` → `/sdd-impl` → `/sdd-validate-impl` → `open-sdd archive <feature> --confirm`
+- **Change to running code** → `open-sdd brownfield constitution . --write` → `open-sdd steering check` → `open-sdd delta init|validate` → `open-sdd brownfield contracts <feature>` → `/sdd-spec-tasks` → implement → `contracts --verify`
+- **Legacy without tests** → `/sdd-characterize` first (freeze current behaviour) → then `/sdd-refactor`, `/sdd-bugfix` or a delta
+- **Bug** → `/sdd-bugfix` (actual · expected · must not change; failing test first)
+- **Refactor** → `/sdd-characterize` if untested → `/sdd-refactor` (same tests before and after)
+- **Only deciding** → `/sdd-plan-only` (read-only: nothing is written)
+- Where a feature is and what it needs next: `open-sdd stages <feature>`
+
 ## Development Rules
 - 3-phase approval workflow: Requirements → Design → Tasks → Implementation
 - Human review required each phase; use `-y` only for intentional fast-track

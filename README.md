@@ -118,6 +118,25 @@ live in either, they are good choices; no parity of ecosystem, polish or adoptio
 [Migrate from Kiro, spec-kit and cc-sdd](docs/guides/migrate-from.md) maps their artifacts onto this
 one.
 
+### The best of each tool, in one place
+
+open-sdd does not replace these tools by copying them: it takes the one idea each does best, turns it into a
+deterministic check or a command where possible, and leaves out what only adds ceremony. Ideas and rules, not code
+(all MIT); see [SDD modes](docs/guides/sdd-modes.md) for why each piece is included.
+
+| Tool | What it does best | What open-sdd takes | Where | What it leaves out, and why |
+|---|---|---|---|---|
+| **Spec Kit** (GitHub) | the constitution as the authority; `/clarify`; `/analyze` across artifacts | constitution required at every governed rung; clarify as bounded questions derived from the deterministic ambiguity findings; cross-artifact consistency as an executable check, not a prompt | `brownfield constitution`, `govern`, `brownfield clarify`, `consistency` | gates written as prompts: here they return exit codes |
+| **Kiro** (AWS) | EARS requirements; steering with `inclusion`; three approved phases; Spec / Quick / Bugfix / Plan modes | EARS validation and repair; steering readiness; the sequential stage guide; the four modes as skills | `requirements review/fix`, `steering check`, `stages`, `/sdd-spec-quick`, `/sdd-bugfix`, `/sdd-plan-only` | the IDE itself: open-sdd runs in any host |
+| **OpenSpec** (Fission-AI) | change as a delta (ADDED · MODIFIED · REMOVED · RENAMED); `archive` | delta specs with stable ids; archiving verified specs; one behaviour per requirement | `delta init/validate`, `archive`, `requirements review` | applying deltas by hand: `delta` owns it |
+| **cc-sdd** (gotalab) | tasks with `(P)`, `_Boundary:_`, `_Depends:_`; waves; no technology in requirements | parallel waves; boundary, dependency and duplicate-id checks | `waves`, `consistency` | the "no technology in requirements" rule: not ported yet |
+| **BMAD-METHOD**¹ | discovery before building; non-goals; elicitation methods | `brief.md` gate: mandatory non-goals, measurable outcome, unconfirmed assumptions block; append-only decision log | `/sdd-discovery`, `discovery lint/log` | permanent personas and full PRD/architecture ceremony: one agent with lenses is enough |
+| **Feathers** (*Working Effectively with Legacy Code*) | characterization tests | freeze current behaviour before touching untested legacy | `/sdd-characterize`, `brownfield contracts` | — |
+| **SteelForge IDE** | levels and flows people pick first; tinyspec; EARS → Gherkin | `explore` mode outside the ladder; skills by project type; acceptance scenarios traced to each REQ | `modes`, `/sdd-tiny`, `/sdd-promote`, `gherkin` | — |
+
+¹ "BMAD-METHOD" and "BMad" are trademarks of BMad Code; the name is used only to identify the source of the ideas.
+Kiro's documentation could not be read directly; its ideas come through cc-sdd and Kiro's published modes.
+
 ## What it does not do yet
 
 - **Module discovery is Node-only.** Workspace roots come from `package.json`; Maven/Gradle, Go, Rust

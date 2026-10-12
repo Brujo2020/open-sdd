@@ -34,6 +34,18 @@ SDD-style Spec-Driven Development on an agentic SDLC
   - `/sdd:validate-impl {feature}` (optional: after implementation)
 - Progress check: `/sdd:spec-status {feature}` (use anytime)
 
+## Which commands for which kind of project
+Projects differ; pick the row first (`open-sdd modes --projects` prints the full table with what to avoid):
+- **Fuzzy idea** → `/sdd-discovery` (skills variant) or write `brief.md` → `open-sdd discovery lint <feature>` → spec only if the brief survives
+- **Spike / POC** (level `explore`) → `/sdd:tiny` → implement → `/sdd:promote` if it survives
+- **New product or feature** → `/sdd:steering` → `/sdd:spec-init` → `/sdd:spec-requirements` → `/sdd:spec-design` → `/sdd:spec-tasks` → `open-sdd gherkin <feature> --write` → `/sdd:spec-impl` → `/sdd:validate-impl` → `open-sdd archive <feature> --confirm`
+- **Change to running code** → `open-sdd brownfield constitution . --write` → `open-sdd steering check` → `open-sdd delta init|validate` → `open-sdd brownfield contracts <feature>` → `/sdd:spec-tasks` → implement → `contracts --verify`
+- **Legacy without tests** → `/sdd:characterize` first (freeze current behaviour) → then `/sdd:refactor`, `/sdd:bugfix` or a delta
+- **Bug** → `/sdd:bugfix` (actual · expected · must not change; failing test first)
+- **Refactor** → `/sdd:characterize` if untested → `/sdd:refactor` (same tests before and after)
+- **Only deciding** → `/sdd:plan-only` (read-only: nothing is written)
+- Where a feature is and what it needs next: `open-sdd stages <feature>`
+
 ## Development Rules
 - 3-phase approval workflow: Requirements → Design → Tasks → Implementation
 - Human review required each phase; use `-y` only for intentional fast-track
