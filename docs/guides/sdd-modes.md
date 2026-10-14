@@ -55,6 +55,7 @@ throwaway mode, and nothing built in it counts as evidence until `/sdd-promote` 
 | `open-sdd stages <feature>` | `stagesFor` in `sddModes.ts` | Kiro's sequential stage guide: the active stage is the first one not done, and each stage says what it needs. Users stopped asking "what now?". |
 | `open-sdd gherkin <feature>` | `src/core/earsGherkin.ts` | open-sdd validated and coached EARS but never turned a criterion into an acceptance scenario, so the requirement → test trace was typed by hand and drifted. Deterministic: it only reorders what the criterion says, and skips (with the reason) what is not EARS. |
 | Five task-structure checks in `consistency` | `src/core/taskStructure.ts` | `consistency` traced ids but did not read the task list itself. Duplicate numbers make `/sdd-impl 1.2` ambiguous; `(P)` without `_Boundary:_` lets parallel tasks collide; `_Depends:_` on a missing task corrupts the waves; a task with no verification makes "done" an opinion; a requirement the plan never names was not designed. |
+| `REQUIREMENT_NAMES_TECHNOLOGY` in `consistency` | `src/core/requirementTechnology.ts` | cc-sdd's rule: a requirement says WHAT, not WITH WHAT; naming PostgreSQL or React fixes a design decision inside the document that must survive any design. Advisory only (`info`): the list holds names that are unambiguous in prose, and a criterion that records the constraint (`Constraint:`, ADR, contract) is left alone. It complements the catalogued `VER-004`, which needs the standards catalogue loaded. |
 | `open-sdd discovery lint` / `log` | `src/core/discoveryBrief.ts` | `/sdd-discovery` wrote `brief.md` but nothing checked it before requirements consumed it. The gate blocks an empty scope exclusion, an unmeasurable outcome and any unconfirmed assumption (from BMAD), and refuses secrets. The log is append-only so the reasons behind a kill or a lock survive. |
 | `open-sdd archive <feature>` | `src/core/archive.ts` | specs had no end of life and finished work inflated every scan. Archiving (from OpenSpec) requires every task done, `spec.json` in `verified`/`completed` and tasks approved; it is a dry run without `--confirm`, never overwrites, and moves in one `rename`. |
 | `open-sdd steering check` | `src/core/steeringCheck.ts` | generated steering is partly inferred. Until a person confirms it, every spec inherits guesses as rules. The check validates Kiro's `inclusion` modes, rejects `#[[file:…]]` references outside the workspace, and treats `(inferred)` / `[NEEDS CLARIFICATION]` as a draft. |
@@ -63,6 +64,22 @@ throwaway mode, and nothing built in it counts as evidence until `/sdd-promote` 
 | `/sdd-plan-only` | skill | decide before committing: the agent is read-only. |
 | `/sdd-refactor` | skill | "no behaviour change" is a claim: the same tests green before and after, and `brownfield impact` as the check. |
 | `/sdd-characterize` | skill | on untested legacy, freeze the current behaviour first, or no later change can be proven safe. |
+
+## Getting the new flows into your agent
+
+The CLI commands (`modes`, `stages`, `gherkin`, `archive`, `discovery`, `steering check`) work anywhere `open-sdd`
+runs. The six new **flows** (`sdd-tiny`, `sdd-promote`, `sdd-bugfix`, `sdd-plan-only`, `sdd-refactor`,
+`sdd-characterize`) are skills, so they need the host's skills installed:
+
+```bash
+open-sdd integrate claude-code --write     # 27 skills in .claude/skills/ + CLAUDE.md with the guide per project type
+open-sdd integrate --list                  # every host and where its skills go
+```
+
+`open-sdd init . --write` (the no-MCP default) installs the 22 prompt templates only; it does not install these six
+flows. Verified on a clean repository: `integrate claude-code --write` writes `.claude/skills/sdd-*/SKILL.md` (27
+directories, each `name:` equal to its folder) and the "Which commands for which kind of project" section of
+`CLAUDE.md`. The same skills are in the shared tree that every host reading `.agents/skills/` installs.
 
 ## Attribution
 

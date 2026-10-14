@@ -13,6 +13,7 @@ import { buildFeatureFile, earsToScenario, lintGherkin, parseEarsParts } from '.
 import { modulesFor, stagesFor } from '../src/core/sddModes.js';
 import { checkSteering } from '../src/core/steeringCheck.js';
 import { checkTaskStructure } from '../src/core/taskStructure.js';
+import { findTechnologyInRequirements } from '../src/core/requirementTechnology.js';
 import { parseRequirementsMarkdown } from '../src/core/specManager.js';
 import { handleModesCommand } from '../src/cli/commands/modes.js';
 import type { CliIO } from '../src/cli/io.js';
@@ -95,6 +96,34 @@ describe('task structure', () => {
     expect(codes).toContain('PARALLEL_WITHOUT_BOUNDARY');
     expect(codes).toContain('REQUIREMENT_NOT_IN_PLAN');
     expect(report.checked.some((c) => c.startsWith('estructura de tasks.md'))).toBe(true);
+  });
+});
+
+describe('technology in requirements', () => {
+  const find = (criteria: string[]) => findTechnologyInRequirements(`### REQ-T-001: x\n${criteria.map((c) => `- ${c}`).join('\n')}\n`).map((h) => h.technology);
+
+  it('flags unambiguous technology names, once per criterion, and reports the requirement', () => {
+    expect(find(['WHEN the user saves, the system shall store the draft in a PostgreSQL table using React state', 'WHEN idle, the system shall expire the session in 15 minutes'])).toEqual(['PostgreSQL']);
+    expect(findTechnologyInRequirements('### REQ-T-002: y\n- The API shall expose GraphQL queries\n')[0]).toMatchObject({ requirementId: 'REQ-T-002', technology: 'GraphQL' });
+  });
+
+  it('leaves alone ambiguous words, recorded constraints and substrings', () => {
+    expect(find(['The system shall go to the next screen', 'The page shall express the total in euros', 'The Spring release shall include dark mode'])).toEqual([]);
+    expect(find(['Constraint: the system shall persist data in PostgreSQL', 'The system shall use Redis per ADR-12', 'Restricción: el sistema debe usar Kafka'])).toEqual([]);
+    expect(find(['The system shall support JavaScripty names', 'The reactor shall stop'])).toEqual([]);
+  });
+
+  it('surfaces as an informational finding in `consistency`', async () => {
+    const root = await makeTemp();
+    const spec = path.join(root, '.sdd', 'specs', 'f');
+    await mkdir(spec, { recursive: true });
+    await writeFile(path.join(spec, 'requirements.md'), '### REQ-F-001: A\n- WHEN x, the system shall cache it in Redis\n');
+    await writeFile(path.join(spec, 'tasks.md'), '- [ ] 1 Do it _Requirements: REQ-F-001_ — test: unit\n');
+    const report = await checkConsistency({ cwd: root, feature: 'f', changedFiles: [] });
+    const hit = report.findings.find((f) => f.code === 'REQUIREMENT_NAMES_TECHNOLOGY');
+    expect(hit?.severity).toBe('info');
+    expect(hit?.artifacts).toEqual(['.sdd/specs/f/requirements.md']);
+    expect(hit?.message).toContain('Redis');
   });
 });
 

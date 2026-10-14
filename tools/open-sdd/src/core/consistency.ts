@@ -34,6 +34,7 @@ import type { DiscoveredProject } from './types.js';
 import { parseRequirementsMarkdown, parseTasksMarkdown, resolveSddDir } from './specManager.js';
 import { alignSpecWithConstitution } from './specConstitution.js';
 import { checkTaskStructure } from './taskStructure.js';
+import { findTechnologyInRequirements } from './requirementTechnology.js';
 import { findRepoRoot, loadConstitution } from './status.js';
 
 export interface ConsistencyFinding {
@@ -318,6 +319,19 @@ export const checkConsistency = async (input: ConsistencyInput): Promise<Consist
     const structure = checkTaskStructure({ tasks, plan, requirementIds, tasksRel, planRel });
     findings.push(...structure);
     checked.push(`estructura de tasks.md (ids, (P) con _Boundary:_, _Depends:_, verificación) y cobertura del plan (${plan !== null ? `${requirementIds.length} requisito(s)` : 'sin plan.md: no comprobada'})`);
+  }
+
+  // ── 1c. technology named inside a requirement (advisory; requirementTechnology.ts) ──────────────
+  if (requirements !== null) {
+    for (const hit of findTechnologyInRequirements(requirements)) {
+      findings.push({
+        severity: 'info',
+        code: 'REQUIREMENT_NAMES_TECHNOLOGY',
+        message: `${hit.requirementId} nombra ${hit.technology} («${hit.criterion}»): un requisito dice QUÉ, no CON QUÉ. Si es una restricción real, regístrala como «Constraint:» o ADR; si no, pasa la decisión al plan.`,
+        artifacts: [requirementsRel],
+      });
+    }
+    checked.push('tecnología nombrada en los requisitos (orientativo)');
   }
 
   // ── 2. delta targets that no changed file touches ─────────────────────────────────────────────

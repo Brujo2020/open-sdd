@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - `open-sdd stages <feature>`: the sequential stage guide, with what each stage needs.
 - `open-sdd gherkin <feature> [--write]`: EARS acceptance criteria → `acceptance.feature`, one scenario per criterion tagged `@REQ-…`.
 - `consistency` runs five new task-structure checks: `TASK_DUPLICATE_ID`, `PARALLEL_WITHOUT_BOUNDARY`, `DEPENDS_ON_UNKNOWN_TASK`, `TASK_WITHOUT_VERIFICATION`, `REQUIREMENT_NOT_IN_PLAN`.
+- `consistency` also reports `REQUIREMENT_NAMES_TECHNOLOGY` (info): a requirement that names a technology without recording the constraint.
 - `open-sdd discovery lint|log`: a gate over `brief.md` (non-goals, measurable outcome, unconfirmed assumptions block, no secrets) and an append-only decision log.
 - `open-sdd archive <feature> [--confirm]`: verified specs move to `.sdd/archive/<date>-<feature>/`.
 - `open-sdd steering check`: inclusion modes, in-workspace `#[[file:…]]` references and unconfirmed inferences.
