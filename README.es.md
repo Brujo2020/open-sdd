@@ -108,6 +108,25 @@ elecciones; no se reclama paridad de ecosistema, de pulido ni de adopción.
 [Migrar desde Kiro, spec-kit y cc-sdd](docs/guides/migrate-from.md) mapea sus artefactos a los de
 esta herramienta.
 
+### Lo mejor de cada herramienta, en un solo sitio
+
+open-sdd no sustituye a estas herramientas copiándolas: toma la idea que cada una hace mejor, la convierte en una
+comprobación determinista o en un comando cuando se puede, y deja fuera lo que solo añade ceremonia. Ideas y reglas,
+no código (todas MIT); en [modos SDD](docs/guides/sdd-modes.md) está por qué se incluye cada pieza.
+
+| Herramienta | Lo que mejor hace | Lo que toma open-sdd | Dónde | Lo que deja fuera, y por qué |
+|---|---|---|---|---|
+| **Spec Kit** (GitHub) | la constitución como autoridad; `/clarify`; `/analyze` entre artefactos | constitución exigida en cada peldaño gobernado; clarify como preguntas acotadas derivadas de los hallazgos de ambigüedad deterministas; la coherencia entre artefactos como comprobación ejecutable, no como prompt | `brownfield constitution`, `govern`, `brownfield clarify`, `consistency` | gates escritos como prompts: aquí devuelven códigos de salida |
+| **Kiro** (AWS) | requisitos EARS; steering con `inclusion`; tres fases aprobadas; modos Spec / Quick / Bugfix / Plan | validación y reparación EARS; steering confirmado; la guía de etapas secuencial; los cuatro modos como skills | `requirements review/fix`, `steering check`, `stages`, `/sdd-spec-quick`, `/sdd-bugfix`, `/sdd-plan-only` | el propio IDE: open-sdd funciona en cualquier anfitrión |
+| **OpenSpec** (Fission-AI) | el cambio como delta (ADDED · MODIFIED · REMOVED · RENAMED); `archive` | specs delta con ids estables; archivo de specs verificadas; un comportamiento por requisito | `delta init/validate`, `archive`, `requirements review` | aplicar deltas a mano: lo hace `delta` |
+| **cc-sdd** (gotalab) | tareas con `(P)`, `_Boundary:_`, `_Depends:_`; oleadas; sin tecnología en los requisitos | oleadas paralelas; comprobación de fronteras, dependencias e ids duplicados | `waves`, `consistency` | la regla «sin tecnología en los requisitos»: aún no portada |
+| **BMAD-METHOD**¹ | discovery antes de construir; non-goals; métodos de elicitación | gate del `brief.md`: non-goals obligatorios, resultado medible, supuestos sin confirmar que bloquean; registro de decisiones solo-añadir | `/sdd-discovery`, `discovery lint/log` | personas permanentes y la ceremonia completa de PRD/arquitectura: basta un agente con lentes |
+| **Feathers** (*Working Effectively with Legacy Code*) | pruebas de caracterización | congelar el comportamiento actual antes de tocar código heredado sin pruebas | `/sdd-characterize`, `brownfield contracts` | — |
+| **SteelForge IDE** | niveles y flujos que se eligen primero; tinyspec; EARS → Gherkin | modo `explore` fuera de la escalera; skills por tipo de proyecto; escenarios de aceptación trazados a cada REQ | `modes`, `/sdd-tiny`, `/sdd-promote`, `gherkin` | — |
+
+¹ «BMAD-METHOD» y «BMad» son marcas de BMad Code; el nombre solo identifica el origen de las ideas.
+La documentación de Kiro no se pudo leer directamente; sus ideas llegan a través de cc-sdd y de los modos que Kiro publica.
+
 ## Lo que todavía no hace
 
 - **El descubrimiento de módulos es solo para Node.** Las raíces de workspace salen de

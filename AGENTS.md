@@ -68,7 +68,7 @@ The Antigravity skills shipped by this repository are templates; the install cop
 target project:
 
 - Templates here: `tools/open-sdd/templates/agents/antigravity-skills/skills/sdd-*/SKILL.md`
-- Installed target: `.agent/skills/sdd-*/SKILL.md` (21 skills; the prefix is `sdd-`, not `kiro-`)
+- Installed target: `.agent/skills/sdd-*/SKILL.md` (27 skills; the prefix is `sdd-`, not `kiro-`)
 - Each skill is a directory with a `SKILL.md` file
 - The agent registry defining every layout and alias flag is `tools/open-sdd/src/agents/registry.ts`
 - Use `/skills` to inspect currently available skills

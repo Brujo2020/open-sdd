@@ -154,3 +154,19 @@ Non-negotiables when reporting on this model:
   false-positive rate, the 2.1–2.2 s sweep) as measurements of this repository.
 - The full mapping — every paper section, its implementing symbol, and the declared gaps — is
   `docs/PAPER-ALIGNMENT.md`. Read it before claiming the code does what the paper describes.
+
+## Which skills to use for which kind of project
+
+Projects differ, and so do the skills that fit them. Before recommending a flow, identify the project type and
+follow its sequence; `open-sdd modes --projects` prints the same table, and `open-sdd modes --project <type>` one row.
+
+| Project type | Recognise it by | Level · terrain | Skills, in order | Do NOT use |
+|---|---|---|---|---|
+| Fuzzy idea | no one can say who needs it or what "done" is | spec-first · greenfield | `/sdd-discovery` → `open-sdd discovery lint` → `/sdd-spec-quick` or `/sdd-tiny` | `/sdd-spec-requirements` (formalises a guess) |
+| Spike / POC | throwaway code to test feasibility | explore | `/sdd-tiny` → implement → `/sdd-promote` if it survives | `/sdd-spec-quick`, `/sdd-impl` |
+| New product or feature | no existing code constrains it | spec-first · greenfield | `/sdd-steering` → `/sdd-spec-init` → `/sdd-spec-requirements` → `/sdd-spec-design` → `/sdd-spec-tasks` → `open-sdd gherkin --write` → `/sdd-impl` → `/sdd-validate-impl` → `open-sdd archive --confirm` | `/sdd-getspecs`, `/sdd-characterize` |
+| Several related features | roadmap with dependencies | spec-anchored · greenfield | `/sdd-discovery` → `/sdd-spec-batch` → `open-sdd waves` → `/sdd-impl` per wave | `/sdd-spec-quick` one by one |
+| Change to running code | code is the source of truth and has tests | spec-anchored · brownfield | `/sdd-getspecs` (once) → `brownfield constitution` → `steering check` → `delta init/validate` → `brownfield contracts` → `/sdd-spec-tasks` → `/sdd-impl` → `contracts --verify` | a new spec from scratch, `/sdd-tiny` |
+| Legacy without tests | nothing pins the current behaviour | spec-anchored · brownfield | `/sdd-getspecs` → `/sdd-characterize` → `brownfield contracts` → then `/sdd-refactor`, `/sdd-bugfix` or `delta init` | any change before `/sdd-characterize` |
+| Bug | existing behaviour is wrong | spec-first · brownfield | `/sdd-bugfix` → `delta init` only if a spec changes → `/sdd-verify-completion` | `/sdd-spec-quick` |
+| Refactor | structure changes, behaviour must not | spec-first · brownfield | `/sdd-characterize` (if untested) → `/sdd-refactor` → `brownfield impact` | `/sdd-spec-requirements`, `/sdd-bugfix` in the same change |

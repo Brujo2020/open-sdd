@@ -23,6 +23,7 @@ import { handleVerifyCommand } from './cli/commands/verify.js';
 import { handleUninstallCommand } from './cli/commands/uninstall.js';
 import { handleStandardsCommand } from './cli/commands/standards.js';
 import { handleRequirementsCommand } from './cli/commands/requirements.js';
+import { handleModesCommand } from './cli/commands/modes.js';
 import { EXIT, KNOWN_COMMANDS, STRICT_SUBCOMMANDS, handleHelpCommand, renderCommandHelp, renderExplain, renderFullHelp, suggestCommands, } from './cli/commands/help.js';
 import { handleImplCommand } from './cli/commands/impl.js';
 import { handleGatesCommand, handleGovernCommand, handleAssureCommand, handleWavesCommand, handleFloorCommand, } from './cli/commands/paper.js';
@@ -293,6 +294,11 @@ const dispatchSubcommand = async (cmd, subArgv, io, targetCwd) => {
     // El coach de requisitos (W3): la revisión de calidad, el checklist ejecutable y la reparación.
     // `review` es la misma puerta con el subcomando delante, para que `review <feature> --base <ref>`
     // y `requirements review <feature>` compartan una sola implementación.
+    // Modos SDD y módulos deterministas traídos de SteelForge: la matriz de módulos por nivel, la guía de
+    // etapas, EARS → Gherkin, el archivo de specs terminadas, el gate del brief de discovery y el del steering.
+    if (['modes', 'stages', 'gherkin', 'archive', 'discovery', 'steering'].includes(cmd)) {
+        return handleModesCommand(cmd, subArgv, io, targetCwd);
+    }
     if (cmd === 'requirements') {
         return handleRequirementsCommand(['requirements', ...subArgv], io, targetCwd);
     }
