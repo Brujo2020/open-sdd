@@ -101,6 +101,16 @@ describe('core/standardsRender — drift names the entry that disagrees', () => 
     expect(drift[0].entries).toEqual(['REQ-A-002']);
   });
 
+  it('does not report CRLF line endings as drift', async () => {
+    const cwd = await makeTemp();
+    const entries = [entry('REQ-A-001', '.sdd/settings/rules/a.md#anchor')];
+    await writeRules(cwd, entries);
+    const abs = path.resolve(cwd, '.sdd/settings/rules/a.md');
+    const fs = await import('node:fs/promises');
+    await fs.writeFile(abs, (await readFile(abs, 'utf8')).replace(/\n/g, '\r\n'), 'utf8');
+    expect(await detectDrift(cwd, entries)).toEqual([]);
+  });
+
   it('reports a rendered file that is missing from disk', async () => {
     const cwd = await makeTemp();
     const entries = [entry('REQ-A-001', '.sdd/settings/rules/a.md#anchor')];
