@@ -727,7 +727,20 @@ never overwrites an existing file and reports every path it refused to touch, an
 leave two SDD roots (`.kiro` and `.sdd`) raises a warning. The honest label: an on-ramp that loses
 nothing silently, not a lossless migration.
 
-### G-26 — The portable commit gate has never executed on Windows, and the Windows suite is red again
+### G-26 — RESOLVED: the Windows suite is green and the portable commit hook has executed under git on Windows
+
+**Resolution (2026-10-16).** Root cause of both red classes: the repository had no `.gitattributes`, so
+the Windows runner checked text out as CRLF. Rendered command templates then no longer started with
+`---\n` (`coreCommandTemplates.test.ts`), and `detectDrift` reported every standards block as `differs`
+(`coreStandardsRender.test.ts:122`). Fixes: `.gitattributes` forces LF on checkout (`331a676`), and
+`detectDrift` normalises CRLF before comparing, because a *target* project may legitimately keep CRLF
+(`44410f4`, with a test that fails without the fix). Evidence: run `38836253517` on `331a676`
+(PR #1), job `windows`: step 6 *Test suite (full)* `success` and step 7 *Execute the portable commit
+hook on Windows (G-26)* `success` — the first execution of that step. Scope: one CI run on
+`windows-latest`; no other Windows host or git configuration is claimed. The history below is kept as
+it was written.
+
+#### History (before resolution)
 
 Paper: §6.3, Table 19 (levels A–D), §16.1 (host portability of the floor). `.github/workflows/gates.yml`
 declares a `windows` job (windows-latest, Node 20) that builds the CLI and runs the **full** suite with
