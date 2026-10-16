@@ -142,11 +142,13 @@ export const detectDrift = async (cwd, entries) => {
     const drifts = [];
     for (const rule of rendered) {
         const allIds = (grouped.get(rule.file) ?? []).map((entry) => entry.id);
-        const onDisk = await readIfPresent(path.resolve(cwd, rule.file));
-        if (onDisk === null) {
+        const raw = await readIfPresent(path.resolve(cwd, rule.file));
+        if (raw === null) {
             drifts.push({ file: rule.file, reason: 'missing', entries: allIds });
             continue;
         }
+        // Un checkout con CRLF (Windows, core.autocrlf) no es deriva: se compara con fin de línea LF.
+        const onDisk = raw.replace(/\r\n/g, '\n');
         const disagreeing = (grouped.get(rule.file) ?? [])
             .filter((entry) => !onDisk.includes(renderEntryBlock(entry)))
             .map((entry) => entry.id);
