@@ -49,6 +49,7 @@ import {
   renderCommandHelp,
   renderExplain,
   renderFullHelp,
+  renderEssentialHelp,
   suggestCommands,
 } from './cli/commands/help.js';
 import { handleImplCommand } from './cli/commands/impl.js';
@@ -259,7 +260,7 @@ const runScoreDoor = async (io: CliIO, cwd: string): Promise<number> => {
     const report = await computeSddScore(cwd);
     io.log(renderScoreFooter(report));
     io.log(`Por qué: ${explainNextAction(report)}`);
-    io.log('todos los comandos: open-sdd --help');
+    io.log('aprende el flujo: open-sdd help workflow · comandos esenciales: open-sdd --help');
     return 0;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -498,7 +499,7 @@ const emitUsageError = (
   for (const suggestion of suggestions) {
     io.error(`  = help: did you mean \`${suggestion}\`? Run \`${runFor(suggestion)}\``);
   }
-  io.error('  = help: run `open-sdd --help` to list every command, or `open-sdd help exit-codes`');
+  io.error('  = help: run `open-sdd --help --all` to list every command, or `open-sdd help workflow` for the path');
 };
 
 interface UsageIssue {
@@ -555,7 +556,7 @@ export const runCli = async (
         return EXIT.PASSED;
       }
     }
-    io.log(renderFullHelp());
+    io.log(argv.includes('--all') ? renderFullHelp() : renderEssentialHelp());
     return EXIT.PASSED;
   }
   if (argv.includes('--version') || argv.includes('-v')) {
@@ -643,7 +644,7 @@ export const runCli = async (
     // Un error de argumentos es un error de USO (2), no un fallo de gobernanza (1): el contrato de
     // códigos de salida existe para que un script distinga «escribiste mal» de «tu repositorio falló».
     io.error(formatError(`error[usage]: ${msg}`));
-    io.error('  = help: run `open-sdd --help` to list every command and flag, or `open-sdd help exit-codes`');
+    io.error('  = help: run `open-sdd --help --all` to list every command and flag, or `open-sdd help workflow` for the path');
     return EXIT.USAGE;
   }
 

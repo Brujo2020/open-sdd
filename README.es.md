@@ -48,7 +48,9 @@ actual y UNA acción siguiente, con una línea de por qué.
 ```bash
 open-sdd                 # score SDD, fase y la única acción siguiente
 open-sdd status          # el mismo estado como panel completo
-open-sdd --help          # todos los comandos
+open-sdd --help          # lo esencial, en el orden en que se usa
+open-sdd help workflow   # un camino guiado por situación: feature nueva, código existente, fix…
+open-sdd --help --all    # todos los comandos
 ```
 
 Los mensajes de consola están hoy en español; `--lang en` traduce por completo solo

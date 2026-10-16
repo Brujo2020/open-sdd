@@ -897,9 +897,10 @@ not learn that 22 workflows were installed. Three changes close it, none of them
   (`core/commandTemplates.ts`) reads each template's own frontmatter, so the listing cannot drift from
   what ships. A test asserts that the parsed `commands` and `writes` equal the raw YAML lists for all
   22 entries, and that `readOnly` is *derived* from `writes` instead of declared a second time.
-- **The count in the help:** `open-sdd --help` now carries a "Command templates (the DEFAULT
+- **The count in the help:** `open-sdd --help --all` now carries a "Command templates (the DEFAULT
   integration: 22 workflows, no MCP and no network)" section with the count, the listing command and
-  the install line. The wiring test that parses `--help` and dispatches every command it names
+  the install line; the essentials (`open-sdd --help`, learning-path) name `open-sdd templates` in
+  their START block. The wiring test that parses `--help --all` and dispatches every command it names
   therefore covers the new row automatically, which is why the help text could not be edited into a
   promise the CLI does not keep.
 
