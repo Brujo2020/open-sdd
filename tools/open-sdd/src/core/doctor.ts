@@ -40,7 +40,8 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { colors, formatVerdict } from '../cli/ui/colors.js';
-import { INSTALL_COMMAND } from '../cli/packageIdentity.js';
+import { INSTALL_COMMAND, VERSION } from '../cli/packageIdentity.js';
+import { HOOK_PIN_FILE, compareSemver, readHookPin, resolveSelfCli, writeHookPin } from './hookPin.js';
 import type { CliIO } from '../cli/io.js';
 import { parseConstitution, principlesInForce, validateConstitution } from './constitution.js';
 import {
@@ -596,18 +597,56 @@ const checkHook = async (cwd: string, platform: NodeJS.Platform): Promise<HookPr
     };
   }
 
+  // G-36: the hook may be current and still run a DIFFERENT CLI than the one diagnosing it. Say so.
+  const pinNote = await describeHookPin(path.dirname(hookPath), cwd);
   return {
     check: {
       id: 'hook',
       label: 'Hook de commit',
-      status: 'ok',
-      detail: `Hook instalado en ${relativeHook} (${origin}), ejecutable e idéntico a la plantilla vigente ${path.basename(matched.path)}.`,
+      status: pinNote.status,
+      detail: `Hook instalado en ${relativeHook} (${origin}), ejecutable e idéntico a la plantilla vigente ${path.basename(matched.path)}. ${pinNote.detail}`,
+      ...(pinNote.fix ? { fix: pinNote.fix } : {}),
     },
     hookPath,
     state: 'current',
     templatePath,
     templateContent,
   };
+};
+
+/**
+ * G-36 — which CLI will the hook run? An unpinned hook is safe (a PATH CLI is accepted only after a
+ * version check, and refused otherwise), so it stays `ok` with the fact stated. A pin that points at a
+ * vanished CLI, or at a CLI older than the one running this diagnosis, is a disagreement between the
+ * diagnosis and the gate: `warn`, with the one command that re-pins.
+ */
+const describeHookPin = async (
+  hooksDir: string,
+  cwd: string,
+): Promise<{ status: 'ok' | 'warn'; detail: string; fix?: string }> => {
+  const repin = `open-sdd floor install ${quote(cwd)}`;
+  const pin = await readHookPin(hooksDir);
+  if (pin === null) {
+    return {
+      status: 'ok',
+      detail: `Sin CLI fijado (${HOOK_PIN_FILE}): el hook usa el CLI del proyecto o, en último caso, uno de PATH solo tras verificar su versión.`,
+    };
+  }
+  if (!(await exists(pin.cli))) {
+    return {
+      status: 'warn',
+      detail: `El CLI fijado ya no existe (${pin.cli}); el hook cae a candidatos verificados y exigirá al menos v${pin.version || '?'} a uno de PATH.`,
+      fix: repin,
+    };
+  }
+  if (compareSemver(pin.version, VERSION) === -1) {
+    return {
+      status: 'warn',
+      detail: `El hook ejecuta el CLI fijado v${pin.version}, pero este diagnóstico corre con v${VERSION}: el gate y el doctor no hablan del mismo CLI.`,
+      fix: repin,
+    };
+  }
+  return { status: 'ok', detail: `CLI fijado para el hook: v${pin.version}.` };
 };
 
 /**
@@ -1161,6 +1200,14 @@ const applyFixes = async (cwd: string, facts: DoctorFacts): Promise<string[]> =>
       await mkdir(path.dirname(facts.hookPath as string), { recursive: true });
       await writeFile(facts.hookPath as string, facts.hookTemplateContent, 'utf8');
       await chmod(facts.hookPath as string, 0o755);
+      const selfCli = resolveSelfCli(MODULE_DIR);
+      if (selfCli !== null) {
+        await writeHookPin(path.dirname(facts.hookPath as string), {
+          cli: selfCli,
+          version: VERSION,
+          pinnedAt: new Date().toISOString(),
+        });
+      }
       done.push(
         `reinstalado el hook de commit en ${path.relative(cwd, facts.hookPath as string)} desde la plantilla vigente (${path.basename(facts.hookTemplatePath)})`,
       );

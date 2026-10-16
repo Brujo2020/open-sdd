@@ -46,8 +46,13 @@ export const detectInstalledFloor = async (cwd, options = {}) => {
     const hookPath = options.hookPath ?? path.join('tools', 'open-sdd', 'templates', 'hooks', 'pre-commit');
     const workflowsDir = options.workflowsDir ?? path.join('.github', 'workflows');
     const resolvedHook = await resolveHookPath(cwd);
-    const commitHookShipped = await fileExists(path.join(cwd, hookPath));
     const commitHookInstalled = await fileExists(resolvedHook.path);
+    // In this repository the hook ships as a template. In a TARGET project nothing ships it: the hook
+    // was installed from the published package, so the installed hook carrying the gate's own header IS
+    // the shipped hook. Without this, `floor status` reported "not installed" (exit 1) in every user
+    // project right after `floor install . --ci` — including inside the CI templates that run it.
+    const installedText = commitHookInstalled ? await readFile(resolvedHook.path, 'utf8').catch(() => '') : '';
+    const commitHookShipped = (await fileExists(path.join(cwd, hookPath))) || /open-sdd \| pre-commit gate/.test(installedText);
     const entries = await readdir(path.join(cwd, workflowsDir), { withFileTypes: true }).catch(() => []);
     const workflowsReferencingGates = [];
     let ciGateMatrix = false;
@@ -63,6 +68,21 @@ export const detectInstalledFloor = async (cwd, options = {}) => {
         if (/pull_request/.test(content))
             ciGateMatrix = true;
     }
+    // GitLab CI: the merge-request matrix lives in `.gitlab-ci.yml` or in a file it includes under
+    // `.gitlab/` (where `floor install --ci gitlab` writes it).
+    const gitlabFiles = ['.gitlab-ci.yml'];
+    for (const entry of await readdir(path.join(cwd, '.gitlab'), { withFileTypes: true }).catch(() => [])) {
+        if (entry.isFile() && /\.ya?ml$/.test(entry.name))
+            gitlabFiles.push(path.join('.gitlab', entry.name));
+    }
+    for (const rel of gitlabFiles) {
+        const content = await readFile(path.join(cwd, rel), 'utf8').catch(() => '');
+        if (!/gates run/.test(content))
+            continue;
+        workflowsReferencingGates.push(rel.split(path.sep).join('/'));
+        if (/merge_request_event/.test(content))
+            ciGateMatrix = true;
+    }
     const floorInstalled = commitHookShipped && commitHookInstalled && ciGateMatrix;
     const missing = [];
     if (!commitHookShipped)
@@ -72,7 +92,7 @@ export const detectInstalledFloor = async (cwd, options = {}) => {
         missing.push(`hook no instalado en ${relative} (${resolvedHook.origin}) (ejecuta \`npm run hooks:install\`)`);
     }
     if (!ciGateMatrix)
-        missing.push('ningún workflow corre la cadena en pull_request');
+        missing.push('ningún workflow corre la cadena en pull_request (GitHub) ni en merge_request_event (GitLab)');
     const relativeHook = path.relative(cwd, resolvedHook.path) || resolvedHook.path;
     return {
         commitHookShipped,

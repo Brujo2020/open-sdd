@@ -1,0 +1,13 @@
+{
+  "name": "hardening-wave",
+  "title": "Hardening wave: a gate that cannot fail open, approvals bound to bytes, one-command adoption",
+  "language": "en",
+  "phase": "implemented-awaiting-review",
+  "approvals": {
+    "requirements": false,
+    "design": false,
+    "tasks": false
+  },
+  "created": "2026-10-02",
+  "description": "Ten improvements from a weakness review against the field (spec-kit, Kiro, OpenSpec, BMAD, spec-workflow-mcp) and the open gaps of docs/PAPER-ALIGNMENT.md (G-36, G-37, G-21). No gate-chain change: decision 4 of docs/EVOLUTION-PLAN.md stands. Implemented and tested; the three approvals are for a human, recorded with `open-sdd approve hardening-wave --gate <g>`."
+}

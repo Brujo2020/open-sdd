@@ -105,3 +105,8 @@ docs/sdd/
 
 # Local dev tooling (not part of the project)
 .entire/
+# LaTeX build artifacts (the .tex sources and the compiled PDF are tracked)
+docs/papers/*.aux
+docs/papers/*.out
+docs/papers/*.log
+docs/papers/*.toc

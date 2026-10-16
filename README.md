@@ -18,6 +18,15 @@ is declared but not implemented is reported as declared instead of counted as gr
 ## Install and the first 60 seconds
 
 ```bash
+npx @brujo2020/open-sdd up            # the plan: host, CI, hook, skills — nothing is written
+npx @brujo2020/open-sdd up --write    # apply it, then `doctor` prints the measured verdict
+```
+
+`up` composes the commands below: `init --skills` for the host it detects, the CI gate matrix for the
+CI you already use (GitHub Actions or GitLab CI), and `doctor` as the last step — so the last line you
+read is a verified verdict, not a claim. Prefer the pieces? `init` alone:
+
+```bash
 npx @brujo2020/open-sdd init . --write
 ```
 
@@ -44,8 +53,11 @@ hash -r                       # zsh: rehash — or open a new terminal
 open-sdd --version            # must print v3.4.0, not the 2.x banner
 ```
 
-A stale global is not cosmetic: the installed commit hook resolves its CLI through `PATH`, so an old
-one makes the gate report nothing while the configuration still reads "blocking" (G-36). Details in
+A stale global used to be more than cosmetic: the hook fell back to whatever `open-sdd` was on `PATH`,
+so an old one made the gate report nothing (G-36). The hook now runs the CLI **pinned** by
+`floor install` (`.git/hooks/open-sdd-cli.json`, per clone) and accepts a `PATH` CLI only after its
+`--version` proves it is at least the pinned one — otherwise the commit is refused with the fix, and
+`doctor` warns when the hook and the CLI diagnosing it disagree. Details in
 [docs/guides/migration-guide.md](docs/guides/migration-guide.md#7-coming-from-the-unscoped-open-sdd-package).
 
 Then the one door. No arguments, read-only: it prints a 0–100 SDD score, the current phase and ONE
@@ -120,8 +132,6 @@ one.
 
 ## What it does not do yet
 
-- **Module discovery is Node-only.** Workspace roots come from `package.json`; Maven/Gradle, Go, Rust
-  and Python monorepos return a single root module from `brownfield bootstrap`.
 - **Impact analysis has known false-positive classes.** `brownfield impact` reads the import graph
   and the delta, and a check with that noise level can train its readers to ignore it.
 - **Three command-template conventions are refused, not guessed.** Codex, Zed and Cline document no
@@ -137,7 +147,7 @@ one.
   and run; no behavioural sentinel has verified write-time blocking in any host, and
   `git commit --no-verify` is not recorded.
 
-The complete list of gaps (G-01 … G-33), each with its code location, is in
+The complete list of gaps (G-01 … G-37), each with its code location, is in
 [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
 
 ## Documentation

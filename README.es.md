@@ -18,6 +18,15 @@ un control declarado pero no implementado se reporta como declarado en vez de co
 ## Instalación y los primeros 60 segundos
 
 ```bash
+npx @brujo2020/open-sdd up            # el plan: anfitrión, CI, hook, skills — no escribe nada
+npx @brujo2020/open-sdd up --write    # lo aplica y termina con `doctor`: el veredicto medido
+```
+
+`up` compone los comandos de abajo: `init --skills` para el anfitrión que detecta, la matriz de gates
+del CI que ya usas (GitHub Actions o GitLab CI) y `doctor` como último paso, así que la última línea que
+lees es un veredicto verificado, no una afirmación. ¿Prefieres las piezas? `init` a solas:
+
+```bash
 npx @brujo2020/open-sdd init . --write
 ```
 
@@ -110,9 +119,6 @@ esta herramienta.
 
 ## Lo que todavía no hace
 
-- **El descubrimiento de módulos es solo para Node.** Las raíces de workspace salen de
-  `package.json`; los monorepos de Maven/Gradle, Go, Rust y Python devuelven un único módulo raíz en
-  `brownfield bootstrap`.
 - **El análisis de impacto tiene clases conocidas de falsos positivos.** `brownfield impact` lee el
   grafo de imports y la delta, y una comprobación con ese nivel de ruido puede entrenar a sus
   lectores a ignorarla.
@@ -130,7 +136,7 @@ esta herramienta.
   existen y se ejecutan; ningún centinela de comportamiento ha verificado el bloqueo en tiempo de
   escritura en ningún anfitrión, y `git commit --no-verify` no se registra.
 
-La lista completa de brechas (G-01 … G-33), cada una con su ubicación en el código, está en
+La lista completa de brechas (G-01 … G-37), cada una con su ubicación en el código, está en
 [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
 
 ## Documentación

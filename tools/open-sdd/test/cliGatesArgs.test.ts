@@ -214,6 +214,13 @@ describe('cli `gates run` — fail closed on an argument it cannot classify', ()
     expect(out).not.toContain('Ejecutando la cadena resuelta');
   });
 
+  it('accepts the global --no-footer instead of rejecting it as an unknown option', async () => {
+    const cwd = await makeChangeRepo();
+    const { errs } = await run(['gates', 'run', 'C2', '--no-footer'], cwd);
+
+    expect(errs.join('\n')).not.toContain('Opción desconocida');
+  });
+
   it('a value flag with no value fails closed instead of defaulting', async () => {
     const cwd = await makeChangeRepo();
     const { code, out, errs } = await run(['gates', 'run', '--base'], cwd);

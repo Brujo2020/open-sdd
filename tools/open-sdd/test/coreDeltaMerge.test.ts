@@ -352,6 +352,45 @@ describe('delta merge — CLI', () => {
     expect(deltaAfter).toMatch(/^- Merged: true$/m);
   });
 
+  it('--write --archive fusiona y retira la delta a archive/<fecha>-delta.md', async () => {
+    const { root, reqPath, deltaPath } = await cliFixture();
+    const { io, logs } = makeIO();
+
+    const code = await handleDeltaCommand(['merge', 'demo', '--write', '--archive'], io, root);
+
+    expect(code).toBe(0);
+    expect(await readFile(reqPath, 'utf8')).toContain('### REQ-AUTH-003');
+    await expect(readFile(deltaPath, 'utf8')).rejects.toThrow();
+    const day = new Date().toISOString().slice(0, 10);
+    const archived = await readFile(path.join(root, '.sdd', 'specs', 'demo', 'archive', `${day}-delta.md`), 'utf8');
+    expect(archived).toMatch(/^Status: merged$/m);
+    expect(logs.join('\n')).toContain('delta archivada');
+  });
+
+  it('--archive sin --write es un error de uso (2) y no toca nada', async () => {
+    const { root, reqPath, deltaPath } = await cliFixture();
+    const before = await readFile(reqPath, 'utf8');
+    const { io, errors } = makeIO();
+
+    const code = await handleDeltaCommand(['merge', 'demo', '--archive'], io, root);
+
+    expect(code).toBe(2);
+    expect(await readFile(reqPath, 'utf8')).toBe(before);
+    expect(await readFile(deltaPath, 'utf8')).toContain('Status:');
+    expect(errors.join('\n')).toContain('--write --archive');
+  });
+
+  it('una delta ya fusionada se archiva después con --write --archive', async () => {
+    const { root, deltaPath } = await cliFixture();
+    const { io } = makeIO();
+    await handleDeltaCommand(['merge', 'demo', '--write'], io, root);
+
+    const code = await handleDeltaCommand(['merge', 'demo', '--write', '--archive'], io, root);
+
+    expect(code).toBe(0);
+    await expect(readFile(deltaPath, 'utf8')).rejects.toThrow();
+  });
+
   it('repetir --write reporta sin cambios y no duplica el bloque', async () => {
     const { root, reqPath } = await cliFixture();
     const { io, logs } = makeIO();

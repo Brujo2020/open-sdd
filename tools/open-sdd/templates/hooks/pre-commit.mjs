@@ -133,8 +133,9 @@ const findOnPath = (fs, path, env, name) => {
 };
 
 /*
- * Resolution order, unchanged from the shell gate: an explicit OPEN_SDD_CLI, then the checkout's own
- * compiled CLI, then the project's node_modules, then a global install. The extra layouts cover the
+ * Resolution order: an explicit OPEN_SDD_CLI, then the CLI pinned by the installer (G-36), then the
+ * checkout's own compiled CLI, then the project's node_modules, and last a global install ONLY after
+ * its version is verified (see resolveCli below). The extra layouts cover the
  * scoped package name the artifact actually ships under, and the bin shim is translated to the real
  * entry point instead of being fed to Node as a shell script.
  */
@@ -148,19 +149,90 @@ const CLI_CANDIDATES = [
   ['node_modules', '.bin', 'open-sdd.cmd'],
 ];
 
-const resolveCli = (fs, path, root, env) => {
+/*
+ * G-36. The PATH lookup used to be the last candidate and was trusted blindly: a stale global
+ * install (seen in the field: 2.0.0 against a 3.4.0 project) ran, enforced nothing and exited 0, so
+ * the commit gate failed OPEN while the configuration still read "blocking". Two defences:
+ *
+ *   1. The installer (open-sdd floor install) PINS the CLI that installed the hook in a file next to
+ *      the hook (PIN_FILE). The pin is per clone (it lives in the hooks directory, never in the
+ *      committed tree), so an absolute machine path is never shared with a team.
+ *   2. A CLI found on PATH is accepted ONLY after its own --version proves it is at least the pinned
+ *      version (or MIN_CLI_VERSION when there is no pin). An unpinned PATH lookup is not a resolution
+ *      strategy for a security gate: anything older, or anything that cannot say its version, makes
+ *      the gate fail closed with the fix.
+ */
+const PIN_FILE = 'open-sdd-cli.json';
+const MIN_CLI_VERSION = '3.4.0';
+
+const parseVersion = (text) => {
+  const match = /(\d+)\.(\d+)\.(\d+)/.exec(typeof text === 'string' ? text : '');
+  return match === null ? null : [Number(match[1]), Number(match[2]), Number(match[3])];
+};
+
+const versionAtLeast = (found, wanted) => {
+  for (let i = 0; i < 3; i += 1) {
+    if (found[i] > wanted[i]) return true;
+    if (found[i] < wanted[i]) return false;
+  }
+  return true;
+};
+
+const readPin = (fs, path, hookPath) => {
+  if (typeof hookPath !== 'string' || hookPath.length === 0) return null;
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(path.dirname(hookPath), PIN_FILE), 'utf8'));
+    const cli = typeof raw.cli === 'string' ? raw.cli : '';
+    const version = typeof raw.version === 'string' ? raw.version : '';
+    return { cli: cli, version: version };
+  } catch (error) {
+    return null;
+  }
+};
+
+const probeVersion = (cp, entry) => {
+  const result = cp.spawnSync(process.execPath, [entry, '--version'], {
+    encoding: 'utf8',
+    shell: false,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 15000,
+  });
+  if (result.status !== 0) return null;
+  return parseVersion(result.stdout);
+};
+
+/*
+ * Returns { cli, origin } when a trustworthy CLI resolves, { cli: null, stale } when the only CLI is
+ * a PATH install too old to enforce, and { cli: null } when nothing resolves at all.
+ */
+const resolveCli = (fs, path, cp, root, env, hookPath) => {
   const declared = typeof env.OPEN_SDD_CLI === 'string' ? env.OPEN_SDD_CLI.trim() : '';
   if (declared.length > 0) {
     const resolved = resolveEntry(fs, path, path.resolve(root, declared));
-    if (resolved !== null) return resolved;
+    if (resolved !== null) return { cli: resolved, origin: 'OPEN_SDD_CLI' };
+  }
+  const pin = readPin(fs, path, hookPath);
+  if (pin !== null && pin.cli.length > 0) {
+    const pinned = resolveEntry(fs, path, pin.cli);
+    if (pinned !== null) return { cli: pinned, origin: 'pin' };
   }
   for (const parts of CLI_CANDIDATES) {
     const resolved = resolveEntry(fs, path, path.join(root, ...parts));
-    if (resolved !== null) return resolved;
+    if (resolved !== null) return { cli: resolved, origin: 'project' };
   }
   const globalShim = findOnPath(fs, path, env, 'open-sdd');
-  if (globalShim !== null) return resolveEntry(fs, path, globalShim);
-  return null;
+  const globalEntry = globalShim === null ? null : resolveEntry(fs, path, globalShim);
+  if (globalEntry === null) return { cli: null };
+  const wantedText = pin !== null && parseVersion(pin.version) !== null ? pin.version : MIN_CLI_VERSION;
+  const wanted = parseVersion(wantedText);
+  const found = probeVersion(cp, globalEntry);
+  if (found === null || !versionAtLeast(found, wanted)) {
+    return {
+      cli: null,
+      stale: { path: globalShim, found: found === null ? 'desconocida' : found.join('.'), wanted: wantedText },
+    };
+  }
+  return { cli: globalEntry, origin: 'PATH' };
 };
 
 const gitRoot = (cp) => {
@@ -215,10 +287,30 @@ const printMissingCli = () => {
     '  No se encontró el CLI (level B falla cerrado: un instrumento ausente no se lee como',
     '  verificación aprobada). Resuélvelo con una de estas opciones:',
     '    npm run build                  # checkout del propio open-sdd',
-    '    npm install -D open-sdd        # como dependencia del proyecto',
+    '    npm install -D @brujo2020/open-sdd   # como dependencia del proyecto',
+    '    npx @brujo2020/open-sdd floor install .   # reinstala el hook y fija el CLI',
     '    export OPEN_SDD_CLI=/ruta/al/cli.js',
     '  Un falso positivo legítimo se declara con motivo en .sdd/settings/security-allowlist.json.',
     '  Para commitear sin el gate: git commit --no-verify  (bypass NO registrado).',
+    '',
+  ];
+  for (const line of lines) emit(process.stderr, line);
+};
+
+/*
+ * G-36: the only CLI is a global install older than the version this hook was installed with. Running
+ * it would enforce nothing and exit 0, so the gate refuses instead of failing open.
+ */
+const printStaleCli = (stale) => {
+  const lines = [
+    '',
+    'open-sdd: COMMIT BLOQUEADO — el CLI encontrado en PATH es demasiado antiguo para hacer cumplir el gate.',
+    '  ' + stale.path + ' informa la versión ' + stale.found + '; este hook exige al menos ' + stale.wanted + '.',
+    '  Un CLI antiguo no aplica las comprobaciones y saldría con 0: el gate falla cerrado en su lugar.',
+    '  Resuélvelo con una de estas opciones:',
+    '    npm install -g @brujo2020/open-sdd@latest      # actualiza el global',
+    '    npx @brujo2020/open-sdd floor install .        # reinstala el hook y fija el CLI',
+    '    export OPEN_SDD_CLI=/ruta/al/cli.js',
     '',
   ];
   for (const line of lines) emit(process.stderr, line);
@@ -231,11 +323,13 @@ const main = (fs, path, cp) => {
     return 0;
   }
 
-  const cli = resolveCli(fs, path, root, process.env);
-  if (cli === null) {
-    printMissingCli();
+  const resolution = resolveCli(fs, path, cp, root, process.env, process.argv[1]);
+  if (resolution.cli === null) {
+    if (resolution.stale !== undefined) printStaleCli(resolution.stale);
+    else printMissingCli();
     return 1;
   }
+  const cli = resolution.cli;
 
   const declaresRigor = isFile(fs, path.join(root, ...RIGOR_SETTINGS));
 

@@ -21,6 +21,10 @@ import { handleGapCommand } from './cli/commands/gap.js';
 import { handleGetspecsCommand } from './cli/commands/getspecs.js';
 import { handleVerifyCommand } from './cli/commands/verify.js';
 import { handleUninstallCommand } from './cli/commands/uninstall.js';
+import { handleApproveCommand } from './cli/commands/approve.js';
+import { handleRouteCommand } from './cli/commands/route.js';
+import { handleContextReportCommand } from './cli/commands/contextReport.js';
+import { handleUpCommand } from './cli/commands/up.js';
 import { handleStandardsCommand } from './cli/commands/standards.js';
 import { handleRequirementsCommand } from './cli/commands/requirements.js';
 import { EXIT, KNOWN_COMMANDS, STRICT_SUBCOMMANDS, handleHelpCommand, renderCommandHelp, renderExplain, renderFullHelp, suggestCommands, } from './cli/commands/help.js';
@@ -162,6 +166,13 @@ const runPlanExecution = async (manifestPath, resolvedConfig, io, execOpts) => {
  * esto protege: el pie jamás puede decir «gates OK» mientras el comando de la misma invocación dice
  * que la cadena NO pasa.
  */
+/**
+ * Commands that are ABOUT the tool, not about the repository: help, offline explanations, the MCP
+ * stdio server (whose stdout is the protocol) and the reversal commands. A score line after them is
+ * noise at best — after `uninstall` it reads as if the governance were still in place — so the
+ * dispatcher never prints the footer for them.
+ */
+const FOOTERLESS_COMMANDS = new Set(['help', 'explain', 'mcp', 'uninstall', 'restore']);
 const runsGateChain = (cmd, subArgv) => (cmd === 'gates' && subArgv[0] === 'run') ||
     (cmd === 'audit' && (subArgv[0] === 'bundle' || subArgv[0] === 'sarif'));
 /**
@@ -262,6 +273,18 @@ const dispatchSubcommand = async (cmd, subArgv, io, targetCwd) => {
     // Experience layer: the guided first run and the terminal face of the MCP context pack.
     if (cmd === 'tour') {
         return handleTourCommand(subArgv, io, targetCwd);
+    }
+    if (cmd === 'context' && subArgv.includes('--report')) {
+        return handleContextReportCommand(subArgv, io, targetCwd);
+    }
+    if (cmd === 'approve') {
+        return handleApproveCommand(subArgv, io, targetCwd);
+    }
+    if (cmd === 'route') {
+        return handleRouteCommand(subArgv, io, targetCwd);
+    }
+    if (cmd === 'up') {
+        return handleUpCommand(subArgv, io, targetCwd);
     }
     if (cmd === 'context') {
         return handleContextCommand(subArgv, io, targetCwd);
@@ -476,7 +499,7 @@ export const runCli = async (rawArgv, runtime = { platform: process.platform, en
             // medido en esta ejecución», y esa línea es honesta aunque el comando falle —de hecho es
             // justamente cuando importa—. Un comando así nunca puede imprimir «gates OK» tras un fallo.
             const runsChain = runsGateChain(cmd, subArgv);
-            if (code === EXIT.PASSED || runsChain) {
+            if ((code === EXIT.PASSED || runsChain) && !FOOTERLESS_COMMANDS.has(cmd)) {
                 // El pie NO se reescribe con `renderCelebrationFooter`/`levelFor` (`core/celebrate.ts`): ese
                 // render tiene OTRA forma (`nivel X · fase N/3 · score N/100 · racha: …`), la racha la aporta
                 // el trinquete —que aquí no se ejecuta— y sustituir la línea `SDD n% · Fase n · …` rompería un
