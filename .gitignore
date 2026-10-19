@@ -38,15 +38,23 @@ venv/
 
 # Build outputs
 dist/
+!tools/open-sdd/dist/
 build/
 *.egg-info/
+
+# Generated SDD state (never source): the ratchet baseline and the audit bundle
+.sdd/audit/
+.sdd/state/
+
+# Bench output (the harness writes to a temp dir; this covers a kept/exported run)
+bench/out/
 
 # Dependencies
 package-lock.json
 yarn.lock
 
 # Exceptions for CI reproducibility
-!tools/cc-sdd/package-lock.json
+!tools/open-sdd/package-lock.json
 
 # Environment variables
 .env
@@ -74,18 +82,24 @@ coverage/
 
 # Project specific
 BLOG.md
-docs/cc-sdd/
-docs/kiro/prompt/
-docs/kiro/
-# .kiro/
+docs/open-sdd/
+docs/sdd/prompt/
+docs/sdd/
+# .sdd/
 # Agent configurations
+# NOTE: do not blanket-ignore `.claude/`. CLAUDE.md instructs agents to read skills from
+# `.claude/skills/`, so ignoring the whole directory made that instruction unactionable — the
+# skills could never be committed where the documentation said to look. Only local, machine
+# specific agent state is ignored here.
 .claude/agents/
 .claude/hooks/
 .claude/commands/utils/
-.claude/
+.claude/settings.local.json
+.claude/**/node_modules/
 .codex/
 .cursor/
 .gemini/
+.agent/
 # GEMINI.md
 # AGENTS.md
 

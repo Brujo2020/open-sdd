@@ -1,0 +1,285 @@
+{
+  "$comment": "Declared exceptions for gate C2 / G5 (security baseline). Each entry is per (path, pattern id) and carries a reason: an exception without a reason is not a recorded event. Every run reports how many findings were suppressed, so a suppression can never be read as a clean scan. Review this file like any other control. NOTE: dist/ is committed and shipped, so it is scanned too; an allow-listed source file needs its compiled twin listed as well, and test/enforcementFloor.test.ts enforces that pairing.",
+  "allow": [
+    {
+      "path": ".sdd/settings/templates/specs/requirements.md",
+      "ids": [
+        "hidden-comment-instruction"
+      ],
+      "reason": "Spec requirements template: the HTML comment is authoring guidance to the spec writer, not an instruction addressed to a model.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": ".sdd/specs/paper-alignment/tasks.md",
+      "ids": [
+        "rm-rf-root"
+      ],
+      "reason": "The specification quotes the destructive command as captured evidence for the C2 fix (the regex previously missed the root form).",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "ids": [
+        "curl-pipe-shell"
+      ],
+      "reason": "The changelog records that the previous README advertised a curl-pipe-shell installer the script cannot serve.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "Claude outputs/",
+      "ids": [
+        "curl-pipe-shell"
+      ],
+      "reason": "Legacy delivery documents restored from git history; they quote installer one-liners as usage examples.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/README.md",
+      "ids": [
+        "curl-pipe-shell"
+      ],
+      "reason": "Documents the supported installation one-liner for the CLI.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/src/cli/commands/paper.ts",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "The `assure memory` command demonstrates the injection scanner with a probe string.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/src/core/gateRunner.ts",
+      "ids": [
+        "rm-rf-root",
+        "system-prompt-exfil"
+      ],
+      "reason": "The scanner's own pattern table: these literals ARE the detector, not an occurrence of the threat.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/src/core/memory.ts",
+      "ids": [
+        "hidden-comment-instruction"
+      ],
+      "reason": "The memory poisoning scanner's pattern table.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreGateRunner.test.ts",
+      "ids": [
+        "aws-access-key",
+        "private-key-block",
+        "openai-key",
+        "generic-assignment",
+        "rm-rf-root",
+        "ignore-previous"
+      ],
+      "reason": "Unit-test fixtures: the scanner must be fed real-shaped credentials and commands to prove it detects them.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreMemory.test.ts",
+      "ids": [
+        "ignore-previous",
+        "hidden-comment-instruction"
+      ],
+      "reason": "Unit-test fixtures for the poisoning scanner.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/dist/core/gateRunner.js",
+      "ids": [
+        "rm-rf-root",
+        "system-prompt-exfil"
+      ],
+      "reason": "Compiled twin of tools/open-sdd/src/core/gateRunner.ts: the emitted artifact contains the same detector pattern table (dist is committed so the package ships the CLI).",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/dist/cli/commands/paper.js",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "Compiled twin of tools/open-sdd/src/cli/commands/paper.ts: the assure-memory demo probe string.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/dist/core/memory.js",
+      "ids": [
+        "hidden-comment-instruction"
+      ],
+      "reason": "Compiled twin of tools/open-sdd/src/core/memory.ts: the memory poisoning scanner pattern table.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreChangeImpact.test.ts",
+      "ids": [
+        "drop-table"
+      ],
+      "reason": "Fixture: una sentencia DDL destructiva con la que se ejercita el analisis de impacto y de migraciones.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreConstitution.test.ts",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "Fixture: las pruebas de resistencia a inyeccion deben alimentar al detector con los patrones que existen para cazar.",
+      "actor": "spec:paper-alignment",
+      "owner": "mantenimiento (spec de registro)",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/templates/shared/settings/templates/specs/requirements.md",
+      "ids": [
+        "hidden-comment-instruction"
+      ],
+      "reason": "Es la PLANTILLA de requisitos que el producto copia a cada proyecto: sus comentarios HTML son la guia que se le da al agente al rellenarla. El patron es correcto y aqui es intencionado; se declara en vez de silenciarse.",
+      "owner": "mantenimiento (plantillas)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreGateWaivers.test.ts",
+      "ids": [
+        "aws-access-key"
+      ],
+      "reason": "FIXTURE del test de waivers: necesita una cadena con forma de credencial para comprobar que una excepcion CADUCADA deja de suprimir el hallazgo y que el gate nombra al responsable. Sin ese valor el propio mecanismo de governance no se puede probar.",
+      "owner": "mantenimiento (tests)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "bench/harness.mjs",
+      "ids": [
+        "aws-access-key"
+      ],
+      "reason": "FIXTURE del banco de pruebas: inyecta a proposito una credencial con forma valida para medir si el motor detecta la clase \"waiver caducado deja de suprimir\". Sin ese valor esa clase no se puede medir.",
+      "owner": "mantenimiento (mediciones)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreStopHook.test.ts",
+      "ids": [
+        "aws-access-key"
+      ],
+      "reason": "FIXTURE de prueba o plantilla: el valor con forma de amenaza es necesario para probar el mecanismo que la detecta, o es la guia que el producto copia a cada proyecto. Se declara con motivo, dueño y caducidad en vez de silenciarse.",
+      "owner": "mantenimiento (tests y plantillas)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": ".github/workflows/gates.yml",
+      "ids": [
+        "aws-access-key"
+      ],
+      "reason": "FIXTURE del paso G-26: el workflow escribe la clave de EJEMPLO que la propia documentacion publica de AWS (no una credencial real, nunca fue valida) en un fixture temporal FUERA del repositorio, para probar que el hook portatil bloquea un secreto en el indice y que el commit se detiene. Sin ese literal el paso no probaria nada; declararlo con motivo es el canal que el propio control prescribe en vez de silenciarlo o debilitar el paso. El literal NO se repite aqui: escribir la clave dentro del motivo la volvia a introducir en el indice, y el escaner la detectaba en este mismo fichero.",
+      "owner": "CI (paso G-26 del job windows)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/cliGatesArgs.test.ts",
+      "ids": [
+        "aws-access-key"
+      ],
+      "reason": "FIXTURE de prueba o plantilla: el valor con forma de amenaza es necesario para probar el mecanismo que la detecta, o es la guia que el producto copia a cada proyecto. Se declara con motivo, dueño y caducidad en vez de silenciarse.",
+      "owner": "mantenimiento (tests y plantillas)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "docs/guides/requirements-quality-catalog.md",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "El catalogo de calidad de requisitos cita, como EJEMPLO de lo que el check AI-002 debe detectar, la frase con la que se intenta secuestrar a un agente. El literal es el objeto de la documentacion, no una instruccion dirigida a un modelo, y que C2 lo detecte es la prueba de que el patron funciona. Se declara con motivo, dueno y caducidad en vez de silenciarse; el literal no se repite aqui para no reintroducirlo en el indice.",
+      "owner": "mantenimiento (catalogo de requisitos)",
+      "actor": "spec:tool-maturity",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreRequirementsCoach.test.ts",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "FIXTURE del check AI-002: el test ejercita que una instruccion dirigida a un agente dentro de una spec se reporte como hallazgo y se escale a una persona, en vez de obedecerse. El literal es el objeto de la prueba, no una instruccion dirigida a un modelo; se declara con motivo, dueno y caducidad en vez de silenciarse, y no se repite aqui para no reintroducirlo en el indice.",
+      "owner": "mantenimiento (tests del coach de requisitos)",
+      "actor": "spec:requirements-coach",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/coreRequirementsDeadEnds.test.ts",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "FIXTURE del contrato de no-callejon-sin-salida: comprueba que un hallazgo de inyeccion viaja con un remedio o una pregunta en vez de morir. El literal es el objeto de la prueba, no una instruccion dirigida a un modelo; se declara con motivo, dueno y caducidad.",
+      "owner": "mantenimiento (tests del coach de requisitos)",
+      "actor": "spec:requirements-coach",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/qaTier2Intermediate.test.ts",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "FIXTURE adversarial de la bateria QA: el caso comprueba que AI-002 escala una spec que intenta dar ordenes en vez de obedecerla. El literal es el objeto de la prueba, no una instruccion dirigida a un modelo; se declara con motivo, dueno y caducidad en vez de silenciarse, y no se repite aqui para no reintroducirlo en el indice.",
+      "owner": "mantenimiento (bateria QA)",
+      "actor": "spec:requirements-coach",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/qaTier3Hard.test.ts",
+      "ids": [
+        "ignore-previous"
+      ],
+      "reason": "FIXTURE adversarial del nivel duro: tres formas de contenido dirigido a un agente dentro de una spec, para demostrar que AI-002 las escala, que nada se obedece y que no se escribe ningun fichero. El literal es el objeto de la prueba, no una instruccion dirigida a un modelo; se declara con motivo, dueno y caducidad.",
+      "owner": "mantenimiento (bateria QA)",
+      "actor": "spec:requirements-coach",
+      "expires": "2027-03-31"
+    },
+    {
+      "path": "tools/open-sdd/test/qaTier4Zombies.test.ts",
+      "ids": [
+        "ignore-previous",
+        "rm-rf-root",
+        "hidden-comment-instruction"
+      ],
+      "reason": "FIXTURE de la horda zombie (nivel 4 de QA): cien ataques contra un contrato de supervivencia, entre ellos tres formas de instruccion dirigida a un agente, un comando destructivo y un comentario oculto. Los literales son el OBJETO de la prueba —se comprueba que AI-002 los escala, que nada se obedece y que ningun fichero se escribe—, no instrucciones dirigidas a un modelo; se declaran con motivo, dueno y caducidad en vez de silenciarse, y no se repiten aqui para no reintroducirlos en el indice.",
+      "owner": "mantenimiento (bateria QA)",
+      "actor": "spec:requirements-coach",
+      "expires": "2027-03-31"
+    }
+  ]
+}

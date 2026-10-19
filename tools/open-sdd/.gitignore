@@ -1,0 +1,4 @@
+node_modules
+# dist is tracked so git/npx installs work without compilation
+coverage
+.claude/bin

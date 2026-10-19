@@ -1,0 +1,50 @@
+# open-sdd | pull-request gate matrix (enforcement level C — "merge").
+#
+# Copy this into the target project at `.github/workflows/open-sdd-gates.yml` (or run
+# `open-sdd floor install . --ci`). Level C is the other half of the floor an organization owns:
+# CI asks no vendor's permission, and unlike a host hook it cannot be silently withdrawn.
+#
+# The chain runs against the PULL REQUEST DIFF (`--base`), not against the working tree: a gate run
+# that inspects nothing is activation without measurement, and a green badge over an empty scan is
+# exactly the false assurance this architecture exists to prevent.
+#
+# Add the project's own build and test steps ABOVE the gate step: this file gates, it does not
+# replace the project's pipeline.
+
+name: open-sdd gates
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The diff against the base commit needs the full history.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        run: npm ci
+
+      # --- the project's own pipeline belongs here (build, lint, test) ---
+
+      - name: Resolve the declared gate chain
+        run: npx --no-install open-sdd gates chain
+
+      - name: Run the gate chain against the pull request diff
+        run: npx --no-install open-sdd gates run --base "${{ github.event.pull_request.base.sha }}"
+
+      - name: Report the enforcement floor
+        if: always()
+        run: npx --no-install open-sdd floor status

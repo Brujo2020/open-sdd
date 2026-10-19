@@ -1,0 +1,39 @@
+{
+  "id": "REQ-EARS-006",
+  "title": "Requirements avoid unverifiable terms",
+  "category": "requirements",
+  "severity": "warning",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#quality-criteria",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "ears-issue:VAGUE_TERM"
+    ]
+  },
+  "message": "el enunciado contiene términos no comprobables",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "needs-human",
+        "text": "sustituye el término por una magnitud observable: umbral, unidad y condición de medida"
+      },
+      {
+        "grade": "maybe-incorrect",
+        "text": "si el término es vocabulario del dominio, decláralo en el glosario y acota su significado"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/ears.ts#validateEarsRequirement",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

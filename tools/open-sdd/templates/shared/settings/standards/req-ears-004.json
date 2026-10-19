@@ -1,0 +1,39 @@
+{
+  "id": "REQ-EARS-004",
+  "title": "One response per requirement",
+  "category": "requirements",
+  "severity": "warning",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#one-template-per-requirement",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "ears-issue:COMPOUND_REQUIREMENT"
+    ]
+  },
+  "message": "varias respuestas `shall` en un mismo enunciado: probablemente son varios requisitos",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "divide el enunciado para que cada uno tenga una única condición de disparo y una única respuesta"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si las respuestas son inseparables, declara la obligación compuesta y su verificación conjunta"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/ears.ts#validateEarsRequirement",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

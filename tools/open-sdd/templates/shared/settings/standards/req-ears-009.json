@@ -1,0 +1,39 @@
+{
+  "id": "REQ-EARS-009",
+  "title": "The requirements declare unwanted behaviour",
+  "category": "requirements",
+  "severity": "warning",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#one-template-per-requirement",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "ears-negative-coverage"
+    ]
+  },
+  "message": "ningún requisito de comportamiento no deseado (`IF ... THEN`): es el patrón que los equipos omiten y el único lugar de primera clase para requisitos negativos",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "needs-human",
+        "text": "añade al menos un criterio `IF <condición>, THEN <respuesta>` por cada fallo observable, o declara por qué el sistema no tiene comportamiento no deseado"
+      },
+      {
+        "grade": "maybe-incorrect",
+        "text": "revisa los modos de fallo conocidos y conviértelos en criterios `IF ... THEN`"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/ears.ts#negativeRequirementGap",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

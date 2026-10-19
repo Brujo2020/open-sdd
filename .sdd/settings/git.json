@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_comment": "Branches and commits for you. Never pushes unless you set auto_push: true.",
+  "mode": "assisted",
+  "branch_prefix": "feat/",
+  "steering_branch": "main",
+  "auto_branch": true,
+  "auto_commit": true,
+  "auto_push": false,
+  "require_approved_spec": true,
+  "commit_conventions": {
+    "steering": "docs(steering): establish architecture and technical standards",
+    "spec_init": "spec({{feature}}): initialize feature specification seed",
+    "spec_approved": "spec({{feature}}): approve requirements, design, and tasks breakdown",
+    "impl_complete": "feat({{feature}}): complete implementation verified against spec"
+  }
+}

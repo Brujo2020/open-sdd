@@ -1,0 +1,39 @@
+{
+  "id": "REQ-EARS-008",
+  "title": "The trigger clause precedes `shall`",
+  "category": "requirements",
+  "severity": "warning",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#one-template-per-requirement",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "ears-template-order"
+    ]
+  },
+  "message": "la cláusula de disparo debe preceder a `shall` para que la plantilla sea explícita",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "mueve el disparador al principio del enunciado, antes de `shall`"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si el orden refleja una condición que no es un disparador, reescribe el enunciado con la plantilla ubicua"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/standards.ts#runStandard (structural:ears-template-order)",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

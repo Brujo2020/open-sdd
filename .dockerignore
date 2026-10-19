@@ -1,0 +1,43 @@
+# Build context exclusions for `docker build`.
+#
+# The image is built FROM SOURCE in the build stage (tsc), so nothing generated or vendored in a
+# checkout needs to reach the daemon. A smaller context is also a smaller chance of shipping a
+# secret or a stale artifact into a layer.
+
+# Dependencies: reinstalled inside the build stage from package-lock.json.
+**/node_modules
+
+# Build output: the build stage produces its own; a stale local dist/ must never be what ships.
+**/dist
+
+# VCS metadata and history.
+.git
+.gitignore
+.github
+
+# Audit bundles: generated evidence with per-run timestamps, never part of an image.
+.sdd/audit
+**/.sdd/audit
+
+# Bench output (the harness writes into a temp dir; these cover anything dumped next to it).
+bench/out
+bench/results
+bench/*.json
+bench/**/*.json
+
+# Local, machine-specific and editor state.
+.sdd/settings/security-allowlist.local.json
+.DS_Store
+.idea
+.vscode
+*.log
+
+# Docs and other non-build inputs: kept out of the context on purpose. Uncomment `docs` if you
+# want to COPY documentation into the image.
+docs
+README.md
+README-OPENSDD.md
+CHANGELOG.md
+AGENTS.md
+CLAUDE.md
+assets

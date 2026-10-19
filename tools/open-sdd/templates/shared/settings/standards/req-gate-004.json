@@ -1,0 +1,40 @@
+{
+  "id": "REQ-GATE-004",
+  "title": "Requirement headings do not mix alphabetic and numeric labels",
+  "category": "requirements",
+  "severity": "warning",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "internal",
+  "source": ".sdd/settings/rules/requirements-review-gate.md#ears-and-testability-review",
+  "detect": {
+    "kind": "regex",
+    "patterns": [
+      "^#{1,6}\\s+[A-Za-z]{1,3}\\d+\\b",
+      "^#{1,6}\\s+(?:Requirement|Requisito|Section|Sección)\\s+\\d"
+    ]
+  },
+  "message": "un encabezado mezcla etiqueta alfabética y numérica: usa solo identificadores numéricos",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "vuelve el encabezado a un identificador numérico, por ejemplo `3.` o `REQ-AREA-003`"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si el identificador alfabético ya está en uso, decide la renumeración antes de cambiarlo: un identificador no se renumera en silencio"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/standards.ts#runStandard (regex)",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

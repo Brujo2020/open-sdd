@@ -1,0 +1,47 @@
+---
+description: Interactive technical design quality review and validation
+agent: sdd/validate-design
+subtask: true
+---
+
+# Technical Design Validation
+
+## Parse Arguments
+- Feature name: `$1`
+
+## Validate
+Check that design has been completed:
+- Verify `{{SDD_DIR}}/specs/$1/` exists
+- Verify `{{SDD_DIR}}/specs/$1/design.md` exists
+
+If validation fails, inform user to complete design phase first.
+
+## Subagent Context
+
+Feature: $1
+Spec directory: {{SDD_DIR}}/specs/$1/
+
+File patterns to read:
+- {{SDD_DIR}}/specs/$1/spec.json
+- {{SDD_DIR}}/specs/$1/requirements.md
+- {{SDD_DIR}}/specs/$1/design.md
+- {{SDD_DIR}}/steering/*.md
+- {{SDD_DIR}}/settings/rules/design-review.md
+
+## Display Result
+
+Show Subagent summary to user, then provide next step guidance:
+
+### Next Phase: Task Generation
+
+**If Design Passes Validation (GO Decision)**:
+- Review feedback and apply changes if needed
+- Run `/sdd-spec-tasks $1` to generate implementation tasks
+- Or `/sdd-spec-tasks $1 -y` to auto-approve and proceed directly
+
+**If Design Needs Revision (NO-GO Decision)**:
+- Address critical issues identified
+- Re-run `/sdd-spec-design $1` with improvements
+- Re-validate with `/sdd-validate-design $1`
+
+**Note**: Design validation is recommended but optional. Quality review helps catch issues early.

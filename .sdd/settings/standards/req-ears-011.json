@@ -1,0 +1,39 @@
+{
+  "id": "REQ-EARS-011",
+  "title": "A requirement describes a single behaviour",
+  "category": "requirements",
+  "severity": "warning",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#quality-criteria",
+  "detect": {
+    "kind": "heuristic",
+    "patterns": [
+      "single-behaviour"
+    ]
+  },
+  "message": "el enunciado probablemente describe varios comportamientos",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "divide la respuesta en un requisito por comportamiento observable"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si los comportamientos comparten una única verificación, declara el criterio conjunto en `plan.md`"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/standards.ts#runStandard (heuristic:single-behaviour)",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

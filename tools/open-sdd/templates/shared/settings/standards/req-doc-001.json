@@ -1,0 +1,29 @@
+{
+  "id": "REQ-DOC-001",
+  "title": "The specification declares its target language",
+  "category": "docs",
+  "severity": "info",
+  "blocking": false,
+  "appliesTo": [
+    "spec.json"
+  ],
+  "standard": "internal",
+  "source": ".sdd/settings/rules/ears-format.md#overview",
+  "detect": {
+    "kind": "question",
+    "patterns": [
+      "\"language\"\\s*:"
+    ]
+  },
+  "message": "¿en qué idioma está escrita la especificación? declara `language` en `spec.json` para que las comprobaciones de lenguaje no adivinen",
+  "remedy": {
+    "autoFixable": false,
+    "grades": []
+  },
+  "evidence": "tools/open-sdd/src/core/standards.ts#runStandard (question)",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "id": "REQ-EARS-005",
+  "title": "The unwanted-behaviour pattern keeps its `THEN`",
+  "category": "requirements",
+  "severity": "error",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#one-template-per-requirement",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "ears-issue:MISSING_THEN"
+    ]
+  },
+  "message": "el patrón no deseado se escribe `IF <condición>, THEN <respuesta>`",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "inserta `THEN` entre la condición y la respuesta"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si el enunciado no describe comportamiento no deseado, cambia de plantilla antes de añadir `THEN`"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/ears.ts#validateEarsRequirement",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

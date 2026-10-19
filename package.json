@@ -1,0 +1,56 @@
+{
+  "name": "@brujo2020/open-sdd",
+  "version": "3.4.0",
+  "description": "Open-SDD: Model-agnostic Spec-Driven Development on an enterprise agentic SDLC",
+  "type": "module",
+  "bin": {
+    "open-sdd": "./tools/open-sdd/dist/cli.js",
+    "sdd-open": "./tools/open-sdd/dist/cli.js",
+    "sdd": "./tools/open-sdd/dist/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Brujo2020/open-sdd.git"
+  },
+  "files": [
+    "tools/open-sdd/dist",
+    "tools/open-sdd/templates",
+    "scripts/postinstall.mjs"
+  ],
+  "scripts": {
+    "postinstall": "node ./scripts/postinstall.mjs",
+    "prepare": "node scripts/install-hooks.mjs",
+    "build": "npm --prefix tools/open-sdd run build",
+    "test": "npm --prefix tools/open-sdd test",
+    "verify": "npm --prefix tools/open-sdd run build && npm --prefix tools/open-sdd test",
+    "hooks:install": "node scripts/install-hooks.mjs",
+    "gates": "node tools/open-sdd/dist/cli.js gates chain",
+    "gates:run": "node tools/open-sdd/dist/cli.js gates run",
+    "crosswalk": "node tools/open-sdd/dist/cli.js gates crosswalk",
+    "mutate": "node scripts/mutation.mjs",
+    "assertions": "node scripts/assertions.mjs",
+    "assertions:probe": "node scripts/assertions.mjs --probe 30",
+    "conformance": "node tools/open-sdd/dist/cli.js govern conformance",
+    "assure": "node tools/open-sdd/dist/cli.js assure threats",
+    "floor:status": "node tools/open-sdd/dist/cli.js floor status",
+    "install:global": "npm run build && npm install -g .",
+    "install:antigravity": "node tools/open-sdd/dist/cli.js --antigravity -y",
+    "install:claude": "node tools/open-sdd/dist/cli.js -y",
+    "install:cursor": "node tools/open-sdd/dist/cli.js --cursor-skills -y",
+    "install:copilot": "node tools/open-sdd/dist/cli.js --copilot-skills -y",
+    "install:windsurf": "node tools/open-sdd/dist/cli.js --windsurf-skills -y",
+    "install:opencode": "node tools/open-sdd/dist/cli.js --opencode-skills -y",
+    "install:gemini": "node tools/open-sdd/dist/cli.js --gemini-cli-skills -y",
+    "install:codex": "node tools/open-sdd/dist/cli.js --codex-skills -y"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "homepage": "https://github.com/Brujo2020/open-sdd#readme",
+  "bugs": {
+    "url": "https://github.com/Brujo2020/open-sdd/issues"
+  }
+}

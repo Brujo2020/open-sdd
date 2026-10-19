@@ -1,0 +1,13 @@
+{
+  "name": "brownfield-support",
+  "phase": "verified",
+  "approvals": {
+    "requirements": true,
+    "design": true,
+    "tasks": true
+  },
+  "language": "en",
+  "created_at": "2026-09-19T00:00:00.000Z",
+  "updated_at": "2026-09-19T00:00:00.000Z",
+  "description": "Brownfield support: the delta spec as the contract of change, the reverse-engineered descriptive constitution, workspace-aware reconnaissance, and the regression oracle."
+}

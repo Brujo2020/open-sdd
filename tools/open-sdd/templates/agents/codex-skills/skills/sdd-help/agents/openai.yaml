@@ -1,0 +1,6 @@
+interface:
+  display_name: "Open-SDD Help"
+  short_description: "Interactive help guide, cheatsheet, and real-world examples for Open-SDD commands"
+
+policy:
+  allow_implicit_invocation: false

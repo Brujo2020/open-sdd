@@ -1,17 +1,15 @@
 # Customization Guide
 
-> 📖 日本語版はこちら: [カスタマイゼーションガイド](ja/customization-guide.md)
-
-This guide explains how to edit cc-sdd's templates and rules to adapt to your team's specific workflow.
+This guide explains how to customize Open-SDD templates and rules to adapt to your team's specific workflow.
 
 ## Introduction
 
-cc-sdd provides two customization points:
+open-sdd provides two customization points:
 
 - **templates/** - Define the **structure and format** of AI-generated documents
 - **rules/** - Define the **judgment criteria and generation principles** for AI
 
-Both are located under `{{KIRO_DIR}}/settings/` and are shared across the entire project.
+Both are located under `{{SDD_DIR}}/settings/` and are shared across the entire project.
 
 ---
 
@@ -19,7 +17,7 @@ Both are located under `{{KIRO_DIR}}/settings/` and are shared across the entire
 
 ### 📄 templates/ - Customize Output Format
 
-**Location**: `{{KIRO_DIR}}/settings/templates/specs/`
+**Location**: `{{SDD_DIR}}/settings/templates/specs/`
 
 **Role**: Defines the **document structure** that AI generates. Sections and fields added to templates will be automatically filled in by the AI.
 
@@ -37,7 +35,7 @@ Both are located under `{{KIRO_DIR}}/settings/` and are shared across the entire
 
 ### 📋 rules/ - Customize AI Judgment Criteria
 
-**Location**: `{{KIRO_DIR}}/settings/rules/`
+**Location**: `{{SDD_DIR}}/settings/rules/`
 
 **Role**: Defines AI's **generation rules and principles**. Editing rules changes AI's judgment criteria and generation style.
 
@@ -57,7 +55,7 @@ Both are located under `{{KIRO_DIR}}/settings/` and are shared across the entire
 
 ## 🚨 Structure That Must Be Maintained
 
-cc-sdd commands read and understand documents through AI agents. The following elements **must be maintained**:
+open-sdd commands read and understand documents through AI agents. The following elements **must be maintained**:
 
 | File | Required Elements | Reason |
 |------|-------------------|--------|
@@ -179,7 +177,7 @@ requirements.md is very flexible for customization:
 - ✅ **Add/remove sections**: Add team-specific review items, remove unnecessary sections
 - ✅ **Format changes**: Tables, bullet points, diagrams, etc. can be freely chosen
 
-**About Mermaid diagrams**: Basic syntax rules are defined in `{{KIRO_DIR}}/settings/rules/design-principles.md`, not in template constraints. You can change diagram requirements by editing the rules file.
+**About Mermaid diagrams**: Basic syntax rules are defined in `{{SDD_DIR}}/settings/rules/design-principles.md`, not in template constraints. You can change diagram requirements by editing the rules file.
 
 **File Structure Plan (3.0)**: In skills mode, `design.md` includes a **File Structure Plan** section that maps directory structure and file responsibilities. This section is recommended but not mandatory -- commands-based workflows can also benefit from adding it manually to their design template.
 
@@ -234,8 +232,8 @@ requirements.md is very flexible for customization:
 
 ```bash
 # Check template location
-ls -la {{KIRO_DIR}}/settings/templates/specs/
-ls -la {{KIRO_DIR}}/settings/rules/
+ls -la {{SDD_DIR}}/settings/templates/specs/
+ls -la {{SDD_DIR}}/settings/rules/
 ```
 
 ### Step 2: Add/Edit While Maintaining Structure
@@ -247,15 +245,15 @@ ls -la {{KIRO_DIR}}/settings/rules/
 
 ```bash
 # Test with new spec
-/kiro:spec-init Test customization feature
-/kiro:spec-requirements test-customization
-/kiro:spec-design test-customization
-/kiro:spec-tasks test-customization
+/spec-init Test customization feature
+/spec-requirements test-customization
+/spec-design test-customization
+/spec-tasks test-customization
 
 # Check generated files
-cat {{KIRO_DIR}}/specs/test-customization/requirements.md
-cat {{KIRO_DIR}}/specs/test-customization/design.md
-cat {{KIRO_DIR}}/specs/test-customization/tasks.md
+cat {{SDD_DIR}}/specs/test-customization/requirements.md
+cat {{SDD_DIR}}/specs/test-customization/design.md
+cat {{SDD_DIR}}/specs/test-customization/tasks.md
 ```
 
 ---
@@ -270,8 +268,8 @@ We present 3 representative customization scenarios tailored to team-specific ne
 
 ### 📋 Customization Target
 
-- **templates**: `{{KIRO_DIR}}/settings/templates/specs/requirements.md`
-- **rules**: `{{KIRO_DIR}}/settings/rules/ears-format.md` (Optional)
+- **templates**: `{{SDD_DIR}}/settings/templates/specs/requirements.md`
+- **rules**: `{{SDD_DIR}}/settings/rules/ears-format.md` (Optional)
 
 ### 🎯 Use Cases
 
@@ -283,7 +281,7 @@ We present 3 representative customization scenarios tailored to team-specific ne
 
 #### Step 1: Template Editing (Required)
 
-**File to Edit**: `{{KIRO_DIR}}/settings/templates/specs/requirements.md`
+**File to Edit**: `{{SDD_DIR}}/settings/templates/specs/requirements.md`
 
 **🔒 Structure to Maintain**:
 - Numbered heading pattern (e.g., `### Requirement N:`, `### REQ-N:`, or localized equivalents)
@@ -415,7 +413,7 @@ We present 3 representative customization scenarios tailored to team-specific ne
 
 #### Step 2: Rules Adjustment (Optional - for stricter control)
 
-**File to Edit**: `{{KIRO_DIR}}/settings/rules/ears-format.md`
+**File to Edit**: `{{SDD_DIR}}/settings/rules/ears-format.md`
 
 **Content to Add**:
 
@@ -470,35 +468,35 @@ Always include NFR sections for:
 
 ### ✅ Behavior After Completion
 
-When you run `/kiro:spec-requirements my-feature`:
+When you run `/spec-requirements my-feature`:
 
 1. **Product Context** section is automatically generated
 2. Each requirement includes **Business Priority**, **Dependencies**, **Risk Level**
 3. **Verification Method** and **Success Threshold** are added to each requirement
 4. **Non-Functional Requirements** section is automatically generated
 5. **Compliance & Approvals** checklist is added
-6. Requirement numbering and acceptance criteria structure are maintained (compatible with `/kiro:spec-impl` and its skills mode equivalent `/kiro-impl`)
+6. Requirement numbering and acceptance criteria structure are maintained (compatible with `/spec-impl` and its skills mode equivalent `/sdd-impl`)
 
 ### 🧪 Testing Method
 
 ```bash
 # 1. Edit template
-vim {{KIRO_DIR}}/settings/templates/specs/requirements.md
+vim {{SDD_DIR}}/settings/templates/specs/requirements.md
 
 # 2. (Optional) Edit rules
-vim {{KIRO_DIR}}/settings/rules/ears-format.md
+vim {{SDD_DIR}}/settings/rules/ears-format.md
 
 # 3. Check with new spec
-/kiro:spec-init Test PRD-style requirements with business context
-/kiro:spec-requirements test-prd-feature
+/spec-init Test PRD-style requirements with business context
+/spec-requirements test-prd-feature
 
 # 4. Check generated requirements.md
-cat {{KIRO_DIR}}/specs/test-prd-feature/requirements.md
+cat {{SDD_DIR}}/specs/test-prd-feature/requirements.md
 
 # 5. Verify Product Context, Priority, NFR sections are included
-grep -A 5 "## Product Context" {{KIRO_DIR}}/specs/test-prd-feature/requirements.md
-grep "Business Priority" {{KIRO_DIR}}/specs/test-prd-feature/requirements.md
-grep -A 3 "## Non-Functional Requirements" {{KIRO_DIR}}/specs/test-prd-feature/requirements.md
+grep -A 5 "## Product Context" {{SDD_DIR}}/specs/test-prd-feature/requirements.md
+grep "Business Priority" {{SDD_DIR}}/specs/test-prd-feature/requirements.md
+grep -A 3 "## Non-Functional Requirements" {{SDD_DIR}}/specs/test-prd-feature/requirements.md
 ```
 
 ---
@@ -507,8 +505,8 @@ grep -A 3 "## Non-Functional Requirements" {{KIRO_DIR}}/specs/test-prd-feature/r
 
 ### 📋 Customization Target
 
-- **templates**: `{{KIRO_DIR}}/settings/templates/specs/design.md`
-- **rules**: `{{KIRO_DIR}}/settings/rules/design-principles.md` (Optional)
+- **templates**: `{{SDD_DIR}}/settings/templates/specs/design.md`
+- **rules**: `{{SDD_DIR}}/settings/rules/design-principles.md` (Optional)
 
 ### 🎯 Use Cases
 
@@ -520,7 +518,7 @@ grep -A 3 "## Non-Functional Requirements" {{KIRO_DIR}}/specs/test-prd-feature/r
 
 #### Step 1: Template Editing (Required)
 
-**File to Edit**: `{{KIRO_DIR}}/settings/templates/specs/design.md`
+**File to Edit**: `{{SDD_DIR}}/settings/templates/specs/design.md`
 
 **🔒 Structure to Maintain**:
 - **File existence only** - Heading names, order, and formats are all free
@@ -930,7 +928,7 @@ graph TB
 
 #### Step 2: Rules Adjustment (Optional)
 
-**File to Edit**: `{{KIRO_DIR}}/settings/rules/design-principles.md`
+**File to Edit**: `{{SDD_DIR}}/settings/rules/design-principles.md`
 
 **Content to Add**:
 
@@ -1024,7 +1022,7 @@ graph TB
 
 ### ✅ Behavior After Completion
 
-When you run `/kiro:spec-design my-backend-feature`:
+When you run `/spec-design my-backend-feature`:
 
 1. **API Specification** generates detailed specs for all endpoints
 2. **Database Schema** explicitly defines tables, indexes, and constraints
@@ -1037,20 +1035,20 @@ When you run `/kiro:spec-design my-backend-feature`:
 
 ```bash
 # 1. Edit template
-vim {{KIRO_DIR}}/settings/templates/specs/design.md
+vim {{SDD_DIR}}/settings/templates/specs/design.md
 
 # 2. Check with new spec
-/kiro:spec-init Build RESTful API for user management
-/kiro:spec-requirements user-api
-/kiro:spec-design user-api
+/spec-init Build RESTful API for user management
+/spec-requirements user-api
+/spec-design user-api
 
 # 3. Check generated design.md
-cat {{KIRO_DIR}}/specs/user-api/design.md
+cat {{SDD_DIR}}/specs/user-api/design.md
 
 # 4. Verify backend-focused sections are included
-grep -A 20 "## API Specification" {{KIRO_DIR}}/specs/user-api/design.md
-grep -A 15 "## Database Schema" {{KIRO_DIR}}/specs/user-api/design.md
-grep -A 10 "## Security" {{KIRO_DIR}}/specs/user-api/design.md
+grep -A 20 "## API Specification" {{SDD_DIR}}/specs/user-api/design.md
+grep -A 15 "## Database Schema" {{SDD_DIR}}/specs/user-api/design.md
+grep -A 10 "## Security" {{SDD_DIR}}/specs/user-api/design.md
 ```
 
 ---
@@ -1059,9 +1057,9 @@ grep -A 10 "## Security" {{KIRO_DIR}}/specs/user-api/design.md
 
 ### 📋 Customization Target
 
-- **Create**: Create new with `/kiro:steering-custom` command
-- **Save to**: `{{KIRO_DIR}}/steering/{{domain-name}}.md`
-- **Rules adjustment**: `{{KIRO_DIR}}/settings/rules/steering-principles.md` (Optional)
+- **Create**: Create new with `/steering-custom` command
+- **Save to**: `{{SDD_DIR}}/steering/{{domain-name}}.md`
+- **Rules adjustment**: `{{SDD_DIR}}/settings/rules/steering-principles.md` (Optional)
 
 ### 🎯 Use Cases
 
@@ -1073,7 +1071,7 @@ grep -A 10 "## Security" {{KIRO_DIR}}/specs/user-api/design.md
 
 #### Step 1: Create Steering Document
 
-**Command**: `/kiro:steering-custom`
+**Command**: `/steering-custom`
 
 **Prompt Example**:
 ```
@@ -1085,7 +1083,7 @@ Create domain-specific steering for REST API standards:
 - Pagination
 ```
 
-**Generated File**: `{{KIRO_DIR}}/steering/api-standards.md`
+**Generated File**: `{{SDD_DIR}}/steering/api-standards.md`
 
 **Complete Template Example**:
 
@@ -1676,7 +1674,7 @@ X-API-Replacement: /api/v2/users
 <details>
 <summary><strong>Authentication Standards</strong></summary>
 
-`{{KIRO_DIR}}/steering/authentication.md`
+`{{SDD_DIR}}/steering/authentication.md`
 
 ```markdown
 # Authentication Standards
@@ -1767,7 +1765,7 @@ X-API-Replacement: /api/v2/users
 <details>
 <summary><strong>Testing Standards</strong></summary>
 
-`{{KIRO_DIR}}/steering/testing.md`
+`{{SDD_DIR}}/steering/testing.md`
 
 ```markdown
 # Testing Standards
@@ -1857,7 +1855,7 @@ describe('ComponentName', () => {
 <details>
 <summary><strong>Error Handling Standards</strong></summary>
 
-`{{KIRO_DIR}}/steering/error-handling.md`
+`{{SDD_DIR}}/steering/error-handling.md`
 
 ```markdown
 # Error Handling Standards
@@ -1989,34 +1987,34 @@ class ErrorBoundary extends React.Component {
 When you create a steering document:
 
 1. **All spec generation commands** automatically reference the rules
-2. `/kiro:spec-design` automatically applies standard format during API design
-3. `/kiro:spec-requirements` automatically includes error handling requirements
-4. `/kiro:spec-tasks` generates authentication and testing-related tasks according to standards
+2. `/spec-design` automatically applies standard format during API design
+3. `/spec-requirements` automatically includes error handling requirements
+4. `/spec-tasks` generates authentication and testing-related tasks according to standards
 
 ### 🧪 Testing Method
 
 ```bash
 # 1. Create steering document
-/kiro:steering-custom
+/steering-custom
 # Prompt: Create API standards steering document for REST conventions
 
 # 2. Check generated file
-cat {{KIRO_DIR}}/steering/api-standards.md
+cat {{SDD_DIR}}/steering/api-standards.md
 
 # 3. Check steering application with new spec
-/kiro:spec-init Build user management API
-/kiro:spec-design user-management-api
+/spec-init Build user management API
+/spec-design user-management-api
 
 # 4. Check if API standards are reflected in generated design.md
-grep -A 10 "## API Specification" {{KIRO_DIR}}/specs/user-management-api/design.md
+grep -A 10 "## API Specification" {{SDD_DIR}}/specs/user-management-api/design.md
 # Verify endpoint structure and error response format match steering
 
 # 5. Verify same standards are applied to other features
-/kiro:spec-init Build order processing API
-/kiro:spec-design order-processing-api
+/spec-init Build order processing API
+/spec-design order-processing-api
 diff \
-  <(grep "Error Response" {{KIRO_DIR}}/specs/user-management-api/design.md) \
-  <(grep "Error Response" {{KIRO_DIR}}/specs/order-processing-api/design.md)
+  <(grep "Error Response" {{SDD_DIR}}/specs/user-management-api/design.md) \
+  <(grep "Error Response" {{SDD_DIR}}/specs/order-processing-api/design.md)
 # Verify both specs use the same error format
 ```
 
@@ -2027,13 +2025,13 @@ diff \
 ### Custom Templates Not Reflected
 
 **Check Items**:
-- File path: Is it placed in `{{KIRO_DIR}}/settings/templates/specs/`?
+- File path: Is it placed in `{{SDD_DIR}}/settings/templates/specs/`?
 - Required structure: Are numbering patterns maintained (`### ... N:`, `1.`, `- [ ] N.`)?
 - Markdown syntax: Are heading levels and code blocks correct?
 
 **Solution**: Return to defaults and gradually re-customize
 ```bash
-npx cc-sdd@latest --overwrite=force
+npx @brujo2020/open-sdd@latest --overwrite=force
 ```
 
 ### Generated Content Differs from Expectations
@@ -2052,9 +2050,9 @@ npx cc-sdd@latest --overwrite=force
 
 ### Different Templates Across Teams
 
-**Solution**: Manage `{{KIRO_DIR}}/settings/` with git
+**Solution**: Manage `{{SDD_DIR}}/settings/` with git
 ```bash
-git add {{KIRO_DIR}}/settings/
+git add {{SDD_DIR}}/settings/
 git commit -m "Add team-wide templates"
 ```
 
@@ -2066,7 +2064,7 @@ git commit -m "Add team-wide templates"
 
 - **Gradual customization**: Change and test one file at a time
 - **Maintain required structure**: Keep numbering patterns and hierarchical structure
-- **Version control**: Manage `{{KIRO_DIR}}/settings/` with git
+- **Version control**: Manage `{{SDD_DIR}}/settings/` with git
 - **Strong rules**: "MUST" + 3+ specific examples
 
 ### ❌ Not Recommended
@@ -2092,10 +2090,10 @@ git commit -m "Add team-wide templates"
 
 ```bash
 # 1. Try with a small feature
-/kiro:spec-init Small feature for testing custom templates
-/kiro:spec-requirements test-feature
-/kiro:spec-design test-feature
-/kiro:spec-tasks test-feature
+/spec-init Small feature for testing custom templates
+/spec-requirements test-feature
+/spec-design test-feature
+/spec-tasks test-feature
 
 # 2. Team review
 # - Check output quality

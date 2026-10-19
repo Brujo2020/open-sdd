@@ -1,27 +1,24 @@
-# cc-sdd Documentation Index
+# open-sdd Documentation Index
 
-Quick pointers to the most relevant guides, workflows, and historical notes for cc-sdd.
+Quick pointers to the most relevant guides, workflows, and historical notes for open-sdd.
 
 ## Current Guides
 
-- [Project README (English)](../README.md)
-- [Project README (日本語)](../tools/cc-sdd/README_ja.md)
-- [Project README (繁體中文)](../tools/cc-sdd/README_zh-TW.md)
-- [Release Notes](RELEASE_NOTES)
+- [Project README](../README.md)
+- [Release Notes](RELEASE_NOTES/RELEASE_NOTES_en.md)
 
 ## Deep Dives
 
-- [Spec-Driven Development Workflow](guides/spec-driven.md) — how cc-sdd implements SDD end to end
-- [Skill Reference](guides/skill-reference.md) — skills-mode workflow, including `/kiro-impl` subagent flow
-- [Command Reference](guides/command-reference.md) — legacy `/kiro:*` command detail
+- [How strict is Open-SDD?](guides/governance-profiles.md) — **start here**: one word, three profiles. Default blocks nothing.
+- [Spec-Driven Development Workflow](guides/spec-driven.md) — how Open-SDD implements SDD end to end
+- [Skill Reference](guides/skill-reference.md) — 20-skill workflow, including parallel wave scheduling
+- [Git Automation & SpecOps Flow](guides/git-workflow.md) — Git feature branch lifecycle and zero-drift verification
+- [Universal Brownfield Reverse-Engineering](guides/brownfield-getspecs.md) — bootstrapping steering & spec seeds from existing codebases
+- [Command Reference](guides/command-reference.md) — CLI engine and skill command reference
 - [Customization Guide](guides/customization-guide.md) — templates and rules customization
-- [Why cc-sdd?](guides/why-cc-sdd.md) — design rationale, trade-offs, and when to use (or not use) the tool
+- [Why Open-SDD?](guides/why-open-sdd.md) — design rationale, trade-offs, and when to use (or not use) the tool
 - [Migration Guide](guides/migration-guide.md) — v1.x → v2 → v3 upgrade paths
-- [Agent compatibility](guides/agent-compatibility.md) — execution surfaces, Devin and Antigravity migration, and verification scope
-- [Claude Code Subagents Workflow](guides/claude-subagents.md) — legacy `--claude-agent` spec-quick Subagent install target
 
 ## Legacy Reference (Archived)
 
-- [Multi-Platform Spec-Driven Development (English)](README/README_en.md)
-- [多平台規格駆動開発 (日本語)](README/README_ja.md)
-- [多平台規格驅動開發 (繁體中文)](README/README_zh-TW.md)
+- [Multi-Platform Spec-Driven Development (Archived)](README/README_en.md)

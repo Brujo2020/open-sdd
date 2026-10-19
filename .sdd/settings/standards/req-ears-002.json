@@ -1,0 +1,39 @@
+{
+  "id": "REQ-EARS-002",
+  "title": "A statement that matches no EARS template",
+  "category": "requirements",
+  "severity": "warning",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "EARS",
+  "source": ".sdd/settings/rules/ears-format.md#one-template-per-requirement",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "ears-issue:NO_TEMPLATE_MATCH"
+    ]
+  },
+  "message": "el enunciado no encaja en ninguna plantilla EARS y contiene términos ambiguos: casi siempre es un requisito ambiguo o dos requisitos vestidos de uno",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "elige la plantilla que corresponda (`WHEN`, `WHILE`, `WHERE`, `IF ... THEN` o ubicua) y reescribe el enunciado"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si el enunciado esconde dos obligaciones, divídelo antes de elegir plantilla"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/ears.ts#validateEarsRequirement",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

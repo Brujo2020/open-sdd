@@ -1,8 +1,6 @@
 # Command Reference
 
-> 📖 **日本語ガイドはこちら:** [コマンドリファレンス (日本語)](ja/command-reference.md)
-
-Complete reference for the legacy `/kiro:*` commands in cc-sdd with detailed usage, examples, and troubleshooting.
+Complete reference for Open-SDD commands and options with detailed usage, examples, and troubleshooting.
 
 If you are using skills mode, start with the [Skill Reference](skill-reference.md) instead.
 
@@ -13,23 +11,23 @@ If you are using skills mode, start with the [Skill Reference](skill-reference.m
 ## Quick Index
 
 ### Steering Commands
-- [`/kiro:steering`](#kirosteering) - Create/update project memory
-- [`/kiro:steering-custom`](#kirosteering-custom) - Add domain-specific steering
+- [`/steering`](#steering) - Create/update project memory
+- [`/steering-custom`](#steering-custom) - Add domain-specific steering
 
 ### Spec Workflow Commands
-- [`/kiro:spec-init`](#kirospec-init) - Initialize new feature spec
-- [`/kiro:spec-requirements`](#kirospec-requirements) - Generate requirements
-- [`/kiro:spec-design`](#kirospec-design) - Create technical design
-- [`/kiro:spec-tasks`](#kirospec-tasks) - Break down into tasks
-- [`/kiro:spec-impl`](#kirospec-impl) - Execute implementation
+- [`/spec-init`](#spec-init) - Initialize new feature spec
+- [`/spec-requirements`](#spec-requirements) - Generate requirements
+- [`/spec-design`](#spec-design) - Create technical design
+- [`/spec-tasks`](#spec-tasks) - Break down into tasks
+- [`/spec-impl`](#spec-impl) - Execute implementation
 
 ### Validation Commands
-- [`/kiro:validate-gap`](#kirovalidate-gap) - Analyze existing vs requirements
-- [`/kiro:validate-design`](#kirovalidate-design) - Review design quality
-- [`/kiro:validate-impl`](#kirovalidate-impl) - Validate implementation
+- [`/validate-gap`](#validate-gap) - Analyze existing vs requirements
+- [`/validate-design`](#validate-design) - Review design quality
+- [`/validate-impl`](#validate-impl) - Validate implementation
 
 ### Status & Utility
-- [`/kiro:spec-status`](#kirospec-status) - Check feature progress
+- [`/spec-status`](#spec-status) - Check feature progress
 
 ---
 
@@ -43,23 +41,23 @@ If you are using skills mode, start with the [Skill Reference](skill-reference.m
 
 | Command | Parameters | Primary Purpose | Typical Next Step |
 |---------|------------|-----------------|-------------------|
-| `/kiro:steering` | – | Bootstrap or sync project memory | `/kiro:spec-init` |
-| `/kiro:steering-custom` | – (interactive) | Capture domain-specific patterns | `/kiro:spec-init` or rerun steering |
-| `/kiro:spec-init` | `<project-description>` | Create new spec folder & metadata | `/kiro:spec-requirements <feature>` |
-| `/kiro:spec-requirements` | `<feature-name>` | Generate EARS requirements | `/kiro:spec-design <feature>` |
-| `/kiro:validate-gap` | `<feature-name>` | (Optional) Analyze existing code gaps | `/kiro:spec-design <feature>` |
-| `/kiro:spec-design` | `<feature-name> [-y]` | Produce `research.md` (when needed) + technical design | `/kiro:spec-tasks <feature>` |
-| `/kiro:validate-design` | `<feature-name>` | (Optional) Review design quality | `/kiro:spec-tasks <feature>` |
-| `/kiro:spec-tasks` | `<feature-name> [-y]` | Break design into tasks; mark parallel candidates with `(P)` | `/kiro:spec-impl <feature> [tasks]` |
-| `/kiro:spec-impl` | `<feature-name> [task-numbers]` | Execute tasks with TDD | `/kiro:validate-impl [feature] [tasks]` |
-| `/kiro:validate-impl` | `[feature-name] [task-numbers]` | Verify implementation quality | `/kiro:spec-status <feature>` |
-| `/kiro:spec-status` | `<feature-name>` | Summarize workflow progress | Resume with suggested command |
+| `/steering` | – | Bootstrap or sync project memory | `/spec-init` |
+| `/steering-custom` | – (interactive) | Capture domain-specific patterns | `/spec-init` or rerun steering |
+| `/spec-init` | `<project-description>` | Create new spec folder & metadata | `/spec-requirements <feature>` |
+| `/spec-requirements` | `<feature-name>` | Generate EARS requirements | `/spec-design <feature>` |
+| `/validate-gap` | `<feature-name>` | (Optional) Analyze existing code gaps | `/spec-design <feature>` |
+| `/spec-design` | `<feature-name> [-y]` | Produce `research.md` (when needed) + technical design | `/spec-tasks <feature>` |
+| `/validate-design` | `<feature-name>` | (Optional) Review design quality | `/spec-tasks <feature>` |
+| `/spec-tasks` | `<feature-name> [-y]` | Break design into implementation tasks w/ parallel-safe blocks (P#) | `/spec-impl <feature> [tasks]` |
+| `/spec-impl` | `<feature-name> [task-numbers]` | Execute tasks with TDD | `/validate-impl [feature] [tasks]` |
+| `/validate-impl` | `[feature-name] [task-numbers]` | Verify implementation quality | `/spec-status <feature>` |
+| `/spec-status` | `<feature-name>` | Summarize workflow progress | Resume with suggested command |
 
 ---
 
 ## Steering Commands
 
-### `/kiro:steering`
+### `/steering`
 
 **Purpose**: Create or update project memory (steering) so every command can reference shared rules, architecture guardrails, and product-wide guidelines. It is *not* for feature-specific implementation notes.
 
@@ -67,14 +65,14 @@ If you are using skills mode, start with the [Skill Reference](skill-reference.m
 
 **Usage**:
 ```bash
-/kiro:steering
+/steering
 ```
 
 **What it does**:
 Analyzes your codebase and generates/updates three core steering documents that capture evergreen guidance (not per-feature minutiae):
-- `{{KIRO_DIR}}/steering/structure.md` - Architecture patterns, directory organization, naming conventions
-- `{{KIRO_DIR}}/steering/tech.md` - Technology stack, framework decisions, technical constraints
-- `{{KIRO_DIR}}/steering/product.md` - Business context, product purpose, core capabilities
+- `{{SDD_DIR}}/steering/structure.md` - Architecture patterns, directory organization, naming conventions
+- `{{SDD_DIR}}/steering/tech.md` - Technology stack, framework decisions, technical constraints
+- `{{SDD_DIR}}/steering/product.md` - Business context, product purpose, core capabilities
 
 <details>
 <summary><strong>Sample Output (Bootstrap)</strong></summary>
@@ -116,8 +114,8 @@ Review and approve as Source of Truth.
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | ❌ "No codebase found" | Running in empty directory | Run from project root with actual code |
-| ❌ "Permission denied" | Insufficient file permissions | Check write permissions on `.kiro/` directory |
-| ⚠️ Steering too generic | Small/new codebase | Add custom steering with `/kiro:steering-custom` |
+| ❌ "Permission denied" | Insufficient file permissions | Check write permissions on `.sdd/` directory |
+| ⚠️ Steering too generic | Small/new codebase | Add custom steering with `/steering-custom` |
 | ⚠️ Updates overwrite my edits | User customizations lost | Steering preserves user content - report if not working |
 
 **Pro Tips**:
@@ -128,12 +126,12 @@ Review and approve as Source of Truth.
 - 💡 Re-run periodically to keep AI context fresh
 
 **Related Commands**:
-- [`/kiro:steering-custom`](#kirosteering-custom) - Add specialized domain knowledge
-- [`/kiro:spec-init`](#kirospec-init) - Next step after steering
+- [`/steering-custom`](#steering-custom) - Add specialized domain knowledge
+- [`/spec-init`](#spec-init) - Next step after steering
 
 ---
 
-### `/kiro:steering-custom`
+### `/steering-custom`
 
 **Purpose**: Create specialized steering documents for domain-specific patterns (API standards, testing initiatives, UI/UX playbooks, etc.).
 
@@ -141,11 +139,11 @@ Review and approve as Source of Truth.
 
 **Usage**:
 ```bash
-/kiro:steering-custom
+/steering-custom
 ```
 
 **What it does**:
-Interactive command that helps you create custom steering files in `{{KIRO_DIR}}/steering/` for specialized areas beyond the core three files (structure/tech/product).
+Interactive command that helps you create custom steering files in `{{SDD_DIR}}/steering/` for specialized areas beyond the core three files (structure/tech/product).
 
 **Available Templates**:
 1. **api-standards.md** - REST/GraphQL conventions, error handling, versioning, company-wide contract formats
@@ -183,7 +181,7 @@ You: api-standards
 AI: Analyzing existing API patterns...
   ✓ Found REST endpoints in src/api/
   ✓ Detected error handling pattern
-  ✓ Created .kiro/steering/api-standards.md
+  ✓ Created .sdd/steering/api-standards.md
 
   Summary:
   - REST with /api/v1 prefix
@@ -198,7 +196,7 @@ AI: Analyzing existing API patterns...
 <summary><strong>Example Output Files</strong></summary>
 
 ```
-.kiro/steering/
+.sdd/steering/
 ├── structure.md          # Core steering
 ├── tech.md              # Core steering
 ├── product.md           # Core steering
@@ -224,13 +222,13 @@ AI: Analyzing existing API patterns...
 - 💡 Update custom steering as standards evolve
 
 **Related Commands**:
-- [`/kiro:steering`](#kirosteering) - Core project memory
+- [`/steering`](#steering) - Core project memory
 
 ---
 
 ## Spec Workflow Commands
 
-### `/kiro:spec-init`
+### `/spec-init`
 
 **Purpose**: Initialize a new feature specification with directory structure and metadata.
 
@@ -238,7 +236,7 @@ AI: Analyzing existing API patterns...
 
 **Usage**:
 ```bash
-/kiro:spec-init <project-description>
+/spec-init <project-description>
 ```
 
 **Arguments**:
@@ -246,13 +244,13 @@ AI: Analyzing existing API patterns...
 
 **What it does**:
 1. Generates a unique feature name from your description
-2. Creates spec directory: `{{KIRO_DIR}}/specs/<feature-name>/`
+2. Creates spec directory: `{{SDD_DIR}}/specs/<feature-name>/`
 3. Initializes metadata file: `spec.json`
 4. Creates initial requirements stub: `requirements.md`
 
 **Example**:
 ```bash
-/kiro:spec-init User authentication with OAuth 2.0 and JWT tokens for a Next.js app
+/spec-init User authentication with OAuth 2.0 and JWT tokens for a Next.js app
 ```
 
 **Output**:
@@ -266,13 +264,13 @@ Rationale: Captures core capability (user authentication) and implementation app
 OAuth 2.0 authentication system with JWT token management for Next.js application.
 
 ## Created Files
-- ✓ .kiro/specs/user-auth-oauth/spec.json
-- ✓ .kiro/specs/user-auth-oauth/requirements.md
+- ✓ .sdd/specs/user-auth-oauth/spec.json
+- ✓ .sdd/specs/user-auth-oauth/requirements.md
 
 ## Next Step
 Run this command to generate comprehensive requirements:
 ```bash
-/kiro:spec-requirements user-auth-oauth
+/spec-requirements user-auth-oauth
 ```
 
 ## Notes
@@ -283,7 +281,7 @@ proper separation of concerns and allow for focused, high-quality requirement an
 
 **When to use**:
 - ✅ Starting a **new feature** or enhancement
-- ✅ After running `/kiro:steering` (recommended for existing projects)
+- ✅ After running `/steering` (recommended for existing projects)
 - ✅ When you have a **clear feature description** to provide
 
 **Feature Naming**:
@@ -297,7 +295,7 @@ proper separation of concerns and allow for focused, high-quality requirement an
 |-------|-------|----------|
 | ❌ "Ambiguous feature name" | Vague description | Provide more specific description or choose from AI's suggestions |
 | ❌ "Feature already exists" | Name conflict | AI auto-appends number (e.g., `-2`), or choose different name |
-| ❌ "Template missing" | Corrupted installation | Reinstall cc-sdd: `npx cc-sdd@latest` |
+| ❌ "Template missing" | Corrupted installation | Reinstall open-sdd: `npx @brujo2020/open-sdd@latest` |
 | ⚠️ Generated name unclear | Short description | Provide longer, more detailed feature description |
 
 **Pro Tips**:
@@ -307,12 +305,12 @@ proper separation of concerns and allow for focused, high-quality requirement an
 - 💡 You can rename the directory later if needed (update `spec.json` accordingly)
 
 **Related Commands**:
-- [`/kiro:spec-requirements`](#kirospec-requirements) - Next step: generate requirements
-- [`/kiro:spec-status`](#kirospec-status) - Check initialization status
+- [`/spec-requirements`](#spec-requirements) - Next step: generate requirements
+- [`/spec-status`](#spec-status) - Check initialization status
 
 ---
 
-### `/kiro:spec-requirements`
+### `/spec-requirements`
 
 **Purpose**: Generate comprehensive, testable requirements in EARS format based on feature description.
 
@@ -320,11 +318,11 @@ proper separation of concerns and allow for focused, high-quality requirement an
 
 **Usage**:
 ```bash
-/kiro:spec-requirements <feature-name>
+/spec-requirements <feature-name>
 ```
 
 **Arguments**:
-- `<feature-name>` (required): Feature directory name from `/kiro:spec-init`
+- `<feature-name>` (required): Feature directory name from `/spec-init`
 
 **What it does**:
 1. Loads project context from ALL steering files
@@ -342,7 +340,7 @@ THE <system> SHALL <action>
 
 **Example**:
 ```bash
-/kiro:spec-requirements user-auth-oauth
+/spec-requirements user-auth-oauth
 ```
 
 <details>
@@ -357,12 +355,12 @@ THE <system> SHALL <action>
 - Error Handling: Clear error messages for auth failures
 
 ## Document Status
-✓ Updated .kiro/specs/user-auth-oauth/requirements.md (87 acceptance criteria)
+✓ Updated .sdd/specs/user-auth-oauth/requirements.md (87 acceptance criteria)
 ✓ Updated spec.json metadata (phase: requirements-generated)
 
 ## Next Steps
 1. Review requirements.md and verify all expected functionality is covered
-2. Approve by running: /kiro:spec-design user-auth-oauth
+2. Approve by running: /spec-design user-auth-oauth
   Or refine requirements and run this command again
 ```
 
@@ -395,7 +393,7 @@ THE <system> SHALL <action>
 </details>
 
 **When to use**:
-- ✅ After `/kiro:spec-init` completes
+- ✅ After `/spec-init` completes
 - ✅ When you need to **clarify requirements** before design
 - ✅ To **iterate** on requirements (run multiple times to refine)
 
@@ -404,10 +402,10 @@ THE <system> SHALL <action>
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | ❌ "Missing project description" | Empty requirements.md | Provide feature details when prompted |
-| ❌ "Spec not found" | Wrong feature name | Check `.kiro/specs/` for correct name |
-| ⚠️ Requirements too generic | No steering context | Run `/kiro:steering` first for better context |
+| ❌ "Spec not found" | Wrong feature name | Check `.sdd/specs/` for correct name |
+| ⚠️ Requirements too generic | No steering context | Run `/steering` first for better context |
 | ⚠️ Missing some requirements | Incomplete description | Review and run again, or manually add to requirements.md |
-| ⚠️ Not using EARS format | Template issue | Check `{{KIRO_DIR}}/settings/rules/ears-format.md` |
+| ⚠️ Not using EARS format | Template issue | Check `{{SDD_DIR}}/settings/rules/ears-format.md` |
 
 **Pro Tips**:
 - 💡 **Iterative process** - Run multiple times to refine requirements
@@ -416,13 +414,13 @@ THE <system> SHALL <action>
 - 💡 Edit `requirements.md` directly if needed - AI preserves your edits
 
 **Related Commands**:
-- [`/kiro:validate-gap`](#kirovalidate-gap) - Optional: analyze existing code gaps
-- [`/kiro:spec-design`](#kirospec-design) - Next: create technical design
-- [`/kiro:spec-status`](#kirospec-status) - Check requirements progress
+- [`/validate-gap`](#validate-gap) - Optional: analyze existing code gaps
+- [`/spec-design`](#spec-design) - Next: create technical design
+- [`/spec-status`](#spec-status) - Check requirements progress
 
 ---
 
-### `/kiro:spec-design`
+### `/spec-design`
 
 **Purpose**: Create comprehensive technical design that translates requirements (WHAT) into architectural design (HOW).
 
@@ -430,7 +428,7 @@ THE <system> SHALL <action>
 
 **Usage**:
 ```bash
-/kiro:spec-design <feature-name> [-y]
+/spec-design <feature-name> [-y]
 ```
 
 **Arguments**:
@@ -454,10 +452,10 @@ The command automatically determines research depth based on feature complexity 
 **Example**:
 ```bash
 # Standard flow with approval prompt
-/kiro:spec-design user-auth-oauth
+/spec-design user-auth-oauth
 
 # Fast-track with auto-approval
-/kiro:spec-design user-auth-oauth -y
+/spec-design user-auth-oauth -y
 ```
 
 <details>
@@ -474,8 +472,8 @@ Executing full discovery process...
 ✓ Identified integration points: API routes, middleware, database
 
 ## Design Generated
-✓ Updated .kiro/specs/user-auth-oauth/research.md with discovery notes
-✓ Created .kiro/specs/user-auth-oauth/design.md
+✓ Updated .sdd/specs/user-auth-oauth/research.md with discovery notes
+✓ Created .sdd/specs/user-auth-oauth/design.md
 
 Summary:
 - Architecture: NextAuth.js integration with custom JWT provider
@@ -487,7 +485,7 @@ Summary:
 ## Next Steps
 Review design.md and approve to continue:
 ```bash
-/kiro:spec-tasks user-auth-oauth
+/spec-tasks user-auth-oauth
 ```
 ```
 
@@ -543,7 +541,7 @@ Review design.md and approve to continue:
 | ❌ "Design phase failed" | Network issues during research | Check internet connection for WebSearch/WebFetch |
 | ⚠️ Design too shallow | Simple feature auto-detected | Manually request more detail if needed |
 | ⚠️ Missing diagrams | Complex architecture | Verify Mermaid syntax, manually add if needed |
-| ⚠️ Design doesn't fit codebase | Incomplete steering | Update `/kiro:steering` with current patterns |
+| ⚠️ Design doesn't fit codebase | Incomplete steering | Update `/steering` with current patterns |
 
 **Auto-Approval (`-y` flag)**:
 - ⚠️ **Use carefully** - skips human review of requirements
@@ -557,13 +555,13 @@ Review design.md and approve to continue:
 - 💡 Integration points show **how new code fits** existing system
 
 **Related Commands**:
-- [`/kiro:validate-design`](#kirovalidate-design) - Optional: quality review before tasks
-- [`/kiro:spec-tasks`](#kirospec-tasks) - Next: break into implementation tasks
-- [`/kiro:spec-status`](#kirospec-status) - Check design progress
+- [`/validate-design`](#validate-design) - Optional: quality review before tasks
+- [`/spec-tasks`](#spec-tasks) - Next: break into implementation tasks
+- [`/spec-status`](#spec-status) - Check design progress
 
 ---
 
-### `/kiro:spec-tasks`
+### `/spec-tasks`
 
 **Purpose**: Generate detailed, actionable implementation tasks that translate design into executable work items, with `(P)` immediately after the number of parallel-capable tasks.
 
@@ -571,7 +569,7 @@ Review design.md and approve to continue:
 
 **Usage**:
 ```bash
-/kiro:spec-tasks <feature-name> [-y]
+/spec-tasks <feature-name> [-y]
 ```
 
 **Arguments**:
@@ -604,10 +602,10 @@ Task order supplies the default dependency. Use `_Depends:_` for dependencies th
 **Example**:
 ```bash
 # Standard flow with approval prompt
-/kiro:spec-tasks user-auth-oauth
+/spec-tasks user-auth-oauth
 
 # Fast-track with auto-approval
-/kiro:spec-tasks user-auth-oauth -y
+/spec-tasks user-auth-oauth -y
 ```
 
 <details>
@@ -615,7 +613,7 @@ Task order supplies the default dependency. Use `_Depends:_` for dependencies th
 
 ````text
 ## Status
-✓ Generated tasks at .kiro/specs/user-auth-oauth/tasks.md
+✓ Generated tasks at .sdd/specs/user-auth-oauth/tasks.md
 
 ## Task Summary
 - Total: 8 major tasks, 24 sub-tasks
@@ -626,7 +624,7 @@ Task order supplies the default dependency. Use `_Depends:_` for dependencies th
 ## Next Steps
 Review tasks.md and start implementation:
 ```bash
-/kiro:spec-impl user-auth-oauth 1.1,1.2
+/spec-impl user-auth-oauth 1.1,1.2
 ```
 ````
 
@@ -695,20 +693,20 @@ Review tasks.md and start implementation:
 
 **Pro Tips**:
 - 💡 **Review task order** - should follow logical implementation sequence
-- 💡 Tasks are **checkboxes** - `[ ]` unchecked, `[x]` completed by `/kiro:spec-impl`
+- 💡 Tasks are **checkboxes** - `[ ]` unchecked, `[x]` completed by `/spec-impl`
 - 💡 **Edit freely** - add, remove, or reorder tasks as needed
-- 💡 Run `/kiro:spec-status` to track completion progress
+- 💡 Run `/spec-status` to track completion progress
 
 **Related Commands**:
-- [`/kiro:spec-impl`](#kirospec-impl) - Next: execute implementation tasks
-- [`/kiro:spec-status`](#kirospec-status) - Track task completion
-- [`/kiro:validate-impl`](#kirovalidate-impl) - Validate after implementation
+- [`/spec-impl`](#spec-impl) - Next: execute implementation tasks
+- [`/spec-status`](#spec-status) - Track task completion
+- [`/validate-impl`](#validate-impl) - Validate after implementation
 
 ---
 
-### `/kiro:spec-impl`
+### `/spec-impl`
 
-> **Skills mode equivalent**: `/kiro-impl`. Skills mode uses per-task subagents when available, with an inline fallback; manual mode runs TDD in the main context. Invocation and delegation depend on the host. See [Agent compatibility](agent-compatibility.md).
+> **Skills mode equivalent**: `/sdd-impl`. Skills mode supports autonomous (subagent spawn per task) and manual (TDD in main context) modes. See [Skill Reference](skill-reference.md).
 
 **Purpose**: Execute implementation tasks using Test-Driven Development (TDD) methodology.
 
@@ -716,7 +714,7 @@ Review tasks.md and start implementation:
 
 **Usage**:
 ```bash
-/kiro:spec-impl <feature-name> [task-numbers]
+/spec-impl <feature-name> [task-numbers]
 ```
 
 **Arguments**:
@@ -736,16 +734,16 @@ Executes tasks following **Kent Beck's TDD cycle**:
 **Examples**:
 ```bash
 # Execute specific tasks
-/kiro:spec-impl user-auth-oauth 1.1,1.2,1.3
+/spec-impl user-auth-oauth 1.1,1.2,1.3
 
 # Execute all pending tasks in feature
-/kiro:spec-impl user-auth-oauth
+/spec-impl user-auth-oauth
 
 # Execute single task
-/kiro:spec-impl user-auth-oauth 2.1
+/spec-impl user-auth-oauth 2.1
 
 # Execute major task (all sub-tasks)
-/kiro:spec-impl user-auth-oauth 1
+/spec-impl user-auth-oauth 1
 ```
 
 <details>
@@ -838,7 +836,7 @@ class User {
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | ❌ "Tasks not approved" | spec.json approval missing | Review tasks.md and approve, or check spec.json |
-| ❌ "Feature not found" | Wrong feature name | Verify name matches `.kiro/specs/` directory |
+| ❌ "Feature not found" | Wrong feature name | Verify name matches `.sdd/specs/` directory |
 | ❌ "Invalid task number" | Task ID doesn't exist | Check tasks.md for valid task numbers |
 | ❌ "Tests failing" | Implementation incomplete | Fix failing tests before moving to next task |
 | ⚠️ Tests not written first | TDD not followed | AI should write tests first - report if skipped |
@@ -847,16 +845,16 @@ class User {
 **Task Selection**:
 ```bash
 # Specific sub-tasks
-/kiro:spec-impl feature 1.1,1.2,1.3
+/spec-impl feature 1.1,1.2,1.3
 
 # All sub-tasks of major task 1
-/kiro:spec-impl feature 1
+/spec-impl feature 1
 
 # Mix of major and sub-tasks
-/kiro:spec-impl feature 1,2.1,2.2,3
+/spec-impl feature 1,2.1,2.2,3
 
 # All pending tasks (empty checkboxes)
-/kiro:spec-impl feature
+/spec-impl feature
 ```
 
 **Validation Steps**:
@@ -872,19 +870,19 @@ For each task completion:
 - 💡 **TDD is mandatory** - Tests written before implementation
 - 💡 **Check regressions** - Existing tests must continue passing
 - 💡 **Incremental commits** - Commit after each task or small group
-- 💡 Run `/kiro:spec-status` frequently to track progress
-- 💡 Use `/kiro:validate-impl` after completing tasks
+- 💡 Run `/spec-status` frequently to track progress
+- 💡 Use `/validate-impl` after completing tasks
 
 **Related Commands**:
-- [`/kiro:validate-impl`](#kirovalidate-impl) - Validate completed implementation
-- [`/kiro:spec-status`](#kirospec-status) - Check implementation progress
-- [`/kiro:spec-tasks`](#kirospec-tasks) - Review task list
+- [`/validate-impl`](#validate-impl) - Validate completed implementation
+- [`/spec-status`](#spec-status) - Check implementation progress
+- [`/spec-tasks`](#spec-tasks) - Review task list
 
 ---
 
 ## Validation Commands
 
-### `/kiro:validate-gap`
+### `/validate-gap`
 
 **Purpose**: Analyze the gap between requirements and existing codebase to inform implementation strategy (optional quality gate for brownfield projects).
 
@@ -892,7 +890,7 @@ For each task completion:
 
 **Usage**:
 ```bash
-/kiro:validate-gap <feature-name>
+/validate-gap <feature-name>
 ```
 
 **Arguments**:
@@ -913,7 +911,7 @@ For each task completion:
 
 **Example**:
 ```bash
-/kiro:validate-gap user-auth-oauth
+/validate-gap user-auth-oauth
 ```
 
 <details>
@@ -966,7 +964,7 @@ Risk: Low
 ## Next Steps
 Proceed to design phase with this analysis:
 ```bash
-/kiro:spec-design user-auth-oauth
+/spec-design user-auth-oauth
 ```
 ```
 
@@ -983,9 +981,9 @@ Proceed to design phase with this analysis:
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| ❌ "Requirements not found" | Wrong feature name or phase | Run `/kiro:spec-requirements` first |
+| ❌ "Requirements not found" | Wrong feature name or phase | Run `/spec-requirements` first |
 | ⚠️ Analysis too shallow | Small codebase | Provide more context manually if needed |
-| ⚠️ Missing integration points | Incomplete steering | Update `/kiro:steering` with current architecture |
+| ⚠️ Missing integration points | Incomplete steering | Update `/steering` with current architecture |
 | 💡 "Can I skip this?" | Greenfield project | Yes - this is optional for new codebases |
 
 **Pro Tips**:
@@ -996,13 +994,13 @@ Proceed to design phase with this analysis:
 - 💡 Flags areas needing **further research** before design
 
 **Related Commands**:
-- [`/kiro:spec-requirements`](#kirospec-requirements) - Must run before gap analysis
-- [`/kiro:spec-design`](#kirospec-design) - Next step after gap analysis
-- [`/kiro:validate-design`](#kirovalidate-design) - Design validation after creation
+- [`/spec-requirements`](#spec-requirements) - Must run before gap analysis
+- [`/spec-design`](#spec-design) - Next step after gap analysis
+- [`/validate-design`](#validate-design) - Design validation after creation
 
 ---
 
-### `/kiro:validate-design`
+### `/validate-design`
 
 **Purpose**: Interactive technical design quality review to ensure readiness for implementation (optional quality gate).
 
@@ -1010,7 +1008,7 @@ Proceed to design phase with this analysis:
 
 **Usage**:
 ```bash
-/kiro:validate-design <feature-name>
+/validate-design <feature-name>
 ```
 
 **Arguments**:
@@ -1031,7 +1029,7 @@ Proceed to design phase with this analysis:
 
 **Example**:
 ```bash
-/kiro:validate-design user-auth-oauth
+/validate-design user-auth-oauth
 ```
 
 <details>
@@ -1082,7 +1080,7 @@ Estimated fix time: 2-3 hours of design refinement.
 ### Next Steps
 1. Update design.md to address the 3 issues above
 2. Re-run validation or proceed directly to tasks if confident
-3. Generate tasks: `/kiro:spec-tasks user-auth-oauth`
+3. Generate tasks: `/spec-tasks user-auth-oauth`
 ```
 
 </details>
@@ -1105,7 +1103,7 @@ Estimated fix time: 2-3 hours of design refinement.
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| ❌ "Design not found" | Wrong feature name or phase | Run `/kiro:spec-design` first |
+| ❌ "Design not found" | Wrong feature name or phase | Run `/spec-design` first |
 | ⚠️ Too many critical issues | Complex or incomplete design | Address issues and re-run validation |
 | ⚠️ Review too lenient | Simple feature | Validation focuses on critical risks only |
 | 💡 "Do I need this?" | Unsure if required | Optional - use for complex/risky designs |
@@ -1124,15 +1122,15 @@ Estimated fix time: 2-3 hours of design refinement.
 - 💡 Use for **peer review** - Structured format for team discussions
 
 **Related Commands**:
-- [`/kiro:spec-design`](#kirospec-design) - Must run before design validation
-- [`/kiro:spec-tasks`](#kirospec-tasks) - Next step after GO decision
-- [`/kiro:validate-gap`](#kirovalidate-gap) - Optional pre-design validation
+- [`/spec-design`](#spec-design) - Must run before design validation
+- [`/spec-tasks`](#spec-tasks) - Next step after GO decision
+- [`/validate-gap`](#validate-gap) - Optional pre-design validation
 
 ---
 
-### `/kiro:validate-impl`
+### `/validate-impl`
 
-> **Skills mode equivalent**: `/kiro-validate-impl`. In skills mode, validation focuses on **integration** concerns (cross-task consistency, boundary correctness via `git diff`, mechanical enforcement) rather than per-task checks. See [Skill Reference](skill-reference.md).
+> **Skills mode equivalent**: `/sdd-validate-impl`. In skills mode, validation focuses on **integration** concerns (cross-task consistency, boundary correctness via `git diff`, mechanical enforcement) rather than per-task checks. See [Skill Reference](skill-reference.md).
 
 **Purpose**: Validate implementation against requirements, design, and tasks to ensure quality and completeness.
 
@@ -1140,7 +1138,7 @@ Estimated fix time: 2-3 hours of design refinement.
 
 **Usage**:
 ```bash
-/kiro:validate-impl [feature-name] [task-numbers]
+/validate-impl [feature-name] [task-numbers]
 ```
 
 **Arguments**:
@@ -1162,14 +1160,14 @@ Estimated fix time: 2-3 hours of design refinement.
 
 **Examples**:
 ```bash
-# Auto-detect from recent /kiro:spec-impl commands
-/kiro:validate-impl
+# Auto-detect from recent /spec-impl commands
+/validate-impl
 
 # Validate specific feature (all completed tasks)
-/kiro:validate-impl user-auth-oauth
+/validate-impl user-auth-oauth
 
 # Validate specific tasks
-/kiro:validate-impl user-auth-oauth 1.1,1.2,1.3
+/validate-impl user-auth-oauth 1.1,1.2,1.3
 ```
 
 <details>
@@ -1255,7 +1253,7 @@ From conversation history:
 
 ### Next Steps
 1. Fix Task 1.3 race condition
-2. Re-run validation: `/kiro:validate-impl user-auth-oauth 1.3`
+2. Re-run validation: `/validate-impl user-auth-oauth 1.3`
 3. Continue with Task 2.x when ready
 ```
 
@@ -1290,7 +1288,7 @@ From conversation history:
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| ❌ "No implementation found" | No completed tasks | Run `/kiro:spec-impl` first |
+| ❌ "No implementation found" | No completed tasks | Run `/spec-impl` first |
 | ❌ "Tests failing" | Implementation incomplete/broken | Fix failing tests before validation passes |
 | ⚠️ Missing requirements | Incomplete implementation | Implement missing functionality |
 | ⚠️ Design mismatch | Code doesn't follow design | Refactor to match design.md specifications |
@@ -1299,7 +1297,7 @@ From conversation history:
 **Auto-Detection**:
 Scans conversation history for:
 ```bash
-/kiro:spec-impl user-auth-oauth 1.1,1.2,1.3
+/spec-impl user-auth-oauth 1.1,1.2,1.3
 ```
 Extracts: `user-auth-oauth` and tasks `1.1, 1.2, 1.3`
 
@@ -1308,18 +1306,18 @@ Extracts: `user-auth-oauth` and tasks `1.1, 1.2, 1.3`
 - 💡 **Auto-detection** works great in continuous conversation
 - 💡 Use as **quality gate** before moving to next major task
 - 💡 **Regressions** are flagged - existing tests must still pass
-- 💡 Pair with `/kiro:spec-status` for complete progress view
+- 💡 Pair with `/spec-status` for complete progress view
 
 **Related Commands**:
-- [`/kiro:spec-impl`](#kirospec-impl) - Implementation execution
-- [`/kiro:spec-status`](#kirospec-status) - Overall feature progress
-- [`/kiro:spec-tasks`](#kirospec-tasks) - View task list
+- [`/spec-impl`](#spec-impl) - Implementation execution
+- [`/spec-status`](#spec-status) - Overall feature progress
+- [`/spec-tasks`](#spec-tasks) - View task list
 
 ---
 
 ## Status & Utility
 
-### `/kiro:spec-status`
+### `/spec-status`
 
 **Purpose**: Display comprehensive status and progress for a specification across all phases.
 
@@ -1327,7 +1325,7 @@ Extracts: `user-auth-oauth` and tasks `1.1, 1.2, 1.3`
 
 **Usage**:
 ```bash
-/kiro:spec-status <feature-name>
+/spec-status <feature-name>
 ```
 
 **Arguments**:
@@ -1342,7 +1340,7 @@ Extracts: `user-auth-oauth` and tasks `1.1, 1.2, 1.3`
 
 **Example**:
 ```bash
-/kiro:spec-status user-auth-oauth
+/spec-status user-auth-oauth
 ```
 
 <details>
@@ -1422,19 +1420,19 @@ Extracts: `user-auth-oauth` and tasks `1.1, 1.2, 1.3`
 ## Next Action
 Continue implementation with remaining tasks:
 ```bash
-/kiro:spec-impl user-auth-oauth 4.3,4.4,5.1
+/spec-impl user-auth-oauth 4.3,4.4,5.1
 ```
 
 Or implement all remaining tasks:
 ```bash
-/kiro:spec-impl user-auth-oauth
+/spec-impl user-auth-oauth
 ```
 
 ---
 
 ## Issues
 ⚠️ **Warning**: Task 3.x completed but validation not run.  
-  Recommended: `/kiro:validate-impl user-auth-oauth` to verify quality
+  Recommended: `/validate-impl user-auth-oauth` to verify quality
 
 ---
 
@@ -1462,7 +1460,7 @@ Or implement all remaining tasks:
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| ❌ "Spec not found" | Wrong feature name | List specs in `.kiro/specs/` directory |
+| ❌ "Spec not found" | Wrong feature name | List specs in `.sdd/specs/` directory |
 | ⚠️ Percentages incorrect | tasks.md parsing issue | Verify checkbox format: `- [ ]` and `- [x]` |
 | 💡 Missing next action | Unclear phase | Status should suggest next command |
 
@@ -1480,8 +1478,8 @@ Or implement all remaining tasks:
 - 💡 Great for **status updates** in team meetings
 
 **Related Commands**:
-- [`/kiro:spec-impl`](#kirospec-impl) - Continue implementation
-- [`/kiro:validate-impl`](#kirovalidate-impl) - Validate completed work
+- [`/spec-impl`](#spec-impl) - Continue implementation
+- [`/validate-impl`](#validate-impl) - Validate completed work
 - All other spec commands based on current phase
 
 ---
@@ -1493,30 +1491,30 @@ Or implement all remaining tasks:
 
 ```bash
 # 1. Project setup
-/kiro:steering
+/steering
 
 # 2. Initialize feature
-/kiro:spec-init User authentication with OAuth 2.0 and JWT tokens
+/spec-init User authentication with OAuth 2.0 and JWT tokens
 
 # 3. Generate requirements
-/kiro:spec-requirements user-auth-oauth
+/spec-requirements user-auth-oauth
 
 # 4. Create design
-/kiro:spec-design user-auth-oauth
+/spec-design user-auth-oauth
 
 # 5. Break into tasks
-/kiro:spec-tasks user-auth-oauth
+/spec-tasks user-auth-oauth
 
 # 6. Implement incrementally
-/kiro:spec-impl user-auth-oauth 1.1,1.2
-/kiro:spec-impl user-auth-oauth 1.3,1.4
-/kiro:spec-impl user-auth-oauth 2
+/spec-impl user-auth-oauth 1.1,1.2
+/spec-impl user-auth-oauth 1.3,1.4
+/spec-impl user-auth-oauth 2
 
 # 7. Check progress
-/kiro:spec-status user-auth-oauth
+/spec-status user-auth-oauth
 
 # 8. Validate implementation
-/kiro:validate-impl user-auth-oauth
+/validate-impl user-auth-oauth
 ```
 
 </details>
@@ -1526,30 +1524,30 @@ Or implement all remaining tasks:
 
 ```bash
 # 1. Establish project context
-/kiro:steering
-/kiro:steering-custom  # Add domain-specific patterns
+/steering
+/steering-custom  # Add domain-specific patterns
 
 # 2. Initialize enhancement
-/kiro:spec-init Add OAuth to existing auth system
+/spec-init Add OAuth to existing auth system
 
 # 3. Generate requirements
-/kiro:spec-requirements oauth-enhancement
+/spec-requirements oauth-enhancement
 
 # 4. Analyze integration gaps
-/kiro:validate-gap oauth-enhancement
+/validate-gap oauth-enhancement
 
 # 5. Create design (informed by gap analysis)
-/kiro:spec-design oauth-enhancement
+/spec-design oauth-enhancement
 
 # 6. Validate design against existing system
-/kiro:validate-design oauth-enhancement
+/validate-design oauth-enhancement
 
 # 7. Break into tasks
-/kiro:spec-tasks oauth-enhancement
+/spec-tasks oauth-enhancement
 
 # 8. Implement and validate
-/kiro:spec-impl oauth-enhancement 1.1,1.2
-/kiro:validate-impl oauth-enhancement
+/spec-impl oauth-enhancement 1.1,1.2
+/validate-impl oauth-enhancement
 ```
 
 </details>
@@ -1559,21 +1557,21 @@ Or implement all remaining tasks:
 
 ```bash
 # 1. Quick setup
-/kiro:steering
+/steering
 
 # 2. Initialize with description
-/kiro:spec-init Add user profile page with avatar upload
+/spec-init Add user profile page with avatar upload
 
 # 3. Auto-approve through design
-/kiro:spec-requirements user-profile
-/kiro:spec-design user-profile -y
-/kiro:spec-tasks user-profile -y
+/spec-requirements user-profile
+/spec-design user-profile -y
+/spec-tasks user-profile -y
 
 # 4. Implement all at once
-/kiro:spec-impl user-profile
+/spec-impl user-profile
 
 # 5. Final validation
-/kiro:validate-impl user-profile
+/validate-impl user-profile
 ```
 
 </details>
@@ -1587,14 +1585,14 @@ Or implement all remaining tasks:
 
 ```bash
 # Generate initial version
-/kiro:spec-requirements feature
+/spec-requirements feature
 
 # Review and refine (run multiple times)
-/kiro:spec-requirements feature  # Updates based on feedback
+/spec-requirements feature  # Updates based on feedback
 
 # Same for design and tasks
-/kiro:spec-design feature
-/kiro:spec-design feature  # Refine based on review
+/spec-design feature
+/spec-design feature  # Refine based on review
 ```
 
 </details>
@@ -1604,14 +1602,14 @@ Or implement all remaining tasks:
 
 ```bash
 # Implement one major task at a time
-/kiro:spec-impl feature 1
-/kiro:validate-impl feature
+/spec-impl feature 1
+/validate-impl feature
 
-/kiro:spec-impl feature 2
-/kiro:validate-impl feature
+/spec-impl feature 2
+/validate-impl feature
 
 # Check overall progress
-/kiro:spec-status feature
+/spec-status feature
 ```
 
 </details>
@@ -1619,16 +1617,16 @@ Or implement all remaining tasks:
 ### Quality Gates
 ```bash
 # Optional gates at each phase
-/kiro:spec-requirements feature
-/kiro:validate-gap feature          # Optional: brownfield only
+/spec-requirements feature
+/validate-gap feature          # Optional: brownfield only
 
-/kiro:spec-design feature
-/kiro:validate-design feature       # Optional: complex designs
+/spec-design feature
+/validate-design feature       # Optional: complex designs
 
-/kiro:spec-tasks feature
+/spec-tasks feature
 
-/kiro:spec-impl feature 1.1,1.2
-/kiro:validate-impl feature         # Optional: after each session
+/spec-impl feature 1.1,1.2
+/validate-impl feature         # Optional: after each session
 ```
 
 ---
@@ -1642,9 +1640,9 @@ Or implement all remaining tasks:
 - 🎯 **Review before approve** - don't auto-approve (`-y`) production features
 
 ### Steering
-- 💡 Run `/kiro:steering` **first** for existing projects
+- 💡 Run `/steering` **first** for existing projects
 - 💡 Re-run after **major refactoring** to update context
-- 💡 Use `/kiro:steering-custom` for **repeated domain patterns**
+- 💡 Use `/steering-custom` for **repeated domain patterns**
 - 💡 Steering is **additive** - preserves your customizations
 
 ### Requirements
@@ -1669,8 +1667,8 @@ Or implement all remaining tasks:
 - 💡 **TDD is mandatory** - tests before code
 - 💡 Start with **small batches** - 1-2 tasks initially
 - 💡 Watch for **regressions** - existing tests must pass
-- 💡 Run `/kiro:spec-status` **frequently** to track progress
-- 💡 Use `/kiro:validate-impl` after **each session**
+- 💡 Run `/spec-status` **frequently** to track progress
+- 💡 Use `/validate-impl` after **each session**
 
 ### Validation
 - 💡 **validate-gap**: Use for brownfield, skip for greenfield
@@ -1684,7 +1682,7 @@ Or implement all remaining tasks:
 
 ### "Feature not found"
 **Cause**: Wrong feature name or spec doesn't exist  
-**Solution**: Check `.kiro/specs/` directory for correct name
+**Solution**: Check `.sdd/specs/` directory for correct name
 
 ### "Requirements/Design not approved"
 **Cause**: Phase not marked as approved in spec.json  
@@ -1692,7 +1690,7 @@ Or implement all remaining tasks:
 
 ### "Template missing"
 **Cause**: Corrupted or incomplete installation  
-**Solution**: Reinstall cc-sdd: `npx cc-sdd@latest`
+**Solution**: Reinstall open-sdd: `npx @brujo2020/open-sdd@latest`
 
 ### Tasks not completing
 **Cause**: Checkbox format incorrect in tasks.md  
@@ -1704,11 +1702,11 @@ Or implement all remaining tasks:
 
 ### Steering seems outdated
 **Cause**: Codebase changed since last steering update  
-**Solution**: Re-run `/kiro:steering` to sync with current code
+**Solution**: Re-run `/steering` to sync with current code
 
 ### AI suggestions don't match project
 **Cause**: Incomplete or missing steering context  
-**Solution**: Run `/kiro:steering` and `/kiro:steering-custom` for domain patterns
+**Solution**: Run `/steering` and `/steering-custom` for domain patterns
 
 ---
 
@@ -1716,26 +1714,26 @@ Or implement all remaining tasks:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ cc-sdd Command Quick Reference                              │
+│ open-sdd Command Quick Reference                              │
 ├─────────────────────────────────────────────────────────────┤
 │ STEERING                                                    │
-│  /kiro:steering              Create/update project memory   │
-│  /kiro:steering-custom       Add domain-specific context    │
+│  /steering              Create/update project memory   │
+│  /steering-custom       Add domain-specific context    │
 ├─────────────────────────────────────────────────────────────┤
 │ SPEC WORKFLOW                                               │
-│  /kiro:spec-init <desc>      Initialize feature             │
-│  /kiro:spec-requirements <f> Generate requirements          │
-│  /kiro:spec-design <f> [-y]  Create technical design        │
-│  /kiro:spec-tasks <f> [-y]   Break into implementation      │
-│  /kiro:spec-impl <f> [tasks] Execute with TDD               │
+│  /spec-init <desc>      Initialize feature             │
+│  /spec-requirements <f> Generate requirements          │
+│  /spec-design <f> [-y]  Create technical design        │
+│  /spec-tasks <f> [-y]   Break into implementation      │
+│  /spec-impl <f> [tasks] Execute with TDD               │
 ├─────────────────────────────────────────────────────────────┤
 │ VALIDATION (Optional)                                       │
-│  /kiro:validate-gap <f>      Analyze existing vs required   │
-│  /kiro:validate-design <f>   Review design quality          │
-│  /kiro:validate-impl [f] [t] Validate implementation        │
+│  /validate-gap <f>      Analyze existing vs required   │
+│  /validate-design <f>   Review design quality          │
+│  /validate-impl [f] [t] Validate implementation        │
 ├─────────────────────────────────────────────────────────────┤
 │ STATUS                                                      │
-│  /kiro:spec-status <f>       Check progress                 │
+│  /spec-status <f>       Check progress                 │
 └─────────────────────────────────────────────────────────────┘
 
 Legend: <f> = feature-name, [t] = task-numbers, [-y] = auto-approve

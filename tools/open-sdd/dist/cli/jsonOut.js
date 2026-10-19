@@ -1,0 +1,155 @@
+/**
+ * Sobre JSON compartido por los comandos del CLI (`--json`).
+ *
+ * El CLI tiene hoy un `--json` por comando, y cada uno inventó su forma. Eso hace que un script que
+ * encadena comandos tenga que aprender cinco gramáticas distintas para lo mismo: «¿salió bien?»,
+ * «¿qué datos?», «¿qué errores?». `jsonEnvelope` fija UNA forma estable:
+ *
+ *   { ok, command, data, findings: { errors, warnings }, detail }
+ *
+ * ── Reglas del sobre ────────────────────────────────────────────────────────────────────────────
+ *  1. `ok` es la respuesta a «¿puedo seguir?» y se deriva de `errors`: sin errores, `ok: true`. Se
+ *     puede forzar explícitamente cuando el veredicto no es simplemente «hay errores» (por ejemplo,
+ *     un comando que sale con 0 pero quiere declarar que quedó algo sin inspeccionar).
+ *  2. `findings` es SIEMPRE un objeto con dos listas, nunca ausente: un consumidor puede leer
+ *     `.findings.errors.length` sin comprobar `undefined`. Cada hallazgo es `{ id?, message, artifact? }`;
+ *     las cadenas sueltas se aceptan y se normalizan a `{ message }` para no obligar a reescribir el
+ *     llamante.
+ *  3. `detail` es una línea en español legible por humanos; `renderJsonEnvelope` la usa para el
+ *     resumen de una línea. El orden de las claves del objeto es fijo, para que el JSON sea
+ *     comparable por diff.
+ *  4. El sobre NO ejecuta nada ni conoce los comandos: es forma, no lógica. Un comando adoptante
+ *     sigue siendo responsable de su veredicto (y de su código de salida).
+ *
+ * ── Adopción incremental (declarada, no supuesta) ───────────────────────────────────────────────
+ * Este helper es nuevo y se adopta comando a comando; NO se ha reescrito ningún comando existente
+ * para no romper contratos ya fijados por tests (por ejemplo, `status --json` sin feature devuelve
+ * la lista heredada por spec). Comandos que AÚN NO emiten este sobre y conservan su `--json` previo:
+ *
+ *   - src/cli/commands/status.ts       (`--json` heredado + StatusReport)
+ *   - src/cli/commands/brownfield.ts   (survey/constitution/bootstrap/impact/contracts/reuse/delta)
+ *   - src/cli/commands/paper.ts        (gates/govern/assure/waves/floor)
+ *   - src/cli/commands/audit.ts
+ *   - src/cli/commands/gap.ts
+ *   - src/cli/commands/getspecs.ts
+ *   - src/cli/commands/impl.ts
+ *   - src/cli/commands/init.ts
+ *   - src/cli/commands/verify.ts
+ *   - src/cli/commands/help.ts         (no emite JSON; solo texto)
+ *
+ * Cuando un comando adopte el sobre, basta con devolver `jsonEnvelope(...)` como su salida `--json`;
+ * no hay registro central que actualizar.
+ *
+ * ── El pie de puntuación (una línea, en TODOS los comandos) ─────────────────────────────────────
+ * `emitScoreFooter` es el ÚNICO sitio que decide si un comando lleva el pie `SDD n% · Fase …`. Lo
+ * llama el despachador (`src/index.ts`), no cada comando, para que ninguno tenga que acordarse. El
+ * sobre JSON gana un campo opcional `score` con el informe completo; el pie humano y el JSON son la
+ * misma medición (`core/sddScore.ts`), no dos. Reglas de supresión, en este orden:
+ *
+ *   `--no-footer`  lo apaga explícitamente (scripts que comparan la salida del comando tal cual).
+ *   `--json`       la salida debe seguir siendo JSON parseable: un pie la rompería.
+ *   `--quiet`      el modo guion promete UNA línea y esa línea es del comando.
+ *
+ * Un TTY no es requisito: en no-TTY el pie SÍ aparece (salvo las tres excepciones de arriba), porque
+ * un log de CI sin el número es exactamente donde más falta hace. Un fallo al medir no puede tumbar
+ * el comando: el pie se omite y el veredicto del comando queda intacto.
+ *
+ * ── Invariante gates: el pie y el comando no pueden contradecirse ───────────────────────────────
+ * El pie mide la cadena del nivel declarado, pero `gates run` y `audit bundle`/`sarif` ejecutan SU
+ * propia cadena (ids, perfil, régimen y `--staged`/`--base` son del comando). Reproducirla desde el
+ * pie sería adivinar. Por eso el despachador marca esas invocaciones con `gateContext: 'external'` y
+ * el componente de gates viaja como «no medidos en esta ejecución»: el pie NUNCA puede decir «gates
+ * OK» mientras el comando de la misma invocación dice que la cadena NO pasa. Quien sí conozca la
+ * ejecución puede inyectarla con `gateRun` y el componente la puntúa con el mismo código.
+ */
+import { computeSddScore, renderScoreFooter } from '../core/sddScore.js';
+const toFinding = (value) => {
+    if (typeof value === 'string')
+        return { message: value };
+    const record = value;
+    return {
+        ...(typeof record.id === 'string' && record.id.length > 0 ? { id: record.id } : {}),
+        message: typeof record.message === 'string' ? record.message : String(record.message ?? ''),
+        ...(typeof record.artifact === 'string' && record.artifact.length > 0 ? { artifact: record.artifact } : {}),
+    };
+};
+/**
+ * Construir el sobre. Nunca lanza: cualquier entrada se normaliza a la forma estable, porque un
+ * comando que revienta al serializar su propio informe es peor que un informe raro.
+ */
+export const jsonEnvelope = (input) => {
+    const errors = (input.errors ?? []).map(toFinding);
+    const warnings = (input.warnings ?? []).map(toFinding);
+    const ok = input.ok ?? errors.length === 0;
+    const detail = input.detail ??
+        (ok
+            ? `Comando «${input.command}» completado sin errores${warnings.length > 0 ? ` (${warnings.length} aviso(s))` : ''}.`
+            : `Comando «${input.command}» con ${errors.length} error(es)${warnings.length > 0 ? ` y ${warnings.length} aviso(s)` : ''}.`);
+    return { ok, command: input.command, data: input.data, findings: { errors, warnings }, detail, ...(input.score ? { score: input.score } : {}) };
+};
+/**
+ * Aplanar los issues de core (`{ severity, id?, message }`) a las dos listas del sobre. Los issues de
+ * severidad `info` no existen en este vocabulario: un «informativo» no es ni error ni aviso, y
+ * inventarle una tercera lista rompería la estabilidad de la forma.
+ */
+export const findingsFromIssues = (issues) => {
+    const findings = { errors: [], warnings: [] };
+    for (const issue of issues) {
+        const finding = toFinding({
+            ...(typeof issue.id === 'string' && issue.id.length > 0 ? { id: issue.id } : {}),
+            message: issue.message,
+            ...(typeof issue.artifact === 'string' && issue.artifact.length > 0 ? { artifact: issue.artifact } : {}),
+        });
+        if (issue.severity === 'error')
+            findings.errors.push(finding);
+        if (issue.severity === 'warning')
+            findings.warnings.push(finding);
+    }
+    return findings;
+};
+/** Atajo para el caso más común: `ok` ya calculado por el comando. */
+export const isEnvelopeOk = (envelope) => envelope.ok;
+/**
+ * Renderizador de UNA línea, para la salida humana de un `--json` (o para un `--quiet`). Es texto
+ * plano a propósito: el color es decisión del llamante y un resumen con ANSI no se puede comparar
+ * en un test ni registrar en un log.
+ */
+export const renderJsonEnvelope = (envelope) => {
+    const { errors, warnings } = envelope.findings;
+    const verdict = envelope.ok ? 'ok' : 'error';
+    const counts = `${errors.length} error(es)${warnings.length > 0 ? `, ${warnings.length} aviso(s)` : ''}`;
+    return `open-sdd ${envelope.command} · ${verdict} · ${counts} · ${envelope.detail}`;
+};
+/** Flag que apaga el pie para scripts que comparan la salida del comando tal cual. */
+export const SCORE_FOOTER_FLAG = '--no-footer';
+/**
+ * ¿Toca pie en esta invocación? El JSON y el modo guion quedan intactos; `--no-footer` lo apaga. La
+ * decisión vive aquí y solo aquí: el despachador pregunta, ningún comando recuerda nada.
+ */
+export const shouldEmitScoreFooter = (argv) => !argv.includes(SCORE_FOOTER_FLAG) && !argv.includes('--json') && !argv.includes('--quiet');
+/**
+ * Medir el repositorio y escribir el pie de UNA línea. Devuelve el informe (para quien quiera
+ * adjuntarlo al sobre) o `null` cuando no toca o cuando medir falló. Nunca lanza: un pie que
+ * revienta no puede tumbar el comando que lo lleva.
+ *
+ * `opts.gateRun` deja que el llamante puntúe la MISMA ejecución de la cadena que produjo el comando;
+ * `opts.gateContext: 'external'` declara que el comando acaba de correr la cadena y el pie no puede
+ * reproducirla. Sin ninguno de los dos, el pie mide la cadena del nivel declarado. El invariante:
+ * el pie nunca puede decir «gates OK» mientras el comando de esta invocación dice que la cadena NO
+ * pasa.
+ */
+export const emitScoreFooter = async (argv, io, cwd, opts = {}) => {
+    if (!shouldEmitScoreFooter(argv))
+        return null;
+    try {
+        const report = await computeSddScore(cwd, {
+            ...(opts.gateRun ? { gateRun: opts.gateRun } : {}),
+            ...(opts.gateContext ? { gateContext: opts.gateContext } : {}),
+        });
+        io.log(renderScoreFooter(report));
+        return report;
+    }
+    catch {
+        return null;
+    }
+};

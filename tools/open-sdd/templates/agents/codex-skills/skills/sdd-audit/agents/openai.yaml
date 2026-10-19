@@ -1,0 +1,6 @@
+interface:
+  display_name: "Audit Compliance"
+  short_description: "Audit spec-to-code drift and verify EU AI Act / NIST compliance"
+
+policy:
+  allow_implicit_invocation: false

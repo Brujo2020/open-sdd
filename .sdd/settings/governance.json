@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_comment": "solo = nothing blocks, checks just report (default). team = blocks code written without an approved spec. enterprise = everything blocks.",
+  "profile": "solo"
+}

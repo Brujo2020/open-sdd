@@ -1,0 +1,444 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{microtype}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning, fit, calc}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=red!70!black,
+    urlcolor=blue!60!black
+}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+    keywordstyle=\color{blue!80!black}\bfseries
+}
+
+\title{\textbf{Open-SDD: Arquitectura Ejecutable, Harnessing Zero-Trust y Living Specifications para la Ingeniería de Software Agéntica Enterprise}}
+
+\author{
+    \textbf{Mario Alejandro Ramos}\thanks{Ingeniero en Computación e Informática, especialista en Spatial Computing y Arquitecturas Agénticas, NTT DATA. Email: \texttt{mario.ramos@nttdata.com}}
+    \and
+    \textbf{Open-SDD Research \& Architecture Initiative}
+}
+
+\date{Septiembre de 2026 (Preprint)}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+A medida que la inteligencia artificial generativa transiciona aceleradamente desde el autocompletado asistido hacia enjambres autónomos multi-agente (\textit{multi-agent autonomous swarms}), la ingeniería de software corporativa y de producción masiva se enfrenta a una crisis de gobernanza estructural: la capacidad generativa estocástica de los modelos de lenguaje supera ampliamente los mecanismos deterministas de verificación disponibles. Los pipelines agénticos no controlados disparan el \textit{write throughput}, degradando severamente la cohesión sistémica, cuadruplicando la duplicación de código y acumulando deuda técnica silenciosa.
+
+Este artículo presenta \textbf{Open-SDD}, un marco metodológico y \textit{reference harness} abierto, agnóstico al modelo y gobernado por principios de \textit{Zero-Trust}. Fundamentado en la quinta generación de abstracción de software---donde la intención arquitectónica se convierte en un plano de control ejecutable (\textit{SpecOps}) promovido por la literatura reciente de la Oficina del CTO de Red Hat---Open-SDD formaliza un lazo cibernético cerrado de cuatro etapas: \textit{propose $\rightarrow$ act $\rightarrow$ verify $\rightarrow$ learn}. Mediante la unificación de protocolos en estándares \texttt{sdd-*} y la persistencia de especificaciones vivas en \texttt{.sdd/}, Open-SDD introduce seis innovaciones fundamentales: 
+(i) una \textbf{Tríada Documental} gobernada por sintaxis formal EARS y proveniencia inmutable en Git; 
+(ii) la disección y superación de los **Ocho Antipatrones Críticos de la Adopción Agéntica** documentados en la industria a septiembre de 2026, destacando la erradicación de la falacia de personificación agéntica (\textit{Role-Based Agent Trap}) en favor de clases de capacidad funcional; 
+(iii) un modo estricto de control de versiones (\textbf{Strict Git Mode}) con automatización \textit{SpecOps} y compuerta inmutable \textbf{Gate 0}, bloqueando de forma absoluta cualquier generación de código sin especificaciones aprobadas formalmente por supervisión humana; 
+(iv) un **Motor de Decisión Contextual Adaptativo** (PASS/WARN/ASK/BLOCK) que mitiga la \textit{Bypass Conjecture} ($E_{\text{ef}} = E_{\text{nom}}(1 - d(\phi))$) para armonizar el avance veloz del desarrollador (\textit{Flow State}) con controles de seguridad sin fricción; 
+(v) un sustrato de validación continua basado en **Agentic Quality Engineering (Agentic QE)** bajo la metodología PACTS (Proactive, Autonomous, Collaborative, Targeted, Structured) desplegado sobre flotas Model Context Protocol (MCP) e invariantes metamórficos; y 
+(vi) un **Espectro Universal de Modernización Brownfield** que cubre más del 90\% del desarrollo de software real, escalando adaptativamente desde desarrolladores individuales y \textit{startups} ágiles hasta arquitecturas \textit{hyperscaler} (AWS, GCP, Azure) mediante ingeniería inversa \textit{code-first} (\texttt{/sdd-getspecs}), congelamiento de comportamiento observable (\textit{Golden Characterization Locking} de Michael Feathers) y desacoplamiento progresivo (\textit{Strangler Fig Pattern} de Martin Fowler). Demostramos cómo Open-SDD restituye la soberanía humana sobre la intención, la ética y las fronteras de diseño, transformando el código fuente en un activo efímero y reproducible bajo demanda (\textit{Ambient Code}).
+\end{abstract}
+
+\noindent\textbf{Palabras clave:} Spec-Driven Development, Agentic Software Engineering, Zero-Trust Architecture, Living Specifications, Modernización Brownfield Universal, Agentic QE, PACTS, Strict Git Mode, Bypass Conjecture, Antipatrones Agénticos, Gobernanza de IA.
+
+---
+
+\section{Introducción y Estado del Arte a Septiembre de 2026}
+
+Tras más de tres años de integración generalizada de Large Language Models (LLMs) en el ciclo de vida del software (SDLC), la industria tecnológica ha alcanzado un punto de inflexión empírico: la divergencia radical entre la aceleración subjetiva percibida por los ingenieros y la degradación objetiva de la estabilidad sistémica de entrega.
+
+Ensayos de control aleatorizado conducidos por METR demostraron que desarrolladores altamente experimentados operando asistentes de IA sin restricciones de arnés resultaron hasta un 19\% más lentos en bases de código maduras, pese a reportar una percepción de mejora de velocidad del 20\% \cite{metr2025}. A nivel estructural, evaluaciones longitudinales de código fuente sobre 211 millones de líneas realizadas por GitClear evidenciaron una cuadruplicación en la proliferación de bloques de código duplicados (\textit{code clones}) y un desplome de la refactorización a menos del 10\% del volumen total de cambios \cite{gitclear2025}. De manera convergente, la telemetría global de Google Cloud DORA reveló que por cada 25 puntos porcentuales de incremento en adopción no gobernada de asistentes agénticos, la estabilidad de entrega del sistema sufrió un deterioro medible del 7.2\% \cite{dora2024}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=2.2cm, auto]
+    \tikzstyle{gen} = [rectangle, draw, fill=blue!5, text width=8em, text centered, rounded corners, minimum height=2.5em]
+    \tikzstyle{line} = [draw, -latex', thick]
+
+    \node [gen] (g1) {\textbf{1ª Gen (1950s)}\\Código Máquina};
+    \node [gen, right=0.6cm of g1] (g2) {\textbf{2ª Gen (1960s)}\\Ensamblador};
+    \node [gen, right=0.6cm of g2] (g3) {\textbf{3ª Gen (1970-80s)}\\Compiladores High-Level};
+    \node [gen, below=1.2cm of g1] (g4) {\textbf{4ª Gen (1990-2010s)}\\Runtimes Dinámicos \& IaC};
+    \node [gen, right=1.8cm of g4, fill=blue!20, text width=18em] (g5) {\textbf{5ª Gen: SpecOps / SDD (2026)}\\Arquitectura Ejecutable \& Living Specs};
+
+    \path [line] (g1) -- (g2);
+    \path [line] (g2) -- (g3);
+    \path [line] (g3) |- (g4);
+    \path [line] (g4) -- (g5);
+\end{tikzpicture}
+\caption{La evolución de la abstracción del software: De la manipulación binaria a la arquitectura ejecutable (adaptado de Griffin \& Carroll, Red Hat Office of the CTO \cite{griffin2026spec}).}
+\label{fig:abstraction}
+\end{figure}
+
+El diagnóstico formal es contundente: \textbf{el cuello de botella en la ingeniería agéntica de 2026 no radica en la potencia generativa de los modelos, sino en la ausencia de un plano de control determinista sobre un proceso estocástico.} Cuando los agentes operan sin fronteras arquitectónicas explícitas, inducen acoplamiento de estado inadvertido, colapsan la atomicidad transaccional y sufren de sesgo de auto-evaluación (\textit{self-review bias}) al generar y validar código dentro del mismo contexto cognitivo.
+
+Como plantean Leigh Griffin y Ray Carroll desde la Oficina del CTO de Red Hat \cite{griffin2026spec}, la ingeniería de software ha inaugurado su **Quinta Generación de Abstracción** (Figura~\ref{fig:abstraction}). En este paradigma (\textit{Spec-Driven Development}), la arquitectura deja de ser documentación pasiva archivada en wikis obsoletas y se convierte en el plano de control ejecutable (\textit{SpecOps}).
+
+\begin{table}[h!]
+\centering
+\small
+\caption{Inversión Arquitectónica: Modelo Clásico vs. Modelo Open-SDD (adaptado de \cite{griffin2026spec}).}
+\label{tab:inversion}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Dimensión} & \textbf{Modelo Clásico (Legacy)} & \textbf{Modelo Open-SDD (SpecOps)} \\ \midrule
+Fuente Canónica de Verdad & Código fuente productivo & Especificaciones ejecutables vivas en Git \\
+Rol de la Arquitectura & Consultivo (diagramas pasivos en wikis) & Ejecutable, vinculante y verificado en compuerta \\
+Naturaleza del Código & Activo primario de inversión a largo plazo & \textit{Ambient Code}: desechable, reproducible bajo demanda \\
+Detección de \textit{Drift} & Forense post-facto (incidentes en producción) & Preventiva pre-runtime mediante compuertas continuas \\
+Comportamiento en Runtime & Emergente, estocástico e impredecible & Arquitectónicamente determinista \\
+Supervisión Humana & Revisión manual línea por línea de diffs & Gobernanza de alto nivel: intención, ética y límites \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Esta inversión arquitectónica (Tabla~\ref{tab:inversion}) redefine el valor del código: el código se vuelve *ambiental y efímero*, mientras que la especificación viva estructurada en Git es la verdad inmutable del sistema.
+
+\section{Taxonomía de Antipatrones en la Adopción Agéntica (Ramos 2026)}
+
+Basado en la evidencia de fallas sistémicas observadas en despliegues corporativos reales durante 2025 y 2026 documentadas por Ramos \cite{ramos2026zero}, formulamos una taxonomía de **ocho antipatrones críticos de adopción agéntica** que Open-SDD neutraliza de manera programática:
+
+\begin{table}[h!]
+\centering
+\caption{Taxonomía de Antipatrones Agénticos y Contramedidas de Open-SDD (basado en Ramos \cite{ramos2026zero}).}
+\label{tab:antipatterns}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lp{5.5cm}p{7.5cm}@{}}
+\toprule
+\textbf{Antipatrón Agéntico} & \textbf{Manifestación y Riesgo Operacional} & \textbf{Patrón Correctivo Open-SDD} \\ \midrule
+\textbf{1. Role Personification} & Asignar "roles teatrales" ("Eres un Arquitecto", "Eres un QA Lead") a los agentes. Provoca \textit{prompt bloat}, colusión algorítmica y alucinaciones jerárquicas. & \textbf{Clases de Capacidad Funcional}: Los agentes son ejecutores efímeros acotados por herramientas, presupuesto de tokens, temperatura y frontera (\texttt{\_Boundary:\_}). \\
+\textbf{2. Context Dumping} & Volcar repositorios enteros a la ventana de contexto. Provoca \textit{Lost-in-the-Middle} \cite{liu2024lost}, envenenamiento y alucinación de APIs. & \textbf{Graph before Grep}: Extracción determinista de AST vía Tree-Sitter/LSP hacia \texttt{.sdd/memory/graph/}. Solo se inyecta el grafo de dependencias relevante. \\
+\textbf{3. Binary Gate Paralysis} & Compuertas rígidas que bloquean indistintamente acciones reales de meras representaciones (ej. detectar \texttt{rm -rf} en un test). & \textbf{Motor de Decisión Contextual}: Clasificación graduada en 4 niveles (PASS/WARN/ASK/BLOCK) evaluando superficie y contexto. \\
+\textbf{4. Escape-Hatch Proliferation} & Multiplicación de flags de bypass (\texttt{--force}, \texttt{BYPASS=1}) por fatiga de falsos positivos, colapsando la seguridad ($E_{\text{ef}} \to 0$). & \textbf{Receipts Criptográficos Unívocos}: El bypass requiere aprobación HITL con hash de un solo uso registrado en el log de auditoría. \\
+\textbf{5. Checkbox Closure} & Marcar tareas como completadas verificando presencia de cadenas o checkboxes, sin validar el objetivo real. & \textbf{Verificación Empírica Obligatoria}: Tarea cerrada exclusivamente con código de salida cero, tests en verde y captura fresca de stdout. \\
+\textbf{6. Unbounded Retries} & Loops de reintento descontrolados ante fallas de ejecución agéntica, colapsando APIs y agotando cuotas. & \textbf{Presupuesto de Reintentos \& Circuit Breaker}: Máximo de reintentos acotados, \textit{exponential backoff with jitter} y retroalimentación en \texttt{tasks.md}. \\
+\textbf{7. Asymmetric Safeguards} & Controles estrictos en entornos productivos pero nulos en desarrollo o evaluación local agéntica. & \textbf{Zero-Trust de Extremo a Extremo}: Idénticas compuertas de seguridad ejecutadas en local, sandbox MCP y pipelines de CI/CD. \\
+\textbf{8. Decorative Metrics} & Paneles de monitoreo con métricas cosméticas no fundamentadas en comandos de medición comprobables. & \textbf{Telemetría Determinista PACTS}: Cada indicador en \texttt{sdd-audit} enlaza al comando que lo genera y al hash del commit Git correspondiente. \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Desmitificación del Rol: De la Personificación a las Clases de Capacidad}
+Un error capital identificado en las arquitecturas agénticas de primera generación consiste en emular la estructura organizativa humana mediante \textit{system prompts} cargados de psicología artificial ("Piensa como un Senior DevOps", "Actúa como un Security Lead"). Los modelos de lenguaje carecen de autoconciencia deontológica; asignarles una personalidad introduce verbosidad teatral, sesgos de complacencia (\textit{sycophancy}) y alucinación de autoridad.
+
+Open-SDD erradica este enfoque: \textbf{los agentes no son personas; son unidades de ejecución atómicas acotadas por un contrato de capacidad}:
+\begin{equation}
+    \text{AgentExecutionContract} = \langle \mathcal{M}_{\text{class}}, \mathcal{T}_{\text{tools}}, \Theta_{\text{temp}}, \mathcal{B}_{\text{boundary}}, \mathcal{C}_{\text{criteria}} \rangle
+\end{equation}
+donde $\mathcal{M}_{\text{class}}$ es la clase de razonamiento del modelo (Frontier Reasoning, Code-Specialized o Economy), $\mathcal{T}_{\text{tools}}$ es el set de herramientas de menor privilegio expuestas vía MCP, $\Theta_{\text{temp}}$ es la temperatura vinculada (con $\Theta=0$ para auditorías e invariantes), $\mathcal{B}_{\text{boundary}}$ es la lista cerrada de rutas de archivos autorizados, y $\mathcal{C}_{\text{criteria}}$ son los criterios de aceptación EARS a verificar.
+
+\section{Arquitectura del Sistema: El Lazo Cibernético y el Equilibrio de Flujo}
+
+Open-SDD estructura la interacción agéntica en un lazo cibernético cerrado (Figura~\ref{fig:loop}):
+\begin{equation}
+    \text{Loop} = \langle \text{Propose} \longrightarrow \text{Act} \longrightarrow \text{Verify} \longrightarrow \text{Learn} \rangle
+\end{equation}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=1.8cm, auto]
+    \tikzstyle{block} = [rectangle, draw, fill=blue!10, text width=7em, text centered, rounded corners, minimum height=3.2em]
+    \tikzstyle{judge} = [diamond, draw, fill=yellow!20, text width=5.5em, text centered, minimum height=3em]
+    \tikzstyle{line} = [draw, -latex', thick]
+
+    \node [block] (propose) {\textbf{1. Propose}\\ (Tríada Documental EARS en Git)};
+    \node [block, right=1.6cm of propose] (act) {\textbf{2. Act}\\ (Worktrees Efímeros Transaccionales)};
+    \node [block, right=1.6cm of act] (verify) {\textbf{3. Verify}\\ (Motor 6D \& Agentic QE PACTS)};
+    \node [block, right=1.6cm of verify] (learn) {\textbf{4. Learn}\\ (Grafo AST \& Cuarentena)};
+    \node [judge, above=1.2cm of act] (judge) {\textbf{Supervisión HITL / Meta-Judge}};
+
+    \path [line] (propose) -- (act);
+    \path [line] (act) -- (verify);
+    \path [line] (verify) -- (learn);
+    \path [line] (learn.south) -- ++(0,-0.9) -| (propose.south);
+    \path [line, dashed] (judge) -- (act);
+    \path [line, dashed] (judge) -- (verify);
+\end{tikzpicture}
+\caption{Lazo de control cibernético de Open-SDD con supervisión humana y arbitraje determinista.}
+\label{fig:loop}
+\end{figure}
+
+\subsection{El Equilibrio entre Gobernanza y Velocidad (\textit{Flow State})}
+El diseño de Open-SDD responde a una máxima de usabilidad crítica: \textbf{la gobernanza que destruye la velocidad del desarrollador termina siendo saboteada.} Si el harness exige múltiples aprobaciones manuales para un cambio trivial, el desarrollador buscará atajos de evasión.
+
+Para preservar el estado de flujo (\textit{Flow State}) sin sacrificar determinismo, Open-SDD introduce un \textbf{Mecanismo de Aprobación Graduada}:
+\begin{itemize}
+    \item \textbf{Flujo Fast-Track (\texttt{-y}, \texttt{--auto})}: Para tareas atómicas confinadas a módulos de bajo riesgo y radio de impacto nulo, el sistema avanza automáticamente entre compuertas siempre que los tests unitarios y validaciones de sintaxis se mantengan en verde.
+    \item \textbf{Flujo Riguroso con Revisión Humana Obligatoria}: Reservado para inicialización de especificaciones, cambios en contratos de interfaz pública o mutaciones en componentes de alto impacto (\textit{Core Crítico}).
+\end{itemize}
+
+\subsection{Fase 1: Propose (La Tríada Documental)}
+Todo incremento funcional exige una especificación sincrónica almacenada bajo el árbol de especificaciones vivas \texttt{.sdd/specs/<feature>/}:
+\begin{enumerate}
+    \item \texttt{requirements.md}: Criterios de aceptación estructurados en sintaxis \textbf{EARS} (\textit{Easy Approach to Requirements Syntax}) \cite{mavin2009ears}. EARS erradica la ambigüedad del lenguaje natural mediante 5 patrones matemáticamente analizables (Ubiquitous, Event-driven, State-driven, Optional features, Unwanted behavior).
+    \item \texttt{design.md}: Topología de componentes, diagramas Mermaid interactivos, contratos OpenAPI/GraphQL y Decisiones Arquitectónicas Registradas (\textbf{ADRs}).
+    \item \texttt{tasks.md}: Grafo Acíclico Dirigido (DAG) que serializa el trabajo en tareas atómicas TDD (RED $\to$ GREEN) anotadas con \texttt{\_Depends:\_} y \texttt{\_Boundary:\_}.
+\end{enumerate}
+
+\subsection{Fase 2: Act (Worktrees Transaccionales y Aislamiento de Estado)}
+Para evitar condiciones de carrera en el sistema de archivos, cada tarea se ejecuta en un \textit{Git Worktree} aislado sobre una rama efímera vinculada. Los subagentes no comparten directorio de trabajo en sucio. Si una tarea genera regresiones o no satisface sus aserciones, su worktree se descarta; el estado del repositorio principal jamás sufre contaminación.
+
+\subsection{Fase 3: Verify (La Conjetura del Bypass y el Motor Contextual 6D)}
+Tal como modeló formalmente Ramos \cite{ramos2026zero}, la efectividad real de la seguridad agéntica está condicionada por la tasa de falsos positivos:
+\begin{equation}
+    E_{\text{ef}}(\phi) = E_{\text{nom}}(\phi)\cdot \bigl(1 - d(\phi)\bigr)
+\end{equation}
+donde $d(\phi)$ es la probabilidad de desactivación humana provocada por fricción y fatiga.
+
+El \textbf{Motor de Decisión Contextual} de Open-SDD evalúa seis dimensiones en tiempo real (Fase del ciclo de vida, Entorno de ejecución, Superficie de llamada, Tipo de artefacto, Confianza del modelo y Matriz de riesgo) para emitir cuatro veredictos deterministas:
+\begin{itemize}
+    \item \textbf{PASS}: Acciones seguras ejecutadas en fixtures o documentación.
+    \item \textbf{WARN}: Operaciones con desvío no crítico registradas en el log sin detener la ejecución.
+    \item \textbf{ASK}: Ambigüedad de frontera que exige autorización HITL mediante token criptográfico efímero.
+    \item \textbf{BLOCK}: Parada de emergencia ante riesgos comprobados (comandos destructivos en producción, fugas de secretos).
+\end{itemize}
+
+\subsection{Fase 4: Learn (Malla de Memoria y Cuarentena Anti-Envenenamiento)}
+El conocimiento operativo se almacena de forma particionada:
+\begin{itemize}
+    \item \textbf{Memoria de Sesión} (\texttt{.sdd/memory/session/}): Bitácoras temporales compactadas para mitigar el consumo de contexto.
+    \item \textbf{Grafo AST} (\texttt{.sdd/memory/graph/}): Grafo determinista de símbolos y llamadas (\textit{Graph before Grep}).
+    \item \textbf{Cuarentena de Aprendizaje}: Cualquier patrón detectado tras un fallo debe pasar por un validador a temperatura cero para evitar ataques de inyección indirecta antes de consolidarse en \texttt{.sdd/steering/}.
+\end{itemize}
+
+\section{Strict Git Mode y el Ciclo de Vida SpecOps: Spec-as-Code}
+
+Inspirado en los principios de automatización de CI/CD para especificaciones detallados en la literatura de Red Hat \cite{griffin2026spec}, Open-SDD implementa \textbf{Strict Git Mode} (\texttt{.sdd/\allowbreak settings/\allowbreak git.json}), convirtiendo a Git en el árbitro único del ciclo agéntico.
+
+\begin{equation}
+    \text{State}_{\text{Git}} = \langle \text{Init Seed} \longrightarrow \text{Feature Branch} \longrightarrow \text{Spec Lock} \longrightarrow \text{Gated Impl} \longrightarrow \text{Verified Push} \rangle
+\end{equation}
+
+\subsection{El Invariante Gate 0}
+Open-SDD prohíbe de forma matemática que un agente toque código fuente sin una especificación aprobada por un humano:
+\begin{equation}
+    \text{Gate}_0(F) = 
+    \begin{cases} 
+        \text{AUTHORIZED}, & \text{si } \text{spec.json}.\text{phase} = \texttt{"approved"} \land \text{Approvals}(F) = \mathbf{True} \\
+        \text{HALTED}, & \text{en caso contrario (Retorna \texttt{E\_SPEC\_UNAPPROVED})}
+    \end{cases}
+\end{equation}
+Cualquier intento de ejecutar \texttt{/sdd-impl} en una especificación en borrador o inicializada aborta de inmediato.
+
+\subsection{La Tríada de Invariantes Críticos y Gobernanza Dual}
+Para optimizar el flujo de entrega continua y garantizar la adopción práctica de la arquitectura agéntica mitigando la \textit{Bypass Conjecture} formulada en la Ecuación~\ref{eq:bypass}, Open-SDD estructura su marco de verificación a través de la \textbf{Tríada de Invariantes Críticos}:
+\begin{enumerate}
+    \item \textbf{Invariante de Frontera y Blast Radius ($\mathcal{G}_1$)}: Confinamiento estricto a las rutas declaradas en \texttt{\_Boundary:\_}, impidiendo la mutación descontrolada de archivos no autorizados.
+    \item \textbf{Invariante de Contrato Mínimo ($\mathcal{G}_2$)}: Existencia de especificaciones mínimas (criterios EARS) para impedir la invención de alcance alucinado.
+    \item \textbf{Invariante de Evidencia Empírica Fresca ($\mathcal{G}_3$)}: Ejecución determinista de pruebas unitarias e invariantes metamórficos sin regresiones.
+\end{enumerate}
+
+Para balancear agilidad y conformidad, Open-SDD introduce una \textbf{Gobernanza Dual} configurable vía \texttt{.sdd/settings/governance.json}:
+\begin{itemize}
+    \item \textbf{Modo Libre (\texttt{fluid}, por defecto)}: Maximiza la velocidad del flujo de desarrollo (\textit{flow state}) en startups y equipos ágiles. Las compuertas secundarias actúan como advertencias no bloqueantes (\textit{non-blocking telemetry}), habilitando el avance en vía rápida (\textit{fast-track} con \texttt{-y} y \texttt{--auto}) sin pausas burocráticas.
+    \item \textbf{Modo Soberano (\texttt{strict})}: Diseñado para industrias reguladas y entornos hyperscaler. Activa el bloqueo duro de Gate 0, registro inmutable en Git y auditorías formales conforme al EU AI Act y NIST AI RMF.
+\end{itemize}
+
+\subsection{Automatización SpecOps}
+Al aprobarse la Tríada Documental, Open-SDD automatiza la orquestación en Git:
+\begin{enumerate}
+    \item \textbf{Branch Isolation}: Creación automática de la rama de trabajo $\texttt{feat/} \circ \text{Slug}(F)$.
+    \item \textbf{Hito Spec Lock}: Commit formal de las especificaciones aprobadas (\texttt{spec(slug): lock approved documentary triad}) y push a remoto.
+    \item \textbf{Verified Push \& PR}: Tras validar la implementación con tests en verde y Agentic QE (\texttt{/sdd-validate-impl}), Open-SDD publica la rama y genera automáticamente el Pull Request documentando la trazabilidad completa.
+\end{enumerate}
+
+\section{Validación Continua: Autonomous Quality Engineering (Agentic QE) y PACTS}
+
+Para responder a la alta velocidad de generación multi-agente, Open-SDD integra de forma nativa el marco de **Agentic QE** \cite{spiridonov2026agentic}, gobernado por la metodología **PACTS**:
+\begin{itemize}
+    \item \textbf{Proactive}: Modelado de riesgos de regresión antes de confirmar cambios.
+    \item \textbf{Autonomous}: Generación automática de pruebas metamórficas e invariantes de propiedades sin requerir scripting manual:
+    \begin{equation}
+        \forall x, x' \in \mathcal{D}, \quad R(x, x') \implies R\bigl(\mathcal{F}_{\text{legacy}}(x), \mathcal{F}_{\text{modernized}}(x')\bigr)
+    \end{equation}
+    \item \textbf{Collaborative}: Auditoría cruzada donde subagentes revisores independientes desafían el código generado (\texttt{sdd-review}) erradicando el sesgo de auto-revisión.
+    \item \textbf{Targeted}: Confinamiento estricto al radio de impacto ($\text{Boundary}(T_i)$).
+    \item \textbf{Structured}: Emisión de evidencia empírica estructurada hacia el informe de auditoría (\texttt{sdd-audit}).
+\end{itemize}
+
+\section{Mecanización de las Directrices de Karpathy}
+
+Principios pragmáticos formulados por Andrej Karpathy \cite{karpathy2025} son transformados en invariantes operacionales de compilación:
+
+\begin{table}[h!]
+\centering
+\small
+\caption{Mecanización de las Directrices de Karpathy en Open-SDD.}
+\label{tab:karpathy}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}llp{7.2cm}@{}}
+\toprule
+\textbf{Directriz Karpathy} & \textbf{Mecanismo de Arrastre} & \textbf{Invariante Operacional en Open-SDD} \\ \midrule
+Think Before Coding & Fase de Descubrimiento (\texttt{sdd-discovery}) & Prohíbe supuestos silenciosos; obliga a clarificación interactiva previa a la spec. \\
+Simplicity First & Hard Gate de Complejidad & Rechaza abstracciones prematuras, configurabilidad innecesaria y diffs sobredimensionados. \\
+Surgical Changes & Compuerta de Frontera (\texttt{\_Boundary:\_}) & Restringe escrituras únicamente a los archivos declarados; prohíbe formateos colaterales. \\
+Goal-Driven Execution & Compuerta de Verificación (\texttt{sdd-verify}) & Prohíbe el cierre de tareas sin código de salida cero, aserciones en verde y evidencia capturada. \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\section{Modernización Brownfield Universal: Del Desarrollador Solo al Hyperscaler}
+
+En el mundo real, **más del 90\% del software existente es Brownfield**. La creencia de que SDD solo es aplicable a desarrollos nuevos o a grandes corporaciones es un mito infundado. Open-SDD propone un **espectro progresivo en 4 niveles**:
+
+\begin{table}[h!]
+\centering
+\caption{El Espectro Brownfield Universal de Open-SDD según Escala Organizacional.}
+\label{tab:brownfield-spectrum}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lllll@{}}
+\toprule
+\textbf{Dimensión} & \textbf{Tier 1: Solo / Freelance} & \textbf{Tier 2: Startup / SMB} & \textbf{Tier 3: Scale-Up / OSS} & \textbf{Tier 4: Enterprise / Hyperscaler} \\ \midrule
+\textbf{Objetivo Primario} & Grounding y cero amnesia & Memoria viva, sin deuda & Desacople de fronteras & Zero-Trust y cumplimiento legal \\
+\textbf{Punto de Entrada} & \texttt{/sdd-getspecs} (rápido) & \texttt{/sdd-getspecs} (por módulo) & \texttt{/sdd-getspecs} + Gap & Grafo AST + Matriz Blast Radius \\
+\textbf{Foco de Pruebas} & Tests unitarios existentes & Unitarios + Integración en PR & Pruebas de frontera acotadas & Agentic QE (Invariantes PACTS) \\
+\textbf{Compuerta Aprobación} & Fast-track (\texttt{-y}, \texttt{--auto}) & Revisión por pares & Aprobación en Git vía PR & Strict Git Mode + Gate 0 Humano \\
+\textbf{Cumplimiento} & Mínimo (sin fricción) & Registro en commits/PRs & Trazabilidad de ADRs & \texttt{sdd-audit} (EU AI Act, NIST) \\
+\textbf{Patrón Migración} & Refactorización quirúrgica & Feature flags simples & Proxy Strangler Fig & Multi-Cloud Canary / Mirroring \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{Tier 1: Desarrollador Solo \& Freelancer (\textit{Frictionless Brownfield})}: Al retomar proyectos tras meses de pausa, \texttt{/sdd-getspecs} extrae la realidad del código hacia \texttt{.sdd/steering/}, evitando que el asistente alucine librerías inexistentes o destruya patrones establecidos.
+    \item \textbf{Tier 2: Startups \& Equipos Pequeños (\textit{Anti-Deuda Técnica})}: Erradica el conocimiento tribal (\textit{bus factor} $= 1$). Genera un mapa de ruta vivo en \texttt{steering/\allowbreak roadmap.md}, acelerando el onboarding de nuevos desarrolladores de semanas a minutos.
+    \item \textbf{Tier 3: Scale-Ups \& Open Source (\textit{Modernización Modular})}: Aplica la herramienta \texttt{/sdd-validate-gap} para calcular radios de impacto y desacoplar monolitos en módulos atómicos con fronteras confinadas (\texttt{\_Boundary:\_}).
+    \item \textbf{Tier 4: Enterprise \& Hyperscalers (\textit{Modernización Zero-Trust Regulada})}: Activa el protocolo completo de 5 capas:
+    \begin{enumerate}
+        \item \textbf{Capa 1: Reconocimiento Estructural (\textit{Graph before Grep})}: Mapeo AST estático de dependencias.
+        \item \textbf{Capa 2: Congelamiento de Caracterización (\textit{Golden Characterization Locking})}: Basado en Michael Feathers \cite{feathers2004working}, congela el comportamiento observable $B_0$ en Git antes de alterar código.
+        \item \textbf{Capa 3: Semillas de Especificación Viva y Compuerta Humana}: Validación y firma de arquitectos previa a la implementación.
+        \item \textbf{Capa 4: Implementación Quirúrgica (\textit{Strangler Fig Pattern})}: Basado en Martin Fowler \cite{fowler2004strangler}, enruta tráfico progresivo mediante proxies y feature flags.
+        \item \textbf{Capa 5: Auditoría y Cumplimiento}: Enlace de código a requerimientos, ADRs y tests vía \texttt{sdd-audit}.
+    \end{enumerate}
+\end{itemize}
+
+\subsection{Patrones de Nube en Hyperscalers}
+Open-SDD se integra con mecanismos nativos de nube: en \textbf{AWS} vía ALB Weighted Routing y VPC Traffic Mirroring para validación en modo sombra; en \textbf{Google Cloud} mediante Cloud Run y Traffic Director para canarios incrementales ($1\% \to 10\% \to 100\%$); y en \textbf{Microsoft Azure} con Azure Front Door y Azure Chaos Studio para resiliencia operacional.
+
+\section{Auditabilidad, Trazabilidad y Cumplimiento Regulatorio}
+
+Open-SDD automatiza la generación de evidencia de cumplimiento legal y normativo mediante el comando \texttt{sdd-audit}:
+\begin{itemize}
+    \item \textbf{EU AI Act (Reglamento de IA de la UE)}: Documentación técnica exhaustiva (Art. 11), registro inmutable de sesiones de IA (Art. 12) y gobernanza con supervisión humana demostrable (Art. 14).
+    \item \textbf{NIST AI RMF e ISO/IEC 42001}: Mapeo continuo de riesgos e inventario de controles verificables.
+    \item \textbf{Genealogía de Decisiones}: Cada línea de código productivo enlaza bidireccionalmente a su requerimiento EARS, ADR fundacional, hash del modelo generador y firma del revisor humano.
+\end{itemize}
+
+\section{Desafíos Abiertos y Fronteras de Investigación Futura}
+
+Declaramos formalmente cuatro áreas de investigación abierta para la evolución de la disciplina:
+\begin{enumerate}
+    \item \textbf{Verificación Formal Dinámica con SMT Solvers (Z3 / Lean 4)}: Integración de demostradores formales de teoremas para probar matemáticamente la equivalencia semántica entre código legacy y código ambiental generado.
+    \item \textbf{Federación Descentralizada de Specs Multi-Repositorio}: Sincronización de contratos de especificación viva a través de flotas de microservicios y microfrontends sin crear cuellos de botella centralizados.
+    \item \textbf{Optimización Dinámica de Economía de Tokens}: Algoritmos de subasta en tiempo real para asignar presupuestos de tokens según el índice de criticidad y blast radius del componente.
+    \item \textbf{Firmas Criptográficas Post-Cuánticas en Spec Locks}: Incorporación de sellado criptográfico resistente a computación cuántica para compras públicas de defensa y banca central.
+\end{enumerate}
+
+\section{Conclusión}
+
+Open-SDD demuestra que la ingeniería agéntica de alta velocidad a escala no requiere modelos más grandes, sino un arnés de control determinista, riguroso y libre de fricción. Al tratar las especificaciones como código vivo en Git, erradicar los antipatrones de personificación, universalizar el brownfield y acoplar validación continua con Agentic QE, Open-SDD ofrece el estándar definitivo para transformar la generación estocástica en ingeniería de software predecible, segura y de calidad enterprise.
+
+\bibliographystyle{plain}
+\begin{thebibliography}{10}
+
+\bibitem{metr2025}
+J.~Becker, N.~Rush, E.~Barnes, y D.~Rein.
+\newblock Measuring the impact of early-2025 {AI} on experienced open-source developer productivity.
+\newblock {\em arXiv preprint arXiv:2507.09089}, 2025.
+
+\bibitem{gitclear2025}
+GitClear.
+\newblock {AI} {C}opilot code quality: 2025 data suggests 4x growth in code clones.
+\newblock {\em GitClear Research Reports}, 2025.
+
+\bibitem{dora2024}
+Google~Cloud DORA.
+\newblock {\em Accelerate State of DevOps Report 2024--2025: AI Adoption and System Stability}.
+\newblock Google, 2025.
+
+\bibitem{griffin2026spec}
+L.~Griffin y R.~Carroll.
+\newblock Spec driven development: When architecture becomes executable.
+\newblock {\em InfoQ Architecture Series}, Enero 2026.
+
+\bibitem{ramos2026zero}
+M.~A. Ramos.
+\newblock {SDD-First} multi-agent orchestration for enterprise development: A zero-trust reference architecture for governing agentic software engineering at scale.
+\newblock {\em Preprint DOI: 10.13140/RG.2.2.29185.42087}, Agosto 2026.
+
+\bibitem{karpathy2025}
+A.~Karpathy.
+\newblock Guidelines for mitigating common {LLM} coding pitfalls.
+\newblock Codificado en \url{https://github.com/multica-ai/andrej-karpathy-skills}, 2025--2026.
+
+\bibitem{mavin2009ears}
+A.~Mavin, P.~Wilkinson, A.~Harwood, y M.~Novak.
+\newblock Easy approach to requirements syntax ({EARS}).
+\newblock En {\em Proc. 17th IEEE International Requirements Engineering Conference}, 2009.
+
+\bibitem{sampaio2025ai}
+L.~Sampaio.
+\newblock {\em AI-Assisted SDD: Spec-Driven Development with Gemini, Claude, and ai-sdd}.
+\newblock Autoeditado, 2025.
+
+\bibitem{spiridonov2026agentic}
+D.~Spiridonov.
+\newblock Agentic {QE} Framework: Bridging classical testing to autonomous quality engineering.
+\newblock {\em Quantum QE \& Agentic-QE.dev}, 2025--2026. \url{https://agentic-qe.dev}.
+
+\bibitem{cohen2025pact}
+R.~Cohen.
+\newblock The {PACT} principles for autonomous agent governance.
+\newblock {\em Agentics Foundation Whitepapers}, 2024--2025.
+
+\bibitem{feathers2004working}
+M.~Feathers.
+\newblock {\em Working Effectively with Legacy Code}.
+\newblock Prentice Hall, 2004.
+
+\bibitem{fowler2004strangler}
+M.~Fowler.
+\newblock Strangler {F}ig application.
+\newblock \url{https://martinfowler.com/bliki/StranglerFigApplication.html}, 2004--2020.
+
+\bibitem{liu2024lost}
+N.~F. Liu, K.~Lin, J.~Hewitt, A.~Paranjape, M.~Bevilacqua, F.~Petroni, y P.~Liang.
+\newblock Lost in the middle: How language models use long contexts.
+\newblock {\em Transactions of the Association for Computational Linguistics}, 12:157--173, 2024.
+
+\bibitem{vaswani2017attention}
+A.~Vaswani, N.~Shazeer, N.~Parmar, J.~Uszkoreit, L.~Jones, A.~N. Gomez, {\L}.~Kaiser, e I.~Polosukhin.
+\newblock Attention is all you need.
+\newblock En {\em Advances in Neural Information Processing Systems (NeurIPS)}, 30, 2017.
+
+\bibitem{euaiact2024}
+{Parlamento Europeo y Consejo de la Unión Europea}.
+\newblock Reglamento ({UE}) 2024/1689 por el que se establecen normas armonizadas en materia de inteligencia artificial ({Reglamento de Inteligencia Artificial}).
+\newblock {\em Diario Oficial de la Unión Europea}, L 2024/1689, Julio 2024.
+
+\bibitem{nistairmf2023}
+{National Institute of Standards and Technology (NIST)}.
+\newblock Artificial intelligence risk management framework ({AI RMF 1.0}).
+\newblock {\em NIST Trustworthy and Responsible AI}, NIST SP 1270, Enero 2023.
+
+\end{thebibliography}
+
+\end{document}

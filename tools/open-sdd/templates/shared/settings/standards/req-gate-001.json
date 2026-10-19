@@ -1,0 +1,39 @@
+{
+  "id": "REQ-GATE-001",
+  "title": "Requirement headings declare a numeric identifier",
+  "category": "requirements",
+  "severity": "warning",
+  "blocking": false,
+  "appliesTo": [
+    "requirements.md",
+    "delta.md"
+  ],
+  "standard": "internal",
+  "source": ".sdd/settings/rules/requirements-review-gate.md#mechanical-checks",
+  "detect": {
+    "kind": "structural",
+    "patterns": [
+      "requirements-numeric-ids"
+    ]
+  },
+  "message": "un encabezado de requisito no declara identificador numérico",
+  "remedy": {
+    "autoFixable": false,
+    "grades": [
+      {
+        "grade": "maybe-incorrect",
+        "text": "asigna al encabezado un identificador numérico estable, por ejemplo `REQ-AREA-001` o `1.2`"
+      },
+      {
+        "grade": "needs-human",
+        "text": "si el encabezado no es un requisito sino una sección del documento, bájalo a nivel 2"
+      }
+    ]
+  },
+  "evidence": "tools/open-sdd/src/core/standards.ts#runStandard (structural:requirements-numeric-ids)",
+  "calibrated": {
+    "corpus": null,
+    "recall": null,
+    "fpr": null
+  }
+}

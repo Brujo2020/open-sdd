@@ -1,211 +1,172 @@
-# cc-sdd: Long-running spec-driven implementation for AI coding agents
+# open-sdd
 
-<!-- npm badges -->
-[![npm version](https://img.shields.io/npm/v/cc-sdd?logo=npm)](https://www.npmjs.com/package/cc-sdd?activeTab=readme)
-[![install size](https://packagephobia.com/badge?p=cc-sdd)](https://packagephobia.com/result?p=cc-sdd)
-[![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+`open-sdd` is the layer that makes an AI coding agent's "done" verifiable: executable gates, delta
+specs for code that already exists, and a constitution that validates every spec.
 
-<div align="center" style="font-size: 1.1rem; margin-bottom: 1rem;"><sub>
-Package README: <a href="./tools/cc-sdd/README.md">English</a> | <a href="./tools/cc-sdd/README_ja.md">日本語</a> | <a href="./tools/cc-sdd/README_zh-TW.md">繁體中文</a>
-</sub></div>
+[![License: MIT](https://img.shields.io/github/license/Brujo2020/open-sdd)](https://github.com/Brujo2020/open-sdd/blob/main/LICENSE)
+[![CI — Linux + Windows](https://img.shields.io/github/actions/workflow/status/Brujo2020/open-sdd/gates.yml?branch=main)](https://github.com/Brujo2020/open-sdd/actions/workflows/gates.yml)
 
-## Turn approved specs into long-running autonomous implementation
+**English** · [Español](README.es.md)
 
-One command installs an agentic SDLC workflow as Agent Skills: discovery, requirements, design, tasks, and autonomous implementation with per-task independent review on hosts with native subagents. Works across 8 AI coding agents, with the same 17-skill set on each.
+## The problem
 
-👻 **Kiro-inspired.** Similar spec-driven, agentic SDLC style as Kiro IDE. Existing Kiro specs remain compatible and portable.
+AI agents write code fast, and their "it is finished" is a claim nobody checks.
+Prompt-only spec-driven tools produce documents, and a document does not fail a build.
+This tool turns the claim into something executable: a gate decides pass or fail, and a control that
+is declared but not implemented is reported as declared instead of counted as green.
 
-## What's new in v3.0
-
-cc-sdd v3.0 is a rework around Agent Skills and long-running autonomous implementation.
-
-- **`/kiro-discovery` as the new entry point.** Discovery routes new work into one of: extend an existing spec, implement directly with no spec, create one new spec, decompose into multiple specs, or mixed decomposition. It writes `brief.md` and, when needed, `roadmap.md`, so you can resume a workstream without re-explaining scope.
-- **`/kiro-impl` for long-running autonomous implementation.** When native subagents are available, each task gets a fresh implementer running TDD (RED → GREEN) behind a feature flag, an independent reviewer, and an auto-debug pass when blocked or after repeated review rejection. Otherwise, implementation and review run inline. Learnings propagate via `## Implementation Notes` in `tasks.md`. Each iteration handles one task; recorded task state supports resumption after checking unfinished work and active workers.
-- **Boundary-first spec discipline.** `design.md` now includes a File Structure Plan that drives task boundaries. Tasks carry `_Boundary:_` and `_Depends:_` annotations. Review and validation look for boundary violations, not just style issues.
-- **`/kiro-spec-batch` for multi-spec initiatives.** Turn a roadmap into multiple specs by dependency wave, in parallel when native subagents are available, with cross-spec review to catch contradictions, duplicated responsibilities, and interface mismatches.
-- **Agent Skills across 8 coding agents.** 17 skills per install, loaded on demand (progressive disclosure). Claude Code and Codex are stable; Cursor, Copilot, Devin Local / CLI, OpenCode, Gemini CLI, and Antigravity are in beta. Native subagents are used when available; hosts without them execute sequentially with inline review.
-
-Full skills-mode workflow and `/kiro-impl` internals: [Skill Reference](docs/guides/skill-reference.md).
-
-Upgrading from v1.x or v2.x? See the [Migration Guide](docs/guides/migration-guide.md#5-v2x-to-v30).
-
-## Why cc-sdd?
-
-cc-sdd treats the spec as a contract between parts of the system, not a master command document handed to the agent. Code remains the source of truth. Specs make the boundaries between parts of the code explicit so humans and agents can work in parallel without constant synchronization.
-
-The bet: explicit contracts at the right granularity let AI-driven development at team scale move faster, not slower. Agents write the spec, humans approve the contract at phase gates, code is what ships.
-
-Boundaries are not overhead. They are what lets you move freely inside while protecting the outside.
-
-Full rationale, trade-offs, and when-to-use / when-not-to-use: [Why cc-sdd? A philosophy note](docs/guides/why-cc-sdd.md).
-
-## Quick Start
+## Install and the first 60 seconds
 
 ```bash
-cd your-project
-npx cc-sdd@latest
+npx @brujo2020/open-sdd init . --write
 ```
 
-The default installs **Claude Code Skills** with English docs. To pick another agent or language:
+Run it inside your repository. It detects the host agent, records the rigor level in
+`.sdd/settings/rigor.json`, installs the commit gate (`.git/hooks/pre-commit`) and — with no MCP, no
+network and no API key — the **22 prompt templates** as the host's own chat commands. It is
+plan-first: without `--write` it only prints the plan, and it never overwrites an existing file. To
+install the host's skills too, add `--skills`; `open-sdd integrate <host> --write` installs the skills
+**and** registers the MCP server (`--list` shows all 25 hosts, each with a verified registration).
+
+Want to see the flow before installing it? `open-sdd templates` lists all 22 workflows, what each one
+writes, and the directory each of the eleven hosts reads. MCP is opt-in (`--mcp`): a host that blocks
+it, or a security policy that allow-lists it, does not lose any workflow.
+
+**Coming from the unscoped `open-sdd` package?** That older install declared the same three command
+names, and its symlinks survive its own uninstall — so `npm install -g @brujo2020/open-sdd@latest`
+stops with `EEXIST: file already exists … /bin/sdd`. Remove the dangling links, install again, and
+clear the shell's command cache, which still points at the old binary:
 
 ```bash
-npx cc-sdd@latest --codex-skills --lang ja      # Codex, Japanese
-npx cc-sdd@latest --cursor-skills --lang zh-TW  # Cursor IDE, Traditional Chinese
+rm -f "$(npm prefix -g)/bin/sdd" "$(npm prefix -g)/bin/sdd-open"   # left behind, both dangling
+npm install -g @brujo2020/open-sdd@latest
+hash -r                       # zsh: rehash — or open a new terminal
+open-sdd --version            # must print v3.4.0, not the 2.x banner
 ```
 
-Supports 8 AI coding agents (Claude Code and Codex stable; Cursor, Copilot, Devin Local / CLI, OpenCode, Gemini CLI, and Antigravity in beta) and 14 languages. See [Supported Agents](#supported-agents) for the full list.
+A stale global is not cosmetic: the installed commit hook resolves its CLI through `PATH`, so an old
+one makes the gate report nothing while the configuration still reads "blocking" (G-36). Details in
+[docs/guides/migration-guide.md](docs/guides/migration-guide.md#7-coming-from-the-unscoped-open-sdd-package).
 
-Then, in your agent:
+Then the one door. No arguments, read-only: it prints a 0–100 SDD score, the current phase and ONE
+next action, with one line of why.
 
 ```bash
-/kiro-discovery <idea>
+open-sdd                 # SDD score, phase and the single next action
+open-sdd status          # the same state as a full panel
+open-sdd --help          # every command
 ```
 
-Not sure where to start? Start with `kiro-discovery`. It routes your request and tells you what command to run next.
+The console messages are currently Spanish; `--lang en` fully translates `open-sdd tour` and
+`open-sdd context` only. The commands above work from the published package. In this checkout,
+replace `open-sdd` with `node tools/open-sdd/dist/cli.js`.
 
-### Common workflows
-
-| You want to... | Skills mode |
-|---|---|
-| Start a new feature or product-sized idea | `kiro-discovery` → `kiro-spec-init` → `kiro-spec-requirements` → `kiro-spec-design` → `kiro-spec-tasks` → `kiro-impl` |
-| Extend an existing system | `kiro-steering` → `kiro-discovery` or `kiro-spec-init` → optional `kiro-validate-gap` → `kiro-spec-design` → `kiro-spec-tasks` → `kiro-impl` |
-| Break down a large initiative | `kiro-discovery` → `kiro-spec-batch` |
-| Implement a small change with no spec | `kiro-discovery` → direct implementation |
-
-Legacy `/kiro:*` command modes are still available (`--claude`, `--cursor`, etc.) but are deprecated. See the [Migration Guide](docs/guides/migration-guide.md) for the upgrade path.
-
-For larger approved task sets, run `kiro-impl`. Native subagents provide per-task implementation, independent review, and auto-debug when available; otherwise the workflow runs in the main context with inline review.
-
-## See It In Action
-
-Example: build a new Photo Albums feature.
+Optional: the 60-second demo, offline, in a throwaway temp directory.
 
 ```bash
-/kiro-discovery Photo albums with upload, tagging, and sharing
-# discovery writes brief.md (and roadmap.md when multi-spec) and suggests the next command
-/kiro-spec-init photo-albums
-/kiro-spec-requirements photo-albums
-/kiro-spec-design photo-albums
-/kiro-spec-tasks photo-albums
-/kiro-impl photo-albums
-# autonomous: fresh implementer/reviewer when subagents are available; inline otherwise
+git clone https://github.com/Brujo2020/open-sdd && cd open-sdd
+bash scripts/demo-60s.sh
 ```
 
-Typical spec outputs (under 10 minutes):
+It injects four real incoherences — an untraced requirement, a completed task with no evidence, an
+unfilled `{{…}}` marker, a declared contract that does not exist — and exits non-zero if the tool
+misses any of them.
 
-- `requirements.md`: EARS-format requirements with acceptance criteria.
-- `design.md`: architecture with Mermaid diagrams and a File Structure Plan.
-- `tasks.md`: implementation tasks with boundaries and dependency annotations.
+## What you get
 
-On a host with native subagents, `/kiro-impl` runs tasks with TDD (RED → GREEN) behind feature flags, independent review, and auto-debug on failure. Inline execution follows the same review protocol in the main context.
+- **22 prompt templates, installed by default.** Every workflow is a command in your agent's own chat
+  (`/sdd-specify`, `/sdd-converge`, …), and each one runs a real engine command rather than asking a
+  model to "consider" a check. No MCP, no network. The argument you type is translated into each host's
+  own token (`{{args}}`, `${input:request}`, `$ARGUMENTS`), and a host's documented size limit is
+  checked rather than assumed. `open-sdd templates` lists them.
+- **An MCP server, if you want one.** A stdio JSON-RPC server with 11 tools and read-only resources,
+  callable by any modern MCP host. No network, no model backend, no API keys. It is opt-in (`--mcp`),
+  because some hosts and some security policies do not allow it.
+- **Delta specs.** `ADDED` / `MODIFIED` / `REMOVED` / `RENAMED`, with delta-scoped `REQ-<AREA>-<NNN>`
+  ids, so the contract of change stays finite.
+- **A constitution as the pivot.** Every spec is validated against
+  `.sdd/steering/constitution.md`; `brownfield constitution --draft` proposes it and a human ratifies it.
+- **A rigor ladder.** `spec-first` → `spec-anchored` → `spec-as-source`, fluid by default and
+  cumulative: each step only adds gates, and a valid constitution is required at every level.
+- **A commit gate and PR checks.** A pre-commit hook over the staged index, and a pull-request
+  workflow that runs the full chain.
+- **An audit bundle.** One sha256 per artifact plus SARIF 2.1.0; exits non-zero on a blocking finding.
+- **On-demand assistants.** Where a command already found a gap — an ambiguous EARS requirement, an
+  unfilled marker, a missing constitution — it proposes a paste-ready fix or asks an explicit question.
+- **Brownfield adoption.** `brownfield bootstrap` produces a module map, a codebase-intelligence
+  document, a reverse constitution and reuse-first candidates.
+- **Importers.** `import kiro | spec-kit | cc-sdd` maps incumbent artifacts into `.sdd/` and names
+  every skip with its reason.
 
-![Example: design.md System Flow](assets/design-system_flow.png)
+## How it compares
 
-## Supported Agents
+Qualitative, from the alternatives' public documentation. This is **not a benchmark**.
 
-Eight current integrations ship 17 skills each; the deprecated Cascade variant is retained for migration. Invocation, native subagent availability, and independent review depend on the execution surface and configuration.
+| | this tool | spec-kit | Kiro | prompt-only skill packs |
+|---|---|---|---|---|
+| Nature | CLI + MCP engine | prompt/skill toolkit | SDD inside one IDE | prompts and skills |
+| Host integration | MCP server; 35 agent definitions, 32 command conventions (20 verified, 12 refused with the URL that failed) plus a declared fork, 26 verified MCP registrations; the 22 prompt templates are the no-MCP default | broad install and integration surface | its own IDE | the host's chat |
+| Specs for existing code | delta specs + reverse constitution | spec workflow; a brownfield-bootstrap extension is proposed (#1436) | spec workflow in the IDE | documents only |
+| Enforcement | executable gates, exit codes, commit hook + PR checks | prompts and review | IDE-guided workflow | none |
+| Requirements & standards | 32 machine-checkable requirements checks and a 16-entry standards catalogue (`standards`, `requirements review`); every finding carries a position, a basis and a graded remedy or an explicit question — and it stays **advisory until a corpus measures its precision**; the count is verified by `CLM-067`, not hand-written | a checklist prompt | IDE quality hints | none |
+| Evidence / audit | audit bundle, sha256 per artifact, SARIF | the documents themselves | IDE artifacts | none |
+| Offline | no network, no model backend | local templates and scripts | IDE product | host-dependent |
 
-| Agent | Skills mode | Stability | Legacy mode |
-|---|---|---|---|
-| **Claude Code** | `--claude-skills` | Stable | `--claude` / `--claude-agent` (deprecated) |
-| **Codex** | `--codex-skills` | Stable | `--codex` (blocked) |
-| **Cursor IDE** | `--cursor-skills` | Beta | `--cursor` (deprecated) |
-| **GitHub Copilot** | `--copilot-skills` | Beta | `--copilot` (deprecated) |
-| **Devin Local / CLI** | `--devin` / `--devin-skills` | Beta | — |
-| **Windsurf / Cascade (legacy)** | `--windsurf-skills` | Deprecated | `--windsurf` (deprecated) |
-| **OpenCode** | `--opencode-skills` | Beta | `--opencode` / `--opencode-agent` (deprecated) |
-| **Gemini CLI** | `--gemini-skills` | Beta | `--gemini` (deprecated) |
-| **Antigravity** | `--antigravity` | Beta | — |
-| **Qwen Code** | — | — | `--qwen` |
+spec-kit does two things this repository does not: a much broader ecosystem and integration surface,
+and a gentler learning curve. Kiro's IDE integration is smoother than anything shipped here. If you
+live in either, they are good choices; no parity of ecosystem, polish or adoption is claimed.
+[Migrate from Kiro, spec-kit and cc-sdd](docs/guides/migrate-from.md) maps their artifacts onto this
+one.
 
-Stability describes integration maturity. Installing 17 skills does not verify that a host can run the full autonomous loop. Use `--devin` for Devin Local in Devin Desktop or Devin CLI. Installer checks and CLI skill discovery pass for the new beta adapter; authenticated task execution is still unverified. The Windsurf flags are deprecated Cascade migration options; Devin Cloud is outside the new adapter’s scope. Copilot subagents depend on the client. See [Agent compatibility](./docs/guides/agent-compatibility.md) for supported surfaces and Antigravity migration guidance.
+### The best of each tool, in one place
 
-## Advanced Installation
+open-sdd does not replace these tools by copying them: it takes the one idea each does best, turns it into a
+deterministic check or a command where possible, and leaves out what only adds ceremony. Ideas and rules, not code
+(all MIT); see [SDD modes](docs/guides/sdd-modes.md) for why each piece is included.
 
-### Skills mode (recommended)
+| Tool | What it does best | What open-sdd takes | Where | What it leaves out, and why |
+|---|---|---|---|---|
+| **Spec Kit** (GitHub) | the constitution as the authority; `/clarify`; `/analyze` across artifacts | constitution required at every governed rung; clarify as bounded questions derived from the deterministic ambiguity findings; cross-artifact consistency as an executable check, not a prompt | `brownfield constitution`, `govern`, `brownfield clarify`, `consistency` | gates written as prompts: here they return exit codes |
+| **Kiro** (AWS) | EARS requirements; steering with `inclusion`; three approved phases; Spec / Quick / Bugfix / Plan modes | EARS validation and repair; steering readiness; the sequential stage guide; the four modes as skills | `requirements review/fix`, `steering check`, `stages`, `/sdd-spec-quick`, `/sdd-bugfix`, `/sdd-plan-only` | the IDE itself: open-sdd runs in any host |
+| **OpenSpec** (Fission-AI) | change as a delta (ADDED · MODIFIED · REMOVED · RENAMED); `archive` | delta specs with stable ids; archiving verified specs; one behaviour per requirement | `delta init/validate`, `archive`, `requirements review` | applying deltas by hand: `delta` owns it |
+| **cc-sdd** (gotalab) | tasks with `(P)`, `_Boundary:_`, `_Depends:_`; waves; no technology in requirements | parallel waves; boundary, dependency and duplicate-id checks; an advisory hint when a requirement names a technology | `waves`, `consistency` | nothing material |
+| **BMAD-METHOD**¹ | discovery before building; non-goals; elicitation methods | `brief.md` gate: mandatory non-goals, measurable outcome, unconfirmed assumptions block; append-only decision log | `/sdd-discovery`, `discovery lint/log` | permanent personas and full PRD/architecture ceremony: one agent with lenses is enough |
+| **Feathers** (*Working Effectively with Legacy Code*) | characterization tests | freeze current behaviour before touching untested legacy | `/sdd-characterize`, `brownfield contracts` | — |
+| **SteelForge IDE** | levels and flows people pick first; tinyspec; EARS → Gherkin | `explore` mode outside the ladder; skills by project type; acceptance scenarios traced to each REQ | `modes`, `/sdd-tiny`, `/sdd-promote`, `gherkin` | — |
 
-```bash
-npx cc-sdd@latest                     # Claude Code Skills (default)
-npx cc-sdd@latest --claude-skills     # Claude Code Skills
-npx cc-sdd@latest --codex-skills      # Codex Skills
-npx cc-sdd@latest --cursor-skills     # Cursor IDE Skills (beta)
-npx cc-sdd@latest --copilot-skills    # GitHub Copilot Skills (beta)
-npx cc-sdd@latest --devin            # Devin Local / CLI Skills (beta)
-npx cc-sdd@latest --opencode-skills   # OpenCode Skills (beta)
-npx cc-sdd@latest --gemini-skills     # Gemini CLI Skills (beta)
-npx cc-sdd@latest --antigravity       # Antigravity Skills (beta)
-```
+¹ "BMAD-METHOD" and "BMad" are trademarks of BMad Code; the name is used only to identify the source of the ideas.
+Kiro's documentation could not be read directly; its ideas come through cc-sdd and Kiro's published modes.
 
-### Legacy modes (deprecated)
+## What it does not do yet
 
-```bash
-npx cc-sdd@latest --claude         # Claude Code commands (use --claude-skills)
-npx cc-sdd@latest --claude-agent   # Claude Code subagents (use --claude-skills)
-npx cc-sdd@latest --cursor         # Cursor IDE commands (use --cursor-skills)
-npx cc-sdd@latest --copilot        # GitHub Copilot prompts (use --copilot-skills)
-npx cc-sdd@latest --windsurf       # Legacy Cascade workflows (migrate to --devin)
-npx cc-sdd@latest --windsurf-skills # Deprecated Cascade skills; migrate to --devin
-npx cc-sdd@latest --opencode       # OpenCode commands (use --opencode-skills)
-npx cc-sdd@latest --opencode-agent # OpenCode subagents (use --opencode-skills)
-npx cc-sdd@latest --gemini         # Gemini CLI commands (use --gemini-skills)
-npx cc-sdd@latest --codex          # Codex (blocked, use --codex-skills)
-npx cc-sdd@latest --qwen           # Qwen Code
-```
+- **Module discovery is Node-only.** Workspace roots come from `package.json`; Maven/Gradle, Go, Rust
+  and Python monorepos return a single root module from `brownfield bootstrap`.
+- **Impact analysis has known false-positive classes.** `brownfield impact` reads the import graph
+  and the delta, and a check with that noise level can train its readers to ignore it.
+- **Three command-template conventions are refused, not guessed.** Codex, Zed and Cline document no
+  project-scoped command directory, so `init --write` prints the convention it could not verify and
+  writes nothing there. `open-sdd templates` lists all eleven hosts and marks each one.
+- **A local `docker build` is still single-architecture.** It produces the builder's architecture; the
+  multi-arch image (`linux/amd64` + `linux/arm64`) is built and pushed by the CI container job, so it
+  requires GitHub's runners rather than a laptop.
+- **The measurements are synthetic.** `docs/MEASUREMENTS.md` records 10/10 injected classes caught on
+  repositories this project wrote — self-consistency, not field recall or precision. The paper's
+  κ/FPR/latency figures belong to an unpublished prototype and are not measurements of this repository.
+- **The commit floor is installed, but level A is not verified.** The hook and the PR matrix exist
+  and run; no behavioural sentinel has verified write-time blocking in any host, and
+  `git commit --no-verify` is not recorded.
 
-### Language
-
-```bash
-npx cc-sdd@latest --lang ja        # Japanese
-npx cc-sdd@latest --lang zh-TW     # Traditional Chinese
-npx cc-sdd@latest --lang es        # Spanish
-# Supports: en, ja, zh-TW, zh, es, pt, de, fr, ru, it, ko, ar, el, vi
-```
-
-### Advanced options
-
-```bash
-# Preview changes before applying
-npx cc-sdd@latest --dry-run
-
-# Custom specs directory
-npx cc-sdd@latest --kiro-dir docs
-```
-
-## Customization
-
-Edit templates and rules in `{{KIRO_DIR}}/settings/` to match your team's workflow.
-
-- `templates/`: document structure for requirements, design, tasks.
-- `rules/`: AI generation principles and judgment criteria.
-
-Common use cases: PRD-style requirements, API and database schemas, approval gates, JIRA integration, domain-specific standards.
-
-[Customization Guide](docs/guides/customization-guide.md) has practical examples with copy-paste snippets.
+The complete list of gaps (G-01 … G-33), each with its code location, is in
+[docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
 
 ## Documentation
 
-| Guide | What you will learn | Links |
-|---|---|---|
-| **Skill Reference** | Skills-mode workflow, supporting skills, `/kiro-impl` subagent flow, Skills vs `--claude-agent` | [English](docs/guides/skill-reference.md) \| [日本語](docs/guides/ja/skill-reference.md) |
-| **Command Reference** | Legacy `/kiro:*` commands with detailed usage, parameters, and examples | [English](docs/guides/command-reference.md) \| [日本語](docs/guides/ja/command-reference.md) |
-| **Customization Guide** | Practical examples: PRD requirements, frontend/backend designs, JIRA integration | [English](docs/guides/customization-guide.md) \| [日本語](docs/guides/ja/customization-guide.md) |
-| **Spec-Driven Guide** | Complete workflow methodology from requirements to implementation | [English](docs/guides/spec-driven.md) \| [日本語](docs/guides/ja/spec-driven.md) |
-| **Why cc-sdd?** | Design rationale, trade-offs, when the tool fits and when it does not | [English](docs/guides/why-cc-sdd.md) \| [日本語](docs/guides/ja/why-cc-sdd.md) |
-| **Claude Subagents** | Legacy `--claude-agent` install target and its spec-quick subagent flow | [English](docs/guides/claude-subagents.md) \| [日本語](docs/guides/ja/claude-subagents.md) |
-| **Migration Guide** | Upgrading from v1.x / v2.x | [English](docs/guides/migration-guide.md) \| [日本語](docs/guides/ja/migration-guide.md) |
-
-## Related resources
-
-**Articles & presentations**
-
-- [Kiroの仕様書駆動開発プロセスをClaude Codeで徹底的に再現した](https://zenn.dev/gotalab/articles/3db0621ce3d6d2) (Zenn, Japanese)
-- [Claude Codeは仕様駆動の夢を見ない](https://speakerdeck.com/gotalab555/claude-codehashi-yang-qu-dong-nomeng-wojian-nai) (Speaker Deck, Japanese)
-
-**External resources**
-
-- [Kiro IDE](https://kiro.dev): enhanced spec management and team collaboration.
-- [Kiro's Spec Methodology](https://kiro.dev/docs/specs/): the original spec-driven development methodology.
+[Install](docs/INSTALL.md) · [Quickstart (60 s)](docs/guides/quickstart-60s.md) ·
+[Integrations](docs/guides/integrations.md) · [Existing projects](docs/guides/existing-projects.md) ·
+[Migrate from Kiro / spec-kit / cc-sdd](docs/guides/migrate-from.md) ·
+[Measurements](docs/MEASUREMENTS.md) · [Paper alignment and gaps](docs/PAPER-ALIGNMENT.md) ·
+[Español](README.es.md) · [Changelog](CHANGELOG.md)
 
 ## License
 
-MIT License
+MIT — see [LICENSE](LICENSE).
