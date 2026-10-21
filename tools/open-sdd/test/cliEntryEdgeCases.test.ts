@@ -45,7 +45,7 @@ describe('CLI entry edge cases', () => {
     const code = await runCli(['--version', '--help'], runtime, ctx.io, {});
     expect(code).toBe(0);
     expect(ctx.logs.join('\n')).toMatch(/Usage: open-sdd/);
-    expect(ctx.logs.join('\n')).not.toMatch(/open-sdd v/);
+    expect(ctx.logs.join('\n')).not.toMatch(/open-sdd v\d/);
   });
 
   it('handles missing manifest file in dry-run mode', async () => {

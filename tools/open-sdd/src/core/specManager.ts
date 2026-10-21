@@ -322,21 +322,24 @@ Describe the customer problem, architectural friction, or new opportunity.
 `;
   await writeFile(path.join(specDir, 'brief.md'), briefContent, 'utf8');
 
-  // requirements.md stub (EARS format)
+  // requirements.md stub (EARS format). Every placeholder is a `{{…}}` marker, so an unedited stub is
+  // reported as unfilled instead of passing as a real requirement, and its shape is the one the
+  // requirements coach accepts (`REQ-<AREA>-<NNN>`, a `Statement:` in EARS, a measurable acceptance).
   const reqContent = `# Requirements: ${options.title ?? slug}
 
-## User Stories & Business Value
-Describe primary user personas and the expected outcome.
+**Objective:** {{As a <who>, we want <what>, so that <why>}}
 
-## Formal Specifications (EARS)
+## Requirements
 
-### REQ-1: Core Capability
-- **Precondition**: When the system is initialized.
-- **Trigger**: When the user initiates the action.
-- **Response**: The system shall execute successfully.
-- **Acceptance Criteria**:
-  - Valid input yields expected output.
-  - Edge cases return explicit structured errors.
+### REQ-{{AREA}}-001 — {{title}}
+
+Need: {{the objective or user story this requirement serves}}
+Acceptance: {{Given <state>, When <action>, Then <measurable result with its unit>}}
+
+- Statement: When {{trigger}}, the [{{component}}] shall {{observable response with its unit}}.
+
+<!-- Replace every double-brace placeholder. AREA is 2–6 capital letters naming the area, e.g. AUTH.
+     Check it with: open-sdd requirements review ${slug} · next steps: open-sdd help workflow -->
 `;
   await writeFile(path.join(specDir, 'requirements.md'), reqContent, 'utf8');
 
