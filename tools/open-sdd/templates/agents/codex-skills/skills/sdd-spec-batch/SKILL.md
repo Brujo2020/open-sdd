@@ -61,7 +61,6 @@ For each wave, dispatch all features in the wave as **parallel sub-agents**.
 
 ```
 Create a complete specification for feature "{feature-name}".
-Bind the feature argument in each phase to "{feature-name}" (including `$1` or `{feature}` references). This batch uses the existing fast-track mode: supply `-y` to design and tasks before entering their approval checks. Required phase review gates still apply.
 
 1. Read the brief at {{SDD_DIR}}/specs/{feature-name}/brief.md for feature context
 2. Read the roadmap at {{SDD_DIR}}/steering/roadmap.md for project context
@@ -140,7 +139,7 @@ Next: Review generated specs, then start implementation with $sdd-impl <feature>
 </instructions>
 
 ## Critical Constraints
-- **Controller context**: When delegating, keep per-spec generation in workers. In inline fallback, read the phase instructions and spec inputs needed to perform their checks in the main context.
+- **Controller stays lightweight**: Only read roadmap.md and brief.md existence checks in main context. All spec generation happens in sub-agents.
 - **Wave ordering is strict**: Never start a wave until all features in previous waves are complete.
 - **Parallel within waves**: All features in the same wave should be dispatched in parallel if multi-agent is available.
 - **No partial waves**: If a feature in a wave fails, still complete the other features in that wave before reporting.

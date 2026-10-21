@@ -8,7 +8,7 @@ description: Implement approved tasks using TDD with subagent dispatch. Runs all
 
 <background_information>
 You operate in two modes:
-- **Autonomous mode** (no task numbers): Process all pending tasks sequentially in the main context, with inline review after each
+- **Autonomous mode** (no task numbers): Dispatch a fresh sub-agent per task, with independent review after each
 - **Manual mode** (task numbers provided): Execute selected tasks directly in the main context
 
 - **Success Criteria**:
@@ -60,7 +60,15 @@ Otherwise, load all necessary context:
 - `{{SDD_DIR}}/specs/{feature}/spec.json`, `requirements.md`, `design.md`, `tasks.md`
 - Core steering context: `product.md`, `tech.md`, `structure.md`
 - Additional steering files only when directly relevant to the selected task's boundary, runtime prerequisites, integrations, domain rules, security/performance constraints, or team conventions that affect implementation or validation
-- Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
+- Relevant local agent skills or playbooks only when they clearly match the task's host environment or use case; read the specific artifact(s) you need, not entire directories
+
+### Parallel Research
+
+The following research areas are independent and can be executed in parallel:
+1. **Spec context loading**: spec.json, requirements.md, design.md, tasks.md
+2. **Steering, playbooks, & patterns**: Core steering, task-relevant extra steering, matching local agent skills/playbooks, and existing code patterns
+
+After all parallel research completes, synthesize implementation brief before starting.
 
 ### Preflight
 
@@ -123,11 +131,9 @@ If multi-agent capability is available, for each task:
   - Paths to spec files: requirements.md, design.md, tasks.md
   - Exact requirement and design section numbers this task must satisfy (using source numbering, NOT invented `REQ-*` aliases)
   - Task-relevant steering context and parent-discovered validation commands (tests/build/smoke as relevant)
-  - Selected skill/playbook paths and concise task-relevant guidance, including required checks; inline necessary guidance when the worker cannot access those paths
   - Whether the task is behavioral (Feature Flag Protocol) or non-behavioral
   - **Previous learnings**: Include any `## Implementation Notes` entries from tasks.md that are relevant to this task's boundary or dependencies (e.g., "better-sqlite3 requires separate rebuild for Electron"). This prevents the same mistakes from recurring.
 - The implementer sub-agent will read the spec files and build its own Task Brief (acceptance criteria, completion definition, design constraints, verification method) before implementation
-- Preserve this task context, including selected skill guidance, on every implementer re-dispatch (context requests, review remediation, and debug retries); append the new context or feedback.
 - Spawn a fresh sub-agent with this prompt
 
 **b) Handle implementer status**:
@@ -140,7 +146,6 @@ If multi-agent capability is available, for each task:
 **c) Review the task**:
 - If review mode is `required`:
   - Read `templates/reviewer-prompt.md` from this skill's directory
-  - Resolve `../kiro-review/SKILL.md` relative to this skill's directory and pass its absolute path as `REVIEW_PROTOCOL_PATH`
   - Construct a review prompt with:
     - The task description and relevant spec section numbers
     - Paths to spec files (requirements.md, design.md) so the reviewer can read them directly
@@ -177,6 +182,8 @@ If multi-agent capability is available, for each task:
 
 **g) Debug subagent** (triggered by BLOCKED, NEEDS_CONTEXT unresolved, or REJECTED after 2 remediation rounds):
 
+The debug subagent runs in a **fresh context** — it receives only the error information, not the failed implementation history. This avoids the context pollution that causes infinite retry loops.
+
 - Read `templates/debugger-prompt.md` from this skill's directory
 - Construct a debug prompt with:
   - The error description / blocker reason / reviewer rejection findings
@@ -189,10 +196,10 @@ If multi-agent capability is available, for each task:
 - Spawn a fresh sub-agent with this prompt
 
 **Handle debug report**:
-- Require a `## Debug Report` and parse its exact `- NEXT_ACTION:` field (`RETRY_TASK | BLOCK_TASK | STOP_FOR_HUMAN`). If the protocol or a valid report is missing, stop this feature and report the missing input; do not guess a next action or dispatch another implementer.
+- Parse `NEXT_ACTION` from the debug report's exact structured field.
 - If `NEXT_ACTION: STOP_FOR_HUMAN` → append `_Blocked: <ROOT_CAUSE>_` to tasks.md, stop the feature run, and report that human review is required before continuing
 - If `NEXT_ACTION: BLOCK_TASK` → append `_Blocked: <ROOT_CAUSE>_` to tasks.md, skip to next task
-- If `NEXT_ACTION: RETRY_TASK` → preserve the current worktree; do NOT reset or discard unrelated changes. Spawn a **new** implementer sub-agent with the original task context (including selected skill guidance), the debug report's `FIX_PLAN`, `NOTES`, and the current `git diff`, and require it to repair the task with explicit edits only
+- If `NEXT_ACTION: RETRY_TASK` → preserve the current worktree; do NOT reset or discard unrelated changes. Spawn a **new** implementer sub-agent with the debug report's `FIX_PLAN`, `NOTES`, and the current `git diff`, and require it to repair the task with explicit edits only
   - If the new implementer succeeds (READY_FOR_REVIEW → reviewer APPROVED) → normal flow
   - If the new implementer also fails → repeat debug cycle (max 2 debug rounds total). After 2 failed debug rounds → append `_Blocked: debug attempted twice, still failing — <ROOT_CAUSE>_` to tasks.md, skip
 - **Max 2 debug rounds per task**. Each round: fresh debug subagent → fresh implementer. If still failing after 2 rounds, the task is blocked.
@@ -200,7 +207,7 @@ If multi-agent capability is available, for each task:
 
 **`(P)` markers**: Tasks marked `(P)` in tasks.md indicate they have no inter-dependencies and could theoretically run in parallel. However, sdd-impl processes them sequentially (one at a time) to avoid git conflicts and simplify review. The `(P)` marker is informational for task planning, not an execution directive.
 
-**Cascade execution**: This compatibility installation targets Cascade, which does not expose programmatic subagent dispatch. Execute all tasks sequentially in the main context using the manual mode execution flow below and identify review as inline. This limitation does not describe Devin Local / CLI.
+**Fallback**: Windsurf does not support programmatic sub-agent dispatch. Execute all tasks sequentially in the main context using the manual mode execution flow below.
 
 ### Manual Mode (main context)
 

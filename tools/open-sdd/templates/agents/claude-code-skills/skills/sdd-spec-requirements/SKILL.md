@@ -27,7 +27,7 @@ Otherwise, load all necessary context:
 - Read `{{SDD_DIR}}/specs/{feature}/requirements.md` for project description (if missing but `brief.md` exists — typical getSpecs seed — synthesize project description from brief Problem/Current State/Desired Outcome before generating)
 - Core steering context: `product.md`, `tech.md`, `structure.md`
 - Additional steering files only when directly relevant to feature scope, user personas, business/domain rules, compliance/security constraints, operational constraints, or existing product boundaries
-- Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
+- Relevant local agent skills or playbooks only when they clearly match the feature's host environment or use case and contain domain terminology or workflow rules that shape user-observable requirements
 
 ### Step 2: Read Guidelines
 - Read `rules/ears-format.md` from this skill's directory for EARS syntax rules

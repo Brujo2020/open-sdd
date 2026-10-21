@@ -10,9 +10,10 @@ description: Create complete specs (requirements, design, tasks) for all feature
 - **Success Criteria**:
   - All features have complete spec files (spec.json, requirements.md, design.md, tasks.md)
   - Dependency ordering respected (upstream specs complete before downstream)
-  - Features processed sequentially within each dependency wave
+  - Independent features processed in parallel via sub-agent dispatch
   - Cross-spec consistency verified (data models, interfaces, naming)
   - Mixed roadmap context understood without breaking `## Specs (dependency order)` parsing
+  - Controller context stays lightweight (sub-agents do the heavy work)
 </background_information>
 
 <instructions>
@@ -43,10 +44,10 @@ Group pending features into waves based on dependencies:
 Display the execution plan:
 ```
 Spec Batch Plan:
-  Wave 1 (sequential): app-foundation
-  Wave 2 (sequential): block-editor, page-management
-  Wave 3 (sequential): sidebar-navigation, database-views
-  Wave 4 (sequential): cli-integration
+  Wave 1 (parallel): app-foundation
+  Wave 2 (parallel): block-editor, page-management
+  Wave 3 (parallel): sidebar-navigation, database-views
+  Wave 4 (parallel): cli-integration
   Total: 6 specs across 4 waves
 ```
 
@@ -54,13 +55,12 @@ If roadmap contains `## Existing Spec Updates` or `## Direct Implementation Cand
 
 ## Step 3: Execute Waves
 
-For each wave, process its features one at a time in the main context.
+For each wave, dispatch all features in the wave as **parallel sub-agents**.
 
-**For each feature in the wave**, execute this task:
+**For each feature in the wave**, spawn a sub-agent with this task:
 
 ```
 Create a complete specification for feature "{feature-name}".
-Bind the feature argument in each phase to "{feature-name}" (including `$1` or `{feature}` references). This batch uses the existing fast-track mode: supply `-y` to design and tasks before entering their approval checks. Required phase review gates still apply.
 
 1. Read the brief at {{SDD_DIR}}/specs/{feature-name}/brief.md for feature context
 2. Read the roadmap at {{SDD_DIR}}/steering/roadmap.md for project context
@@ -73,9 +73,9 @@ Bind the feature argument in each phase to "{feature-name}" (including `$1` or `
 5. Report completion with file list and task count
 ```
 
-This compatibility installation targets Cascade, which does not expose programmatic subagent dispatch. Execute features in the wave sequentially in the main context. Devin Local / CLI has a separate subagent-capable harness.
+Windsurf does not support programmatic sub-agent dispatch. Execute features in the wave sequentially in the main context.
 
-**After all features in the wave complete**:
+**After all sub-agents in the wave complete**:
 1. Verify each feature has: spec.json, requirements.md, design.md, tasks.md
 2. If any feature failed, report the error and continue with features that succeeded
 3. Display wave completion: "Wave N complete: [features]. Files verified."
@@ -83,9 +83,9 @@ This compatibility installation targets Cascade, which does not expose programma
 
 ## Step 4: Cross-Spec Review
 
-After all waves complete, perform an inline cross-spec consistency review in the main context. This is the highest-value quality gate -- it catches issues that per-spec review gates cannot.
+After all waves complete, spawn a **single sub-agent** for cross-spec consistency review. This is the highest-value quality gate -- it catches issues that per-spec review gates cannot.
 
-**Review task**:
+**Sub-agent task**:
 
 Read ALL generated specs and check for consistency across the entire project:
 - `{{SDD_DIR}}/specs/*/design.md` (primary: contains interfaces, data models, architecture)
@@ -109,8 +109,8 @@ Check:
 
 Output: CONSISTENT areas + ISSUES with (which specs, what's inconsistent, suggested fix).
 
-**After the inline review**:
-- **Critical/important issues found**: Apply the suggested fixes to affected specs sequentially in the main context. If the issue is really a decomposition problem (for example boundary overlap or one spec carrying multiple independent seams), stop and return to roadmap/discovery instead of papering over it locally. Re-run cross-spec review after fixes (max 3 remediation rounds).
+**After the review sub-agent returns**:
+- **Critical/important issues found**: Dispatch fix sub-agents for each affected spec to apply the suggested fixes. If the issue is really a decomposition problem (for example boundary overlap or one spec carrying multiple independent seams), stop and return to roadmap/discovery instead of papering over it locally. Re-run cross-spec review after fixes (max 3 remediation rounds).
 - **Minor issues only**: Report them for user awareness, proceed to Step 5.
 - **No issues**: Proceed to Step 5.
 
@@ -129,7 +129,7 @@ Spec Batch Complete:
   ✓ page-management: ...
   ...
   Total: N specs created, M tasks generated
-  Cross-spec review (inline): PASSED / N issues found (M fixed)
+  Cross-spec review: PASSED / N issues found (M fixed)
   Existing spec updates pending: <count or none>
   Direct implementation candidates pending: <count or none>
 
@@ -139,16 +139,16 @@ Next: Review generated specs, then start implementation with @sdd-impl <feature>
 </instructions>
 
 ## Critical Constraints
-- **Cascade execution**: Generation, fixes, and cross-spec review run in the main context. Report review as inline.
+- **Controller stays lightweight**: Only read roadmap.md and brief.md existence checks in main context. All spec generation happens in sub-agents.
 - **Wave ordering is strict**: Never start a wave until all features in previous waves are complete.
-- **Sequential within waves**: Finish one feature before starting the next feature in the wave.
+- **Parallel within waves**: All features in the same wave should be dispatched in parallel if multi-agent is available.
 - **No partial waves**: If a feature in a wave fails, still complete the other features in that wave before reporting.
 - **Skip completed specs**: Features with `[x]` in roadmap.md or existing tasks.md are skipped.
 - **`## Specs (dependency order)` remains authoritative for batch execution**: Other roadmap sections are context, not wave inputs.
 
 ## Safety & Fallback
 
-**Feature generation failure**:
+**Sub-agent failure**:
 - Log the error, skip the failed feature
 - Continue with remaining features in the wave
 - Report failed features in the summary
