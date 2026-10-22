@@ -11,7 +11,8 @@
  * implemented is reported as such, and a judgement that needs a model backend says it is not
  * evidence rather than returning a green light.
  */
-import { chmod, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { appendFile, chmod, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { renderGateSummary } from '../../core/gateSummary.js';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
@@ -193,8 +194,20 @@ const parseGatesRunArgs = (args) => {
     let staged = false;
     let strict = false;
     let profile = 'solo';
+    let summary;
     for (let i = 1; i < args.length; i += 1) {
         const token = args[i];
+        if (token === '--summary') {
+            summary = true;
+            continue;
+        }
+        if (token.startsWith('--summary=')) {
+            const value = token.slice('--summary='.length);
+            if (value === '')
+                return { ok: false, error: 'La opción --summary= exige una ruta.' };
+            summary = value;
+            continue;
+        }
         const eq = token.startsWith('-') ? token.indexOf('=') : -1;
         const name = eq > -1 ? token.slice(0, eq) : token;
         const inline = eq > -1 ? token.slice(eq + 1) : undefined;
@@ -226,12 +239,12 @@ const parseGatesRunArgs = (args) => {
         if (token.startsWith('-')) {
             return {
                 ok: false,
-                error: `Opción desconocida: ${token}. Admitidas: --staged, --strict, --base <ref>, --profile <solo|team|regulated>, y los ids del catálogo (C1…C7, O1…O7).`,
+                error: `Opción desconocida: ${token}. Admitidas: --staged, --strict, --base <ref>, --profile <solo|team|regulated>, --summary[=<ruta>], y los ids del catálogo (C1…C7, O1…O7).`,
             };
         }
         gateIds.push(token);
     }
-    return { ok: true, value: { gateIds, base, staged, strict, profile } };
+    return { ok: true, value: { gateIds, base, staged, strict, profile, ...(summary !== undefined ? { summary } : {}) } };
 };
 // ---------------------------------------------------------------------------------------------
 // gates
@@ -358,7 +371,13 @@ export const handleGatesCommand = async (args, io, cwd) => {
             io.error(colors.red(parsed.error));
             return 1;
         }
-        const { gateIds: requestedIds, base, staged, strict: strictFlag, profile: runProfile } = parsed.value;
+        const { gateIds: requestedIds, base, staged, strict: strictFlag, profile: runProfile, summary } = parsed.value;
+        // Resolved before running anything: a summary nobody can write is an error, not a silent skip.
+        const summaryPath = summary === true ? process.env.GITHUB_STEP_SUMMARY : summary;
+        if (summary !== undefined && (summaryPath === undefined || summaryPath === '')) {
+            io.error(colors.red('--summary sin ruta necesita $GITHUB_STEP_SUMMARY (GitHub Actions); en otro CI usa --summary=<ruta>.'));
+            return 1;
+        }
         // An id that is not in the executable catalog is never "unknown, therefore self-authorized":
         // the runner would emit `Control "main" no reconocido` and then let the chain PASS, which is a
         // green verdict over a control that does not exist. The typo is named and the command fails.
@@ -429,6 +448,12 @@ export const handleGatesCommand = async (args, io, cwd) => {
         io.log(`  ${report.passed ? colors.green('La cadena pasa') : colors.red('La cadena NO pasa')}`);
         if (report.unavailable.length > 0) {
             io.log(`  ${colors.yellow('Auto-autorizados por sensor no disponible')}: ${report.unavailable.join(', ')} ${dim('(requieren recibo I6)')}`);
+        }
+        if (summaryPath) {
+            const names = Object.fromEntries(report.findings.map((f) => [f.gateId, getExecutableGate(f.gateId)?.name ?? '']));
+            const mode = staged ? `staged index, ${changedFiles.length} file(s)` : base ? `diff against ${base}, ${changedFiles.length} file(s)` : 'diff-independent controls';
+            await appendFile(summaryPath, renderGateSummary(report, { profile: runProfile, strict, mode, names }), 'utf8');
+            io.log(`  ${dim(`resumen Markdown añadido a ${summaryPath}`)}`);
         }
         io.log('');
         return report.passed ? 0 : 1;

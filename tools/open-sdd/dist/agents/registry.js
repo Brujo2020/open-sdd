@@ -653,7 +653,7 @@ export const agentDefinitions = {
     },
     'axet-skills': {
         label: 'Axet Plugin Skills',
-        description: 'Installs the shared sdd skills in `.axet-plugin/skills/sdd-*/` (Axet Plugin, a Cline fork), plus shared settings in `{{SDD_DIR}}/settings/` and an AGENTS.md quickstart. Axet Rules and Workflows are not written: their workspace paths are not verified.',
+        description: 'Installs the shared sdd skills in `.axet-plugin/skills/sdd-*/` (Axet Plugin 3.x by NTT DATA, a Cline fork), where Axet\'s local skills watcher lists each one in the `/` menu; plus shared settings in `{{SDD_DIR}}/settings/` and AGENTS.md, which Axet reads as a rule. Workflows (`.axetrules/workflows/`) are not written: they would duplicate every entry as `/sdd-x.md`.',
         aliasFlags: ['--axet-skills', '--axet'],
         layout: {
             commandsDir: '.axet-plugin/skills',

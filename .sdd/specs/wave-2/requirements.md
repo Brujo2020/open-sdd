@@ -50,7 +50,9 @@ improvements, the first being Cline and its fork Axet.plugin as installable skil
 
 ### REQ-W2-010 — CI summary
 
-- Statement: WHEN `gates run --summary <path>` is given, the [gate runner] shall append a Markdown table of every gate verdict to that path; `--summary` without a path shall use `$GITHUB_STEP_SUMMARY`.
+- Statement: WHEN `gates run --summary=<path>` is given, the [gate runner] shall append a Markdown table of every gate verdict to that path.
+- Statement: WHEN `gates run --summary` is given without a path, the [gate runner] shall append the table to `$GITHUB_STEP_SUMMARY`.
+- Statement: If `--summary` has no path and `$GITHUB_STEP_SUMMARY` is unset, then the [gate runner] shall exit 1 before running any gate.
 
 ### REQ-W2-011 — Traceability you can see
 

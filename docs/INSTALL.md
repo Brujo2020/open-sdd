@@ -121,8 +121,17 @@ repository**.
 | Commit gate + PR workflow | `open-sdd floor install . --ci` | `.git/hooks/pre-commit`, `.github/workflows/open-sdd-gates.yml` |
 
 Known agent flags include `--claude-skills`, `--codex-skills`, `--cursor-skills`,
-`--copilot-skills`, `--gemini-skills`, `--windsurf-skills`, `--opencode-skills` and
-`--antigravity`. The full table (ids, aliases, install directories) is the README's
+`--copilot-skills`, `--gemini-skills`, `--windsurf-skills`, `--opencode-skills`,
+`--antigravity`, `--cline` and `--axet`. Several at once: `open-sdd init . --agent cline-skills,axet-skills --skills --write`.
+
+**Cline and Axet Plugin.** `--cline` installs the skills in `.cline/skills/sdd-*/SKILL.md`, the directory
+docs.cline.bot recommends. `--axet` installs them in `.axet-plugin/skills/sdd-*/SKILL.md`. Axet Plugin
+(NTT DATA's Cline fork) watches that directory and lists every skill in its `/` menu, so `/sdd-spec-init`,
+`/sdd-impl` and the rest autocomplete with no further setup. Both also write `AGENTS.md`, which both hosts
+read as a rule. `init` picks either host by itself when `.cline/`, `.clinerules/` or `.axet-plugin/` exists.
+For VS Code's *Run Task*: `open-sdd integrate vscode-tasks --write`.
+
+The full table (ids, aliases, install directories) is the README's
 [Supported host agents](../README.md) section and
 `tools/open-sdd/src/agents/registry.ts`.
 

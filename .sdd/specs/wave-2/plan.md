@@ -2,9 +2,14 @@
 
 ## Decisions
 
-- **Axet path.** Axet.plugin (a Cline fork) reads workspace skills from `.axet-plugin/skills/<skill>/SKILL.md`
-  (confirmed by the user from the Axet UI, 2026-10-21). Its Rules and Workflows tabs exist but their
-  workspace paths are not verified, so nothing is written there; `AGENTS.md` carries the quickstart.
+- **Axet path.** Verified by reading the Axet Plugin 3.0.0 VSIX (publisher `Ntt-Data`, 2026-10-21):
+  a `LocalSkillsWatcher` always watches `.axet-plugin/skills/` and requires only a YAML frontmatter
+  with `name`; the webview's slash menu merges local workflows, global workflows and those skills
+  into its `custom` section. Workflows live in `.axetrules/workflows/` (named after the file, `.md`
+  included), rules in `.axetrules/` plus `AGENTS.md`, hooks in `.axetrules/hooks/` (Cline events:
+  TaskStart…TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit, PreCompact). The agent writes
+  only skills + AGENTS.md: workflows would list every command twice. A TaskComplete gate hook is a
+  candidate for a later wave.
 - **Cline path.** `.cline/skills/` is the recommended project directory (docs.cline.bot/customization/skills,
   fetched 2026-10-21). The existing `integrate cline` keeps its MCP registration; its skills layout moves
   from `.clinerules/sdd-*.md` prompt files to `.cline/skills/sdd-*/SKILL.md`.

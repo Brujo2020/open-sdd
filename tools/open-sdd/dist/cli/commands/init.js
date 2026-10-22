@@ -23,6 +23,8 @@
  *
  * Los textos visibles son español, como el resto del CLI.
  */
+import { planVscodeTasks } from '../../core/vscodeTasks.js';
+import { findRepoRoot } from '../../core/status.js';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -1316,9 +1318,33 @@ const printIntegrationMatrix = (io) => {
     io.log('');
     return 0;
 };
+/** `integrate vscode-tasks [--write]`: SDD entries in `.vscode/tasks.json`, merge-only (REQ-W2-013). */
+const handleVscodeTasks = async (args, io, cwd) => {
+    const root = await findRepoRoot(cwd);
+    const file = path.join(root, '.vscode', 'tasks.json');
+    const plan = planVscodeTasks(await readIfExists(file));
+    if (plan.action === 'refused') {
+        io.error(colors.red(plan.reason));
+        return 1;
+    }
+    if (plan.action === 'keep') {
+        io.log('.vscode/tasks.json ya tiene las tareas SDD: no se toca.');
+        return 0;
+    }
+    if (!args.includes('--write')) {
+        io.log(`Plan: ${plan.action === 'create' ? 'crear' : 'actualizar'} .vscode/tasks.json con ${plan.added.join(', ')}. Sin --write no se escribe nada.`);
+        return 0;
+    }
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, plan.content, 'utf8');
+    io.log(`.vscode/tasks.json: añadidas ${plan.added.join(', ')} (Terminal → Run Task).`);
+    return 0;
+};
 export const handleIntegrateCommand = async (args, io, cwd = process.cwd()) => {
     if (args.includes('--list'))
         return printIntegrationMatrix(io);
+    if (args[0] === 'vscode-tasks')
+        return handleVscodeTasks(args, io, cwd);
     const json = args.includes('--json');
     const write = args.includes('--write') && !args.includes('--dry-run');
     const hostArg = args.find((arg) => !arg.startsWith('-'));

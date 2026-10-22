@@ -1,3 +1,4 @@
+import { handleInsightCommand } from './cli/commands/insight.js';
 import path from 'node:path';
 import { stat } from 'node:fs/promises';
 import { getAgentDefinition } from './agents/registry.js';
@@ -370,6 +371,10 @@ const dispatchSubcommand = async (
   // y `requirements review <feature>` compartan una sola implementación.
   // Modos SDD y módulos deterministas traídos de SteelForge: la matriz de módulos por nivel, la guía de
   // etapas, EARS → Gherkin, el archivo de specs terminadas, el gate del brief de discovery y el del steering.
+  // wave-2: read-only traceability views (trace, report, `explain REQ-…`) and the score badge.
+  if (['trace', 'badge', 'report'].includes(cmd) || (cmd === 'explain' && /^REQ-/i.test(subArgv[0] ?? ''))) {
+    return handleInsightCommand(cmd, subArgv, io, targetCwd);
+  }
   if (['modes', 'stages', 'gherkin', 'archive', 'discovery', 'steering'].includes(cmd)) {
     return handleModesCommand(cmd, subArgv, io, targetCwd);
   }
