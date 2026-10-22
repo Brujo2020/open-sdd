@@ -1,4 +1,4 @@
-import { agentList, getAgentDefinition, type AgentType } from '../agents/registry.js';
+import { listedAgentList as agentList, getAgentDefinition, type AgentType } from '../agents/registry.js';
 import type { CliIO } from './io.js';
 import { colors, formatAttention, formatHeading } from './ui/colors.js';
 import { isInteractive, promptSelect } from './ui/prompt.js';

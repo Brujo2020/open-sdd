@@ -181,8 +181,14 @@ export const SCORE_FOOTER_FLAG = '--no-footer';
  * ¿Toca pie en esta invocación? El JSON y el modo guion quedan intactos; `--no-footer` lo apaga. La
  * decisión vive aquí y solo aquí: el despachador pregunta, ningún comando recuerda nada.
  */
+/** Commands whose stdout IS an artifact (SVG, HTML, Mermaid): a footer line would corrupt it. */
+const emitsArtifact = (argv: readonly string[]): boolean => {
+  const cmd = argv.find((arg) => !arg.startsWith('-'));
+  return cmd === 'badge' || (cmd === 'report' && argv.includes('--html')) || (cmd === 'trace' && argv.includes('--mermaid'));
+};
+
 export const shouldEmitScoreFooter = (argv: readonly string[]): boolean =>
-  !argv.includes(SCORE_FOOTER_FLAG) && !argv.includes('--json') && !argv.includes('--quiet');
+  !argv.includes(SCORE_FOOTER_FLAG) && !argv.includes('--json') && !argv.includes('--quiet') && !emitsArtifact(argv);
 
 /**
  * Medir el repositorio y escribir el pie de UNA línea. Devuelve el informe (para quien quiera

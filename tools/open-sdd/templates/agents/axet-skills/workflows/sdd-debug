@@ -1,0 +1,10 @@
+# /sdd-debug
+
+Investigate implementation failures using root-cause-first debugging. Use when an implementer is blocked, verification fails, or repeated remediation does not converge.
+
+Run the open-sdd skill `sdd-debug`:
+
+1. Read `.axet-plugin/skills/sdd-debug/SKILL.md` and follow it exactly, including the files it points to in that folder.
+2. The text the user typed after `/sdd-debug` is the skill's input: `$ARGUMENTS` is all of it, `$1` the first word, `$2` the second. If the skill needs an input that is missing, ask for it.
+
+<!-- open-sdd:axet-workflow skill=sdd-debug — generated from templates/agents/_shared/skills; edit the skill, not this file. -->

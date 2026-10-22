@@ -1,4 +1,4 @@
-import { agentList, getAgentDefinition } from '../agents/registry.js';
+import { listedAgentList as agentList, getAgentDefinition } from '../agents/registry.js';
 import { colors, formatAttention, formatHeading } from './ui/colors.js';
 import { isInteractive, promptSelect } from './ui/prompt.js';
 export const agentOptions = agentList.map((value) => {

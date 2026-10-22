@@ -145,7 +145,7 @@ runs:
 
     - name: Run the gate chain against the change
       shell: bash
-      run: node "$OPEN_SDD_CLI" gates run --profile "${{ inputs.profile }}" --base "${{ steps.base.outputs.ref }}"
+      run: node "$OPEN_SDD_CLI" gates run --profile "${{ inputs.profile }}" --base "${{ steps.base.outputs.ref }}" --summary
 
     - name: Constitutional status check
       shell: bash

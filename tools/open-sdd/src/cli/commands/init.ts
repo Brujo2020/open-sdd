@@ -24,15 +24,19 @@
  * Los textos visibles son español, como el resto del CLI.
  */
 
-import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { planVscodeTasks } from '../../core/vscodeTasks.js';
+import { AXET_HOOKS_DIR, applyAxetHooks, detectInstallSource, planAxetHooks } from '../../core/axetHook.js';
+import { findRepoRoot } from '../../core/status.js';
+import { chmod, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { colors } from '../ui/colors.js';
-import { INSTALL_COMMAND } from '../packageIdentity.js';
+import { INSTALL_COMMAND, VERSION } from '../packageIdentity.js';
+import { fileURLToPath } from 'node:url';
 import type { CliIO } from '../io.js';
-import { agentList, getAgentDefinition, type AgentType } from '../../agents/registry.js';
+import { agentList, listedAgentList, getAgentDefinition, type AgentType } from '../../agents/registry.js';
 import {
   DEFAULT_RIGOR_LEVEL,
   RIGOR_LEVELS,
@@ -166,6 +170,13 @@ const flagValue = (args: string[], name: string): string | undefined => {
   return next && !next.startsWith('-') ? next : '';
 };
 
+/** Banderas de init que consumen el token siguiente como valor (nunca es el positional). */
+const VALUE_FLAGS = new Set(['--agent', '--level', '--lang', '--sdd-dir']);
+
+/** El primer argumento posicional real: ni una bandera ni el valor de una bandera con valor. */
+const positionalArg = (args: string[]): string | undefined =>
+  args.find((arg, index) => !arg.startsWith('-') && !VALUE_FLAGS.has(args[index - 1] ?? ''));
+
 const readIfExists = async (p: string): Promise<string | null> => readFile(p, 'utf8').catch(() => null);
 
 // ---------------------------------------------------------------------------------------------
@@ -190,6 +201,9 @@ const HOST_DIRS: { dir: string; agent: AgentType; label: string; host: string }[
   { dir: '.qwen', agent: 'qwen-code', label: 'Qwen Code', host: 'Qwen Code' },
   { dir: '.opencode', agent: 'opencode-skills', label: 'OpenCode', host: 'OpenCode' },
   { dir: '.codex', agent: 'codex-skills', label: 'Codex CLI', host: 'Codex CLI' },
+  { dir: '.axet-plugin', agent: 'axet-skills', label: 'Axet Plugin', host: 'Axet Plugin' },
+  { dir: '.cline', agent: 'cline-skills', label: 'Cline', host: 'Cline' },
+  { dir: '.clinerules', agent: 'cline-skills', label: 'Cline', host: 'Cline' },
 ];
 
 /** Archivos de instrucciones: marcadores débiles, compartidos por varios anfitriones. */
@@ -386,7 +400,7 @@ export const planInit = async (input: PlanInitInput): Promise<InitPlan> => {
   if (input.agent !== undefined) {
     if (!(agentList as readonly string[]).includes(input.agent)) {
       throw new Error(
-        `Agente desconocido: "${input.agent}". Admitidos: ${agentList.join(', ')} (o sus alias ${agentList
+        `Agente desconocido: "${input.agent}". Admitidos: ${listedAgentList.join(', ')} (o sus alias ${listedAgentList
           .flatMap((id) => getAgentDefinition(id).aliasFlags)
           .join(', ')}).`,
       );
@@ -881,19 +895,42 @@ export const isProjectInitInvocation = (args: string[], cwd: string): boolean =>
   // Cualquier bandera propia del inicializador de proyecto decide sin ambigüedad.
   if (args.some((arg) => PROJECT_FLAGS.has(arg) || arg.startsWith('--sdd-dir='))) return true;
 
-  const positional = args.find((arg) => !arg.startsWith('-'));
+  const positional = positionalArg(args);
   if (positional === undefined) return true;
   if (positional === '.' || positional === '..') return true;
   // Un directorio existente es un objetivo; un slug inexistente es un nombre de feature (heredado).
   return existsSync(path.resolve(cwd, positional));
 };
 
+/**
+ * `--agent a,b`: valida todos los ids antes de escribir nada y luego ejecuta un init por agente.
+ * Los artefactos comunes (rigor, constitución, hook) son idempotentes: la segunda pasada los conserva.
+ */
 const handleProjectInit = async (args: string[], io: CliIO, cwd: string): Promise<number> => {
+  const requested = flagValue(args, 'agent');
+  if (requested === undefined || !requested.includes(',')) return handleSingleProjectInit(args, io, cwd);
+  const ids = requested.split(',').map((id) => id.trim()).filter((id) => id.length > 0);
+  const unknown = ids.filter((id) => !(agentList as readonly string[]).includes(id));
+  if (unknown.length > 0) {
+    io.error(colors.red(`Error: agente(s) desconocido(s): ${unknown.join(', ')}. Admitidos: ${listedAgentList.join(', ')}. No se escribió nada.`));
+    return 1;
+  }
+  const index = args.findIndex((arg) => arg === '--agent' || arg.startsWith('--agent='));
+  const rest = args.filter((_, i) => i !== index && !(args[index] === '--agent' && i === index + 1));
+  let exit = 0;
+  for (const id of ids) {
+    const code = await handleSingleProjectInit([...rest, '--agent', id], io, cwd);
+    if (code !== 0) exit = code;
+  }
+  return exit;
+};
+
+const handleSingleProjectInit = async (args: string[], io: CliIO, cwd: string): Promise<number> => {
   const json = args.includes('--json');
   const write = args.includes('--write');
   const skills = args.includes('--skills');
   const mcp = args.includes('--mcp');
-  const positional = args.find((arg) => !arg.startsWith('-'));
+  const positional = positionalArg(args);
   const flag = (name: string): string | undefined => flagValue(args, name);
 
   let plan: InitPlan;
@@ -1128,6 +1165,7 @@ const HOST_SKILL_AGENT: Record<string, AgentType | undefined> = {
   qoder: 'qoder-skills',
   zcode: 'zcode-skills',
   codebuddy: 'codebuddy-skills',
+  cline: 'cline-skills',
 };
 
 export interface IntegrateArtifact {
@@ -1620,12 +1658,58 @@ const printIntegrationMatrix = (io: CliIO): number => {
   return 0;
 };
 
+/** `integrate axet-hooks [--write] [--force] [--source <spec>]`: Axet TaskStart/PostToolUse/TaskComplete (REQ-W2-014). */
+const handleAxetHooks = async (args: string[], io: CliIO, cwd: string): Promise<number> => {
+  const root = await findRepoRoot(cwd);
+  const source = flagValue(args, 'source') || detectInstallSource(fileURLToPath(import.meta.url), VERSION);
+  const plans = planAxetHooks(root, source, args.includes('--force'));
+  const refused = plans.filter((plan) => plan.action === 'refused');
+  if (refused.length > 0) {
+    for (const plan of refused) io.error(colors.red(plan.reason ?? plan.event));
+    return 1;
+  }
+  if (!args.includes('--write')) {
+    for (const plan of plans) io.log(`  ${plan.action.padEnd(7)} ${path.relative(root, plan.file)}`);
+    io.log(`Origen del CLI en los hooks: ${source}. Sin --write no se escribe nada.`);
+    return 0;
+  }
+  const outcome = await applyAxetHooks(plans);
+  io.log(`${AXET_HOOKS_DIR}: escritos ${outcome.written.join(', ') || '—'}; conservados ${outcome.kept.join(', ') || '—'}${outcome.retired.length > 0 ? `; retirado ${outcome.retired.join(', ')}` : ''}. Origen: ${source}.`);
+  io.log('Actívalos en Axet: ajustes → hooks enabled. Son nivel A (guían al agente); quien bloquea es el commit gate.');
+  return 0;
+};
+
+/** `integrate vscode-tasks [--write]`: SDD entries in `.vscode/tasks.json`, merge-only (REQ-W2-013). */
+const handleVscodeTasks = async (args: string[], io: CliIO, cwd: string): Promise<number> => {
+  const root = await findRepoRoot(cwd);
+  const file = path.join(root, '.vscode', 'tasks.json');
+  const plan = planVscodeTasks(await readIfExists(file));
+  if (plan.action === 'refused') {
+    io.error(colors.red(plan.reason));
+    return 1;
+  }
+  if (plan.action === 'keep') {
+    io.log('.vscode/tasks.json ya tiene las tareas SDD: no se toca.');
+    return 0;
+  }
+  if (!args.includes('--write')) {
+    io.log(`Plan: ${plan.action === 'create' ? 'crear' : 'actualizar'} .vscode/tasks.json con ${plan.added.join(', ')}. Sin --write no se escribe nada.`);
+    return 0;
+  }
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, plan.content, 'utf8');
+  io.log(`.vscode/tasks.json: añadidas ${plan.added.join(', ')} (Terminal → Run Task).`);
+  return 0;
+};
+
 export const handleIntegrateCommand = async (
   args: string[],
   io: CliIO,
   cwd: string = process.cwd(),
 ): Promise<number> => {
   if (args.includes('--list')) return printIntegrationMatrix(io);
+  if (args[0] === 'vscode-tasks') return handleVscodeTasks(args, io, cwd);
+  if (args[0] === 'axet-hooks' || args[0] === 'axet-hook') return handleAxetHooks(args, io, cwd);
 
   const json = args.includes('--json');
   const write = args.includes('--write') && !args.includes('--dry-run');

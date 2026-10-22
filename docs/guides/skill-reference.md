@@ -4,8 +4,6 @@ Comprehensive reference for the modern **Open-SDD** skills workflow across all 8
 
 ---
 
-Examples use slash invocation (`/kiro-*`). Codex uses `$kiro-*`, while Cascade uses `@kiro-*`; follow the installed host’s invocation guidance.
-
 ## Start Here
 
 Use this matrix to identify which Open-SDD skill to execute:

@@ -28,6 +28,11 @@ export interface AgentDefinition {
   completionGuide?: AgentCompletionGuide;
   templateFallbacks?: Record<string, string>;
   upgradeNotice?: string;
+  /**
+   * Installable and auto-detected, but never advertised: left out of help, the interactive picker and
+   * error listings. For a host that is private to one organisation.
+   */
+  hidden?: boolean;
 }
 
 const makeUpgradeNotice = (flag: string): string =>
@@ -620,7 +625,7 @@ export const agentDefinitions = {
   'agents-skills': {
     label: 'Cross-tool Agent Skills',
     description:
-      'Installs the 22 sdd skills ONCE in `.agents/skills/sdd-*/`, the cross-tool path that this project verified for Roo Code, Kilo Code, Junie, MiMoCode, Crush, Amp, Kimi Code, Warp, Devin, Factory Droid, Augment, Goose, OpenHands and DeepSeek Harness — one neutral tree instead of one copy per host — plus shared settings in `{{SDD_DIR}}/settings/` and an AGENTS.md quickstart.',
+      'Installs the shared sdd skills ONCE in `.agents/skills/sdd-*/`, the cross-tool path that this project verified for Roo Code, Kilo Code, Junie, MiMoCode, Crush, Amp, Kimi Code, Warp, Devin, Factory Droid, Augment, Goose, OpenHands and DeepSeek Harness — one neutral tree instead of one copy per host — plus shared settings in `{{SDD_DIR}}/settings/` and an AGENTS.md quickstart.',
     aliasFlags: ['--agents-skills'],
     layout: {
       commandsDir: '.agents/skills',
@@ -637,7 +642,7 @@ export const agentDefinitions = {
   'trae-skills': {
     label: 'Trae Skills',
     description:
-      'Installs the 22 sdd skills in `.trae/skills/sdd-*/` from the SHARED neutral tree (Trae also documents `.agents/skills/`, but ships it OFF by default, so its own directory is the one that works), plus shared settings in `{{SDD_DIR}}/settings/`.',
+      'Installs the shared sdd skills in `.trae/skills/sdd-*/` from the SHARED neutral tree (Trae also documents `.agents/skills/`, but ships it OFF by default, so its own directory is the one that works), plus shared settings in `{{SDD_DIR}}/settings/`.',
     aliasFlags: ['--trae-skills'],
     layout: {
       commandsDir: '.trae/skills',
@@ -654,7 +659,7 @@ export const agentDefinitions = {
   'qoder-skills': {
     label: 'Qoder Skills',
     description:
-      'Installs the 22 sdd skills in `.qoder/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. Rules live in `.qoder/rules/` with a documented 100,000-character budget.',
+      'Installs the shared sdd skills in `.qoder/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. Rules live in `.qoder/rules/` with a documented 100,000-character budget.',
     aliasFlags: ['--qoder-skills', '--lingma-skills'],
     layout: {
       commandsDir: '.qoder/skills',
@@ -671,7 +676,7 @@ export const agentDefinitions = {
   'zcode-skills': {
     label: 'ZCode Skills',
     description:
-      'Installs the 22 sdd skills in `.zcode/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. The project path is SOURCE-VERIFIED (the vendor resolver computes it; its docs state only the user scope).',
+      'Installs the shared sdd skills in `.zcode/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. The project path is SOURCE-VERIFIED (the vendor resolver computes it; its docs state only the user scope).',
     aliasFlags: ['--zcode-skills'],
     layout: {
       commandsDir: '.zcode/skills',
@@ -688,7 +693,7 @@ export const agentDefinitions = {
   'codebuddy-skills': {
     label: 'CodeBuddy Skills',
     description:
-      'Installs the 22 sdd skills in `.codebuddy/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. Native instructions live in CODEBUDDY.md.',
+      'Installs the shared sdd skills in `.codebuddy/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. Native instructions live in CODEBUDDY.md.',
     aliasFlags: ['--codebuddy-skills'],
     layout: {
       commandsDir: '.codebuddy/skills',
@@ -701,6 +706,46 @@ export const agentDefinitions = {
       steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
     },
     manifestId: 'codebuddy-skills',
+  },
+  'cline-skills': {
+    label: 'Cline Skills',
+    description:
+      'Installs the shared sdd skills in `.cline/skills/sdd-*/` (the project skills directory docs.cline.bot recommends), plus shared settings in `{{SDD_DIR}}/settings/` and an AGENTS.md quickstart.',
+    aliasFlags: ['--cline-skills', '--cline'],
+    layout: {
+      commandsDir: '.cline/skills',
+      agentDir: '.cline',
+      docFile: 'AGENTS.md',
+    },
+    commands: {
+      spec: '`/sdd-spec-quick <what-to-build>`',
+      steering: '`/sdd-steering`',
+      steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
+    },
+    manifestId: 'cline-skills',
+  },
+  'axet-skills': {
+    label: 'Cline fork (private) Skills',
+    description:
+      'Installs the shared sdd skills, one workflow per skill and the gate hooks for a private Cline fork.',
+    aliasFlags: ['--axet-skills', '--axet'],
+    layout: {
+      commandsDir: '.axet-plugin/skills',
+      agentDir: '.axet-plugin',
+      docFile: 'AGENTS.md',
+    },
+    commands: {
+      spec: '`/sdd-spec-quick <what-to-build>`',
+      steering: '`/sdd-steering`',
+      steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
+    },
+    hidden: true,
+    completionGuide: {
+      prependSteps: [
+        'In Axet, open the ⚖ (Rules & Workflows) panel once — or start any task: Axet re-reads `.axetrules/workflows/` only then, so `/sdd-*` stays out of the `/` menu until it does (reloading the window is not enough).',
+      ],
+    },
+    manifestId: 'axet-skills',
   },
 } as const satisfies Record<string, AgentDefinition>;
 
@@ -715,6 +760,9 @@ export const getAgentDefinition = (agent: AgentType): AgentDefinition => {
 };
 
 export const agentList = Object.keys(agentDefinitions) as AgentType[];
+
+/** The agents help, pickers and error messages advertise: every agent except the hidden ones. */
+export const listedAgentList = agentList.filter((id) => !(agentDefinitions[id] as AgentDefinition).hidden);
 
 /**
  * Install an agent declared OUTSIDE the repository, so `init --agent <id> --write` works for a host

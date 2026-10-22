@@ -4,7 +4,7 @@ Complete reference for Open-SDD commands and options with detailed usage, exampl
 
 If you are using skills mode, start with the [Skill Reference](skill-reference.md) instead.
 
-> **Note**: Examples use legacy Claude Code command syntax; other legacy targets have different invocation conventions. Codex prompt installation is blocked: use `--codex-skills`. Both Windsurf / Cascade targets are deprecated: use the [Devin migration steps](agent-compatibility.md#migrating-windsurf--cascade-to-devin). For current skills targets and execution limits, see [Agent compatibility](agent-compatibility.md).
+> **Note**: This reference is based on Claude Code command templates. While the core functionality is consistent across all supported agents (Cursor, Gemini CLI, Codex CLI, GitHub Copilot, Qwen Code, Windsurf), command syntax and features may vary slightly depending on your agent. Refer to your agent's specific documentation for platform-specific details.
 
 > For installation, CLI setup, and workspace prerequisites, see the [Project README](../../README.md). For an overview of additional docs and guides, start with the [Docs README](../README.md).
 
@@ -33,7 +33,7 @@ If you are using skills mode, start with the [Skill Reference](skill-reference.m
 
 ## Skills Mode Note
 
-> **Applies to**: commands-based installs. Skills-mode installs (`--claude-skills`, `--codex-skills`, `--cursor-skills`, `--copilot-skills`, `--devin`, `--opencode-skills`, `--gemini-skills`, `--antigravity`) should use the [Skill Reference](skill-reference.md).
+> **Applies to**: commands-based installs. Skills-mode installs (`--claude-skills`, `--codex-skills`, `--cursor-skills`, `--copilot-skills`, `--windsurf-skills`, `--opencode-skills`, `--gemini-skills`, `--antigravity`) should use the [Skill Reference](skill-reference.md).
 
 ---
 
@@ -563,7 +563,7 @@ Review design.md and approve to continue:
 
 ### `/spec-tasks`
 
-**Purpose**: Generate detailed, actionable implementation tasks that translate design into executable work items, with `(P)` immediately after the number of parallel-capable tasks.
+**Purpose**: Generate detailed, actionable implementation tasks that translate design into executable work items, including parallel-friendly waves labeled `P0`, `P1`, etc.
 
 **Parameters**: `<feature-name> [-y]`
 
@@ -581,23 +581,19 @@ Review design.md and approve to continue:
 2. **Maps** all requirements to specific implementation tasks
 3. **Sizes** tasks to 1-3 hours each for manageable increments
 4. **Organizes** tasks with logical hierarchy and progression
-5. **Marks** parallel-capable tasks with `(P)`, identifies their component boundaries, and records non-obvious dependencies
+5. **Marks** execution waves with `P#` labels so teams know which tasks can run in parallel
 6. **Updates** `tasks.md` and metadata
 
 **Task Structure**:
 ```
-- [ ] 1. Foundation task
-  - Observable completion condition
-  - _Requirements: 1.1_
-- [ ] 2. Feature group
-- [ ] 2.1 (P) Parallel-capable task
-  - Observable completion condition
-  - _Boundary: ComponentName_
-  - _Depends: 1_
-  - _Requirements: 2.1_
-```
+P0 — Serial gate (must finish before P1)
+  Major Task (1, 2, 3...)
+    Sub-tasks (1.1, 1.2...) sized 1-3 hours, each with acceptance criteria
 
-Task order supplies the default dependency. Use `_Depends:_` for dependencies that are not obvious from that order; `(P)` does not bypass prerequisites. Omit `(P)` in sequential mode. `_Requirements:_` remains the final annotation and contains numeric IDs only.
+P1 — Parallel wave (multiple majors can run concurrently)
+  Major Task (4, 5...)
+    Sub-tasks (4.1, 4.2...)
+```
 
 **Example**:
 ```bash
@@ -611,7 +607,7 @@ Task order supplies the default dependency. Use `_Depends:_` for dependencies th
 <details>
 <summary><strong>Sample Output</strong></summary>
 
-````text
+```
 ## Status
 ✓ Generated tasks at .sdd/specs/user-auth-oauth/tasks.md
 
@@ -626,7 +622,7 @@ Review tasks.md and start implementation:
 ```bash
 /spec-impl user-auth-oauth 1.1,1.2
 ```
-````
+```
 
 </details>
 
@@ -636,23 +632,28 @@ Review tasks.md and start implementation:
 ```markdown
 # Implementation Tasks: User Auth OAuth
 
-- [ ] 1. Establish shared authentication contracts
-  - Define provider and session boundaries with checks for accepted and rejected sign-ins.
-  - _Requirements: 1.1, 1.2_
-- [ ] 2. Implement authentication components
-- [ ] 2.1 (P) Authenticate through configured OAuth providers
-  - Verify successful sign-in and invalid-provider responses against the shared contract.
-  - _Boundary: OAuthProvider_
-  - _Depends: 1_
-  - _Requirements: 1.1_
-- [ ] 2.2 (P) Manage authenticated sessions
-  - Verify session creation, renewal, and expiry against the shared contract.
-  - _Boundary: SessionService_
-  - _Depends: 1_
-  - _Requirements: 1.2_
-- [ ] 3. Integrate and validate the sign-in flow
-  - Verify sign-in through sign-out with both authentication components connected.
-  - _Requirements: 1.1, 1.2_
+P0 — Backend Foundation
+## 1. Database Schema and Models
+- [ ] 1.1 Create User table with OAuth fields (email, provider, providerId, tokens)
+- [ ] 1.2 Create Session table for JWT token management
+- [ ] 1.3 Create RefreshToken table for token rotation
+- [ ] 1.4 Add database migrations and rollback scripts
+
+P1 — Service Integration
+## 2. OAuth Provider Configuration
+- [ ] 2.1 Set up Google OAuth client credentials and redirect URLs
+- [ ] 2.2 Set up GitHub OAuth application and callback endpoints
+- [ ] 2.3 Implement environment variable configuration for OAuth secrets
+- [ ] 2.4 Create OAuth provider abstraction layer
+
+P1 — Service Integration
+## 3. Authentication API Routes
+- [ ] 3.1 Implement /api/auth/[provider]/login endpoint
+- [ ] 3.2 Implement /api/auth/callback handler for OAuth flow
+- [ ] 3.3 Implement /api/auth/logout endpoint
+- [ ] 3.4 Implement /api/auth/refresh for token renewal
+
+...
 ```
 
 </details>
@@ -662,8 +663,8 @@ Review tasks.md and start implementation:
 - ✅ **Self-contained** - Each task stands alone with clear scope
 - ✅ **Incremental** - Each task integrates with system (no orphaned work)
 - ✅ **Testable** - Clear acceptance criteria for each task
-- ✅ **Parallel-aware** - `(P)` marks tasks with non-overlapping boundaries whose prerequisites are satisfied
-- ✅ **Sequential where needed** - task order supplies default dependencies; `_Depends:_` records non-obvious ones
+- ✅ **Parallel-aware** - `P0` for blocking work, same `P#` can execute concurrently
+- ✅ **Sequential where needed** - P0 before P1, major tasks still numbered for clarity
 
 **When to use**:
 - ✅ After design is **approved** (manually or with `-y`)

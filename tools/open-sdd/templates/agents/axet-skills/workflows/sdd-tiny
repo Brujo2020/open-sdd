@@ -1,0 +1,10 @@
+# /sdd-tiny
+
+Tinyspec for a spike or proof of concept — goal, done-when and out-of-scope in three lines, then code
+
+Run the open-sdd skill `sdd-tiny`:
+
+1. Read `.axet-plugin/skills/sdd-tiny/SKILL.md` and follow it exactly, including the files it points to in that folder.
+2. The text the user typed after `/sdd-tiny` is the skill's input: `$ARGUMENTS` is all of it, `$1` the first word, `$2` the second. If the skill needs an input that is missing, ask for it.
+
+<!-- open-sdd:axet-workflow skill=sdd-tiny — generated from templates/agents/_shared/skills; edit the skill, not this file. -->

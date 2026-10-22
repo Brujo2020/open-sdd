@@ -20,9 +20,10 @@
 import type { CliIO } from '../io.js';
 import { INSTALL_COMMAND } from '../packageIdentity.js';
 import { SUPPORTED_LOCALES } from '../i18n.js';
-import { agentList, getAgentDefinition } from '../../agents/registry.js';
+import { listedAgentList as agentList, getAgentDefinition } from '../../agents/registry.js';
 import { EXECUTABLE_CHAIN, getExecutableGate } from '../../core/gateCatalog.js';
 import { RIGOR_LEVELS, RIGOR_ASPECTS } from '../../core/rigor.js';
+import { HOST_INTEGRATIONS } from '../../core/integrations.js';
 import { colors, formatHeading } from '../ui/colors.js';
 
 // ---------------------------------------------------------------------------------------------
@@ -265,6 +266,30 @@ export const COMMANDS: CommandDoc[] = [
     examples: ['open-sdd modes', 'open-sdd modes --level spec-anchored --brownfield', 'open-sdd modes --projects', 'open-sdd modes --project legacy-untested'],
   },
   {
+    name: 'trace',
+    group: 'daily',
+    summary: 'Requirement → task traceability of a feature; uncovered requirements named (exit 1 if any)',
+    usage: 'open-sdd trace <feature> [--mermaid] [--out <file>] [--json]',
+    indexLines: ['  trace <feature> [--mermaid]       Requirement → task links; a Mermaid flowchart with --mermaid'],
+    examples: ['open-sdd trace stripe-billing', 'open-sdd trace stripe-billing --mermaid --out trace.mmd'],
+  },
+  {
+    name: 'report',
+    group: 'daily',
+    summary: 'One self-contained HTML page: requirements, tasks, evidence and the trace graph (no script, no network)',
+    usage: 'open-sdd report <feature> --html [--out <file>]',
+    indexLines: ['  report <feature> --html [--out f] Self-contained HTML report of a feature'],
+    examples: ['open-sdd report stripe-billing --html --out report.html'],
+  },
+  {
+    name: 'badge',
+    group: 'score',
+    summary: 'Offline SVG badge of the composite SDD score for a README',
+    usage: 'open-sdd badge [--out <file>]',
+    indexLines: ['  badge [--out sdd.svg]             SVG badge of the SDD score'],
+    examples: ['open-sdd badge --out docs/sdd-badge.svg'],
+  },
+  {
     name: 'stages',
     group: 'console',
     summary: 'The stage guide of a feature: where it is and what it needs to advance',
@@ -476,6 +501,7 @@ export const COMMANDS: CommandDoc[] = [
     indexLines: [
       '  integrate [host] [--write] [--json] [--dry-run]  Register the MCP server, install its skills and its Stop hook',
       '  integrate --list                                 The whole matrix: skills layout, invocation syntax, MCP path, verified?',
+      '  integrate vscode-tasks [--write]                 SDD tasks in .vscode/tasks.json (Run Task), merge-only',
     ],
     examples: ['open-sdd integrate --list', 'open-sdd integrate claude-code --write'],
   },
@@ -603,11 +629,14 @@ export const COMMANDS: CommandDoc[] = [
   {
     name: 'explain',
     group: 'console',
-    summary: 'Every gate code, offline: what the check does and where to read more',
-    usage: 'open-sdd explain <C1|C2|…|C7|O1|…|O7>',
-    indexLines: [],
-    details: ['Resolves a gate code to its name, posture and description from `core/gateCatalog.ts` (the same table `gates list` reads).'],
-    examples: ['open-sdd explain C1', 'open-sdd explain C5'],
+    summary: 'A gate code or a requirement id, offline: what it is, and for a REQ id where it is defined, which tasks cite it and which files name it',
+    usage: 'open-sdd explain <C1|…|C7|O1|…|O7|REQ-ID> [--json]',
+    indexLines: ['  explain <C1|REQ-ID>               A gate code, or a requirement: definition, citing tasks, files'],
+    details: [
+      'A gate code resolves to its name, posture and description from `core/gateCatalog.ts` (the same table `gates list` reads).',
+      'A `REQ-…` id is looked up in every spec under `.sdd/specs/`; the files that name it come from `git grep` over tracked files.',
+    ],
+    examples: ['open-sdd explain C1', 'open-sdd explain REQ-MAT-001'],
   },
 ];
 
@@ -672,7 +701,8 @@ const HELP_SECTIONS: { group: HelpGroup; heading: string; staticLines?: string[]
   {
     group: 'adoption',
     heading: 'Adoption (the integration matrix and the importers):',
-    after: ['  hosts: claude-code, cursor, copilot, codex, gemini-cli, windsurf, opencode, antigravity, zed, cline'],
+    // Derived from the integrations matrix so the list never drifts from what `integrate` accepts.
+    after: [`  hosts: ${HOST_INTEGRATIONS.map((host) => host.id).join(', ')}`],
   },
   { group: 'daily', heading: 'Daily drivers (read-only reports: none of these runs the gate chain):' },
   { group: 'reversibility', heading: 'Reversibility (the tool is reversible — tenet 12):' },

@@ -1,0 +1,10 @@
+# /sdd-promote
+
+Promote a tinyspec to a governed spec — its goal and done-when become EARS requirements
+
+Run the open-sdd skill `sdd-promote`:
+
+1. Read `.axet-plugin/skills/sdd-promote/SKILL.md` and follow it exactly, including the files it points to in that folder.
+2. The text the user typed after `/sdd-promote` is the skill's input: `$ARGUMENTS` is all of it, `$1` the first word, `$2` the second. If the skill needs an input that is missing, ask for it.
+
+<!-- open-sdd:axet-workflow skill=sdd-promote — generated from templates/agents/_shared/skills; edit the skill, not this file. -->

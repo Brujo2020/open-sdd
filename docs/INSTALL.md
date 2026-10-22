@@ -121,8 +121,14 @@ repository**.
 | Commit gate + PR workflow | `open-sdd floor install . --ci` | `.git/hooks/pre-commit`, `.github/workflows/open-sdd-gates.yml` |
 
 Known agent flags include `--claude-skills`, `--codex-skills`, `--cursor-skills`,
-`--copilot-skills`, `--gemini-skills`, `--windsurf-skills`, `--opencode-skills` and
-`--antigravity`. The full table (ids, aliases, install directories) is the README's
+`--copilot-skills`, `--gemini-skills`, `--windsurf-skills`, `--opencode-skills`,
+`--antigravity` and `--cline`. Several at once: `open-sdd init . --agent claude-code-skills,cline-skills --skills --write`.
+
+**Cline.** `--cline` installs the skills in `.cline/skills/sdd-*/SKILL.md`, the directory docs.cline.bot
+recommends, plus `AGENTS.md`. `init` picks Cline by itself when `.cline/` or `.clinerules/` exists.
+For VS Code's *Run Task*: `open-sdd integrate vscode-tasks --write`.
+
+The full table (ids, aliases, install directories) is the README's
 [Supported host agents](../README.md) section and
 `tools/open-sdd/src/agents/registry.ts`.
 
@@ -182,7 +188,7 @@ Verified by installing into a throwaway git repository with `open-sdd --claude-s
 | `.sdd/settings/governance.json` | What blocks: `solo` (default) / `team` / `enterprise`. |
 | `.sdd/settings/git.json` | Git automation, shipped **assisted and never pushing**. |
 | `.sdd/settings/templates/…` | Spec, steering and steering-custom templates. |
-| `.claude/skills/sdd-*/SKILL.md` (+ `rules/`, `references/`, `templates/` for some skills) | The 21 skills, for Claude Code Skills. Other agents write their own directory (`.cursor/skills`, `.agent/skills`, …). |
+| `.claude/skills/sdd-*/SKILL.md` (+ `rules/`, `references/`, `templates/` for some skills) | The shared skill set, for Claude Code Skills. Other agents write their own directory (`.cursor/skills`, `.agent/skills`, …). |
 | `.claude/commands/sdd-*.md` | The 22 prompt templates, written by `open-sdd init . --write` (the default path). Other hosts write their own commands directory (`.cursor/commands/`, `.github/prompts/`, `.gemini/commands/`, `.opencode/commands/`). |
 | `CLAUDE.md` / `AGENTS.md` | The agent's documentation file, where that agent uses one. |
 
@@ -283,3 +289,10 @@ isolated side.
 
 Everything the console does — `status`, `gates`, `delta validate`, `brownfield …`, the 60-second demo
 — runs offline. `npx` and `npm install` from the registry are the only steps that need the network.
+
+## Appendix: private hosts
+
+`--axet` installs the skills, the `/sdd-*` workflows and the gate hooks for a private Cline fork. It is
+not listed in `--help`. After installing, open the host's Rules & Workflows panel once so it picks up
+the workflows, and enable hooks in its settings.
+

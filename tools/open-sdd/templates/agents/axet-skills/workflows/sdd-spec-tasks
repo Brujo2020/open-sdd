@@ -1,0 +1,10 @@
+# /sdd-spec-tasks
+
+Generate implementation tasks for a specification
+
+Run the open-sdd skill `sdd-spec-tasks`:
+
+1. Read `.axet-plugin/skills/sdd-spec-tasks/SKILL.md` and follow it exactly, including the files it points to in that folder.
+2. The text the user typed after `/sdd-spec-tasks` is the skill's input: `$ARGUMENTS` is all of it, `$1` the first word, `$2` the second. If the skill needs an input that is missing, ask for it.
+
+<!-- open-sdd:axet-workflow skill=sdd-spec-tasks — generated from templates/agents/_shared/skills; edit the skill, not this file. -->

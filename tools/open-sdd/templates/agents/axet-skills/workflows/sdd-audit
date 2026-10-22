@@ -1,0 +1,10 @@
+# /sdd-audit
+
+Enterprise SDD & Compliance Audit: verify requirements coverage, EU AI Act / NIST AI RMF traceability, and architectural drift
+
+Run the open-sdd skill `sdd-audit`:
+
+1. Read `.axet-plugin/skills/sdd-audit/SKILL.md` and follow it exactly, including the files it points to in that folder.
+2. The text the user typed after `/sdd-audit` is the skill's input: `$ARGUMENTS` is all of it, `$1` the first word, `$2` the second. If the skill needs an input that is missing, ask for it.
+
+<!-- open-sdd:axet-workflow skill=sdd-audit — generated from templates/agents/_shared/skills; edit the skill, not this file. -->

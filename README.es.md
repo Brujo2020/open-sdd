@@ -57,6 +57,118 @@ Inyecta cuatro incoherencias reales —un requisito sin trazabilidad, una tarea 
 evidencia, un marcador `{{…}}` sin rellenar, un contrato declarado que no existe— y sale con código
 distinto de cero si la herramienta deja pasar alguna.
 
+## Todos los flujos de un vistazo
+
+[![open-sdd: todos los flujos — instala, elige tu situación, especifica, implementa, verifica](docs/diagrams/open-sdd-flows.png)](docs/diagrams/open-sdd-flows.excalidraw)
+
+Se lee de izquierda a derecha: busca la fila de tu situación y sigue las flechas. Cada `/comando` es
+una skill del chat de tu agente; `open-sdd …` se ejecuta en una terminal.
+
+| Tu situación | Empieza con | Qué obtienes |
+|---|---|---|
+| Una idea difusa | `/sdd-discovery "<idea>"` | `brief.md` (no-objetivos, resultado medible, supuestos) y un roadmap; luego una spec o un lote |
+| Una feature clara | `/sdd-spec-quick <feature>` o la cadena paso a paso | requisitos → diseño → tareas |
+| Código existente | `/sdd-getspecs`, `open-sdd brownfield constitution . --write`, `open-sdd delta init <feature> "<cambio>"` | steering, una constitución descriptiva y una spec delta del cambio, no del sistema entero |
+| Varias features | `/sdd-spec-batch` | todas las specs del roadmap, por olas de dependencia |
+| Un bug | `/sdd-bugfix` | lo que pasa · lo esperado · lo que no debe cambiar, y luego el arreglo con su prueba |
+| Un spike | `/sdd-tiny` y `/sdd-promote` si crece | una spec de tres líneas (objetivo · hecho cuando · fuera de alcance) |
+| Un refactor o legacy sin tests | `/sdd-characterize` y luego `/sdd-refactor` | el comportamiento actual congelado en tests y un cambio que demuestra no alterarlo |
+| Solo un plan | `/sdd-plan-only` | un plan; no se cambia nada |
+
+**Paso a paso**, con aprobación humana en cada fase: `/sdd-spec-init` → `/sdd-spec-requirements`
+(`/sdd-validate-gap` sobre código existente) → `/sdd-spec-design` (`/sdd-validate-design`) → `/sdd-spec-tasks`.
+**Implementa** con `/sdd-impl <feature>`, que lanza un subagente por tarea con revisión independiente y
+gate de verificación, o con `/sdd-impl <feature> 1,2` para solo esas tareas. **Cierra** con
+`/sdd-validate-impl` → `/sdd-verify-completion` → `/sdd-audit` → `open-sdd archive <feature>`. En cualquier
+momento tienes `/sdd-steering` (memoria del proyecto), `/sdd-spec-status`, `/sdd-help` y `open-sdd status`.
+Funcionan solos: el commit gate (C1 · C2 · C3 sobre el índice), la cadena completa en cada pull request y,
+donde el anfitrión lo permite, un hook Stop en el bucle del agente.
+
+La fuente editable es [`docs/diagrams/open-sdd-flows.excalidraw`](docs/diagrams/open-sdd-flows.excalidraw)
+(ábrela en [excalidraw.com](https://excalidraw.com) → *Open*). El mismo mapa en Mermaid, que GitHub renderiza:
+
+<details>
+<summary>Versión Mermaid</summary>
+
+```mermaid
+flowchart LR
+  I(["1 · Instala<br/>npx -y @brujo2020/open-sdd init . --write<br/>detecta tu agente · constitución + skills + commit gate"])
+
+  I --> A1["Idea difusa"] --> C1["/sdd-discovery<br/>→ brief.md + roadmap"]
+  I --> A2["Feature clara"]
+  I --> A3["Código existente"] --> C3["/sdd-getspecs<br/>brownfield constitution · delta"]
+  I --> A4["Varias features"] --> C4["/sdd-spec-batch<br/>por olas de dependencia"]
+  I --> A5["Un bug"] --> C5["/sdd-bugfix"]
+  I --> A6["Spike / prueba rápida"] --> C6["/sdd-tiny<br/>→ /sdd-promote si crece"]
+  I --> A7["Refactor / legacy"] --> C7["/sdd-characterize<br/>→ /sdd-refactor"]
+  I --> A8["Solo pensar"] --> C8["/sdd-plan-only<br/>no cambia nada"]
+
+  subgraph SPEC["3 · Especifica"]
+    Q1["Rápido<br/>/sdd-spec-quick<br/>1 aprobación al final"]
+    Q2["Paso a paso · aprobación por fase<br/>/sdd-spec-init → /sdd-spec-requirements<br/>→ /sdd-spec-design → /sdd-spec-tasks"]
+  end
+  C1 & A2 & C3 --> Q1 & Q2
+  C4 --> Q2
+
+  SHORT["Flujos cortos<br/>spec mínima → código → prueba"]
+  C5 & C6 & C7 & C8 --> SHORT
+
+  subgraph IMPL["4 · Implementa"]
+    M1["/sdd-impl &lt;feature&gt;<br/>autónomo: subagente por tarea + review"]
+    M2["/sdd-impl &lt;feature&gt; 1,2<br/>manual: solo esas tareas"]
+  end
+  Q1 --> M1
+  Q2 --> M1
+  Q2 -.-> M2
+
+  V["5 · Verifica y cierra<br/>/sdd-validate-impl → /sdd-verify-completion<br/>→ /sdd-audit → open-sdd archive"]
+  M1 & M2 & SHORT --> V --> DONE(["Listo"])
+
+  CONST["Constitución<br/>.sdd/steering/constitution.md<br/>principios con evidencia · un humano la ratifica"]
+  CONST -. valida .-> Q1 & Q2 & SHORT
+
+  classDef start fill:#a5d8ff,stroke:#1971c2,color:#1e1e1e
+  classDef idea fill:#ffec99,stroke:#f08c00,color:#1e1e1e
+  classDef spec fill:#b2f2bb,stroke:#2f9e44,color:#1e1e1e
+  classDef impl fill:#a5d8ff,stroke:#1971c2,color:#1e1e1e
+  classDef verify fill:#d0bfff,stroke:#7048e8,color:#1e1e1e
+  classDef short fill:#e9ecef,stroke:#868e96,color:#1e1e1e,stroke-dasharray:5 5
+  classDef bug fill:#ffc9c9,stroke:#e03131,color:#1e1e1e
+  class I start
+  class A1,A4 idea
+  class A2,Q1,Q2 spec
+  class A3 idea
+  class A5 bug
+  class M1,M2 impl
+  class V,DONE verify
+  class SHORT,A6,A7,A8 short
+  classDef const fill:#ffd8a8,stroke:#e8590c,color:#1e1e1e
+  class CONST const
+```
+
+</details>
+
+## La constitución
+
+La constitución es la autoridad ante la que responde cada spec. Vive en `.sdd/steering/constitution.md`
+y es una lista de principios, cada uno con la evidencia que lo sostiene. Toda spec se valida contra ella,
+y un veredicto bloqueante cita el principio que lo rechazó. Es **obligatoria en todos los niveles de
+rigor**: subir el listón añade comprobaciones, pero nunca quita esta.
+
+Tiene dos orígenes, y el archivo registra cuál aplica:
+
+- **Descriptiva** (código existente): `open-sdd brownfield constitution . --write` extrae los principios
+  que el código ya cumple, cada uno con su evidencia. Las prácticas que quieres y que el código aún no
+  sigue pasan a ser *enmiendas propuestas*, no reglas en vigor.
+- **Ratificada** (decisión humana): `open-sdd brownfield constitution . --draft` escribe un borrador
+  que explícitamente no está en vigor. `open-sdd govern constitution --evidence-pack` da a un modelo o a
+  un revisor lo que necesita para mejorarlo, y
+  `open-sdd govern constitution --ratify --by "<nombre>" --rationale "<por qué>" --write` lo pone en
+  vigor, registrando quién lo ratificó y por qué. Una ratificación sin persona nombrada y sin motivo se rechaza.
+
+`open-sdd govern constitution --matrix` muestra cómo está cada spec frente a cada principio, y
+`open-sdd status` informa de la alineación constitucional junto al resto del score.
+
 ## Lo que obtienes
 
 - **22 plantillas de comando, instaladas por defecto.** Cada workflow es un comando en el chat del
@@ -151,6 +263,24 @@ La documentación de Kiro no se pudo leer directamente; sus ideas llegan a trav�
 
 La lista completa de brechas (G-01 … G-33), cada una con su ubicación en el código, está en
 [docs/PAPER-ALIGNMENT.md](docs/PAPER-ALIGNMENT.md).
+
+## De dónde viene
+
+La arquitectura es la que describe *Orquestación SDD-First Multiagente para Desarrollo Enterprise: una
+arquitectura de referencia Zero-Trust para gobernar la ingeniería de software agéntica a escala*, de
+Mario Alejandro Ramos (rev. 3, septiembre de 2026,
+[doi:10.13140/RG.2.2.29185.42087](https://doi.org/10.13140/RG.2.2.29185.42087)). De ahí vienen la cadena de
+gates (C1–C7, O1–O7), los niveles de enforcement A–D (techo y suelo), la conformidad C0–C3, los seis
+invariantes, las olas transaccionales y la constitución como pivote.
+
+- **El preprint** de esta herramienta, que resume la arquitectura, el harness Zero-Trust y el modelo de
+  especificaciones vivas: [`docs/papers/open-sdd-preprint.pdf`](docs/papers/open-sdd-preprint.pdf)
+  (fuentes LaTeX en español y en [inglés](docs/papers/open-sdd-preprint-en.tex)).
+- **Qué está implementado y qué no:** [`docs/PAPER-ALIGNMENT.md`](docs/PAPER-ALIGNMENT.md) vincula cada
+  sección del paper con el símbolo que la implementa y enumera cada brecha declarada.
+  `open-sdd assure claims --verify` ejecuta ese registro, que debe quedar en 0 rotas.
+- Las mediciones del prototipo del paper (κ, la tasa de falsos positivos de C4, los tiempos de barrido)
+  son de ese prototipo y **no** son mediciones de este repositorio.
 
 ## Documentación
 
