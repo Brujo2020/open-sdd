@@ -150,3 +150,32 @@ describe('REQ-W2-008 — Cline and Axet', () => {
     expect(cline?.skills).toEqual({ layout: '.cline/skills/sdd-*/SKILL.md', mode: 'skills' });
   });
 });
+
+describe('REQ-W2-015 — Axet slash menu lists workflows, not skills', () => {
+  const skills = readdirSync(path.join(pkgRoot, 'templates', 'agents', '_shared', 'skills')).sort();
+  const workflowsDir = path.join(pkgRoot, 'templates', 'agents', 'axet-skills', 'workflows');
+
+  it('ships one extensionless workflow per shared skill, so the command is exactly /<skill>', () => {
+    expect(readdirSync(workflowsDir).sort()).toEqual(skills);
+  });
+
+  it('each workflow points at its own skill and nothing else', () => {
+    for (const name of skills) {
+      const text = readFileSync(path.join(workflowsDir, name), 'utf8');
+      expect(text.startsWith(`# /${name}\n`)).toBe(true);
+      expect(text).toContain(`.axet-plugin/skills/${name}/SKILL.md`);
+      expect(text).toContain(`open-sdd:axet-workflow skill=${name}`);
+    }
+  });
+
+  it('the axet-skills manifest installs them in .axetrules/workflows', () => {
+    const manifest = JSON.parse(readFileSync(path.join(manifestsDir, 'axet-skills.json'), 'utf8')) as {
+      artifacts: { id: string; source: { fromDir?: string; toDir?: string } }[];
+    };
+    expect(manifest.artifacts.find((a) => a.id === 'workflows')?.source).toMatchObject({
+      fromDir: 'templates/agents/axet-skills/workflows',
+      toDir: '.axetrules/workflows',
+    });
+  });
+});
+

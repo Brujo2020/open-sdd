@@ -75,3 +75,8 @@ improvements, the first being Cline and its fork Axet.plugin as installable skil
 - Statement: If the CLI cannot be started, then the [hook] shall print `{"cancel":true}` and exit 0.
 - Statement: WHEN the hook receives any other tool, the [hook] shall print `{"cancel":false}` within 1 second.
 - Statement: If `.axetrules/hooks/PreToolUse` exists and was not written by open-sdd, then the [integration] shall refuse and leave the file unchanged.
+
+### REQ-W2-015 — Axet's slash menu offers every sdd skill
+
+- Statement: WHEN `--axet` is given, the [installer] shall write one extensionless workflow per shared skill in `.axetrules/workflows/`, named exactly as the skill.
+- Statement: The [workflow] shall instruct the agent to follow `.axet-plugin/skills/<skill>/SKILL.md` with the text typed after the command as its input.

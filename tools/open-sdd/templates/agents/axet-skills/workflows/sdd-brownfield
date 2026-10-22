@@ -1,0 +1,10 @@
+# /sdd-brownfield
+
+Govern an existing codebase with open-sdd: reconnaissance, descriptive constitution, delta specs, impact/contracts/reuse analysis and the rigor ladder, with the constitution as the pivot that validates every spec. Use when the code already exists and is the de facto source of truth.
+
+Run the open-sdd skill `sdd-brownfield`:
+
+1. Read `.axet-plugin/skills/sdd-brownfield/SKILL.md` and follow it exactly, including the files it points to in that folder.
+2. The text the user typed after `/sdd-brownfield` is the skill's input: `$ARGUMENTS` is all of it, `$1` the first word, `$2` the second. If the skill needs an input that is missing, ask for it.
+
+<!-- open-sdd:axet-workflow skill=sdd-brownfield — generated from templates/agents/_shared/skills; edit the skill, not this file. -->

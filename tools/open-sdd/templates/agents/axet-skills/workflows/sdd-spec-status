@@ -1,0 +1,10 @@
+# /sdd-spec-status
+
+Show specification status and progress
+
+Run the open-sdd skill `sdd-spec-status`:
+
+1. Read `.axet-plugin/skills/sdd-spec-status/SKILL.md` and follow it exactly, including the files it points to in that folder.
+2. The text the user typed after `/sdd-spec-status` is the skill's input: `$ARGUMENTS` is all of it, `$1` the first word, `$2` the second. If the skill needs an input that is missing, ask for it.
+
+<!-- open-sdd:axet-workflow skill=sdd-spec-status — generated from templates/agents/_shared/skills; edit the skill, not this file. -->

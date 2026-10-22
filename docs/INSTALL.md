@@ -125,10 +125,11 @@ Known agent flags include `--claude-skills`, `--codex-skills`, `--cursor-skills`
 `--antigravity`, `--cline` and `--axet`. Several at once: `open-sdd init . --agent cline-skills,axet-skills --skills --write`.
 
 **Cline and Axet Plugin.** `--cline` installs the skills in `.cline/skills/sdd-*/SKILL.md`, the directory
-docs.cline.bot recommends. `--axet` installs them in `.axet-plugin/skills/sdd-*/SKILL.md`. Axet Plugin
-(NTT DATA's Cline fork) watches that directory and lists every skill in its `/` menu, so `/sdd-spec-init`,
-`/sdd-impl` and the rest autocomplete with no further setup. Both also write `AGENTS.md`, which both hosts
-read as a rule. `init` picks either host by itself when `.cline/`, `.clinerules/` or `.axet-plugin/` exists.
+docs.cline.bot recommends. `--axet` installs them in `.axet-plugin/skills/sdd-*/SKILL.md` and adds one workflow per skill in
+`.axetrules/workflows/sdd-*`. Axet Plugin is NTT DATA's Cline fork, and its `/` menu lists workflows
+but never skills. Each workflow file has no extension, so it shows up as `/sdd-spec-init`, `/sdd-impl`
+and so on, and all it does is tell the agent to follow the matching skill. Axet also reads `AGENTS.md`
+as a rule. `init` picks either host by itself when `.cline/`, `.clinerules/` or `.axet-plugin/` exists.
 For VS Code's *Run Task*: `open-sdd integrate vscode-tasks --write`.
 
 **Axet completion gate.** `open-sdd integrate axet-hook --write` writes `.axetrules/hooks/PreToolUse`.

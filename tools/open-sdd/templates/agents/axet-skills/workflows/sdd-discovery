@@ -1,0 +1,10 @@
+# /sdd-discovery
+
+Entry point for new work. Determines the best action path or work decomposition (update existing spec, create new spec, mixed decomposition, or no spec needed) and refines ideas through structured dialogue.
+
+Run the open-sdd skill `sdd-discovery`:
+
+1. Read `.axet-plugin/skills/sdd-discovery/SKILL.md` and follow it exactly, including the files it points to in that folder.
+2. The text the user typed after `/sdd-discovery` is the skill's input: `$ARGUMENTS` is all of it, `$1` the first word, `$2` the second. If the skill needs an input that is missing, ask for it.
+
+<!-- open-sdd:axet-workflow skill=sdd-discovery — generated from templates/agents/_shared/skills; edit the skill, not this file. -->

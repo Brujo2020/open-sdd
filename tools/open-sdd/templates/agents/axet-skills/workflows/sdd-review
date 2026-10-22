@@ -1,0 +1,10 @@
+# /sdd-review
+
+Review a task implementation against approved specs, task boundaries, and verification evidence. Use after an implementer finishes a task, after remediation, or before accepting a task as complete.
+
+Run the open-sdd skill `sdd-review`:
+
+1. Read `.axet-plugin/skills/sdd-review/SKILL.md` and follow it exactly, including the files it points to in that folder.
+2. The text the user typed after `/sdd-review` is the skill's input: `$ARGUMENTS` is all of it, `$1` the first word, `$2` the second. If the skill needs an input that is missing, ask for it.
+
+<!-- open-sdd:axet-workflow skill=sdd-review — generated from templates/agents/_shared/skills; edit the skill, not this file. -->

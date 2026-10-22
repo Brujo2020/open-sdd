@@ -7,8 +7,9 @@
   with `name`; the webview's slash menu merges local workflows, global workflows and those skills
   into its `custom` section. Workflows live in `.axetrules/workflows/` (named after the file, `.md`
   included), rules in `.axetrules/` plus `AGENTS.md`, hooks in `.axetrules/hooks/` (Cline events:
-  TaskStart…TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit, PreCompact). The agent writes
-  only skills + AGENTS.md: workflows would list every command twice. `TaskComplete` is not cancellable in the bundle; `PreToolUse` is, so the completion gate (REQ-W2-014)
+  TaskStart…TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit, PreCompact). The slash menu (`b3e`) lists builtin commands and
+  workflows only — skills are never in it (confirmed when the user saw no `/sdd` entries) — so the
+  agent also writes one extensionless workflow per skill (`/sdd-spec-init`), each pointing at its skill. `TaskComplete` is not cancellable in the bundle; `PreToolUse` is, so the completion gate (REQ-W2-014)
   is a `PreToolUse` script that acts only on `attempt_completion`. A hook that exits non-zero is logged
   and ignored (`cancel:false`), so the script always exits 0 and blocks through its JSON — fail-closed.
   Evidence is the bundle's code, not a behavioural sentinel run in a live Axet session.

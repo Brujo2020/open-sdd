@@ -1,0 +1,10 @@
+# /sdd-refactor
+
+Refactor without changing behaviour — declare spec_impact none, prove it with the same tests before and after
+
+Run the open-sdd skill `sdd-refactor`:
+
+1. Read `.axet-plugin/skills/sdd-refactor/SKILL.md` and follow it exactly, including the files it points to in that folder.
+2. The text the user typed after `/sdd-refactor` is the skill's input: `$ARGUMENTS` is all of it, `$1` the first word, `$2` the second. If the skill needs an input that is missing, ask for it.
+
+<!-- open-sdd:axet-workflow skill=sdd-refactor — generated from templates/agents/_shared/skills; edit the skill, not this file. -->

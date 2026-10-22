@@ -30,3 +30,6 @@
   - _Evidence: create, merge by label (user entries kept), keep on rerun, refuse JSON with comments._
 - [x] 14. Axet PreToolUse completion gate — _Requirements: REQ-W2-014_ — _Boundary:_ `tools/open-sdd/src/core/axetHook.ts`, `tools/open-sdd/src/cli/commands/init.ts`
   - _Evidence: 6 tests run the rendered script with Node: other tools → cancel:false; gate pass → cancel:false; gate fail → cancel:true with output, exit 0; missing CLI → cancel:true; foreign hook refused; runs under a type:module package. Contract read from the Axet 3.0.0 VSIX; not run in a live Axet session._
+- [x] 15. Axet workflows so `/sdd-*` autocompletes — _Requirements: REQ-W2-015_ — _Boundary:_ `tools/open-sdd/templates/agents/axet-skills/workflows/`, `tools/open-sdd/templates/manifests/axet-skills.json`
+  - _Evidence: user saw no `/sdd` entries with skills only; the 3.0.0 bundle's menu (`b3e`) lists builtin + local/global/remote workflows, never skills. Its own menu and expansion code, run over an `--axet` install, yields 27 `/sdd-*` entries and expands `/sdd-spec-init`; 3 sync tests._
+
