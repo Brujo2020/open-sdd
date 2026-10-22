@@ -96,7 +96,7 @@ npx @brujo2020/open-sdd@1.1.5 --lang ja       # legacy i18n flags still work
 
 ## 5. v2.x to v3.0
 
-> The current skills targets cover 8 platforms: Claude Code, Codex, Cursor, Copilot, Devin Local / CLI, OpenCode, Gemini CLI, and Antigravity. Both Windsurf / Cascade targets are deprecated migration options. Other commands-based targets (`--claude-code`, `--cursor`, etc.) also remain deprecated. Native delegation and inline fallbacks vary by host; see [Agent compatibility](agent-compatibility.md).
+> v3.0 applies to all `--*-skills` install targets. Skills modes are now available for 8 platforms: Claude Code, Codex, Cursor, Copilot, Windsurf, OpenCode, Gemini CLI, and Antigravity. Commands-based agents (`--claude-code`, `--cursor`, etc.) still work but are deprecated and will be removed in a future release.
 
 ### TL;DR
 
@@ -110,9 +110,9 @@ npx @brujo2020/open-sdd@1.1.5 --lang ja       # legacy i18n flags still work
 | Session persistence | None | **`brief.md`** persists across sessions; downstream skills read it automatically |
 | TDD protocol | Basic TDD | **Feature Flag TDD**: RED then GREEN protocol for safe incremental delivery |
 | Codex cross-spec review | N/A | **`.codex/agents/spec-reviewer.toml`** for Codex installs |
-| Debug on failure | N/A | **Debug investigation** -- fresh context when native subagents are available (max 2 rounds) |
+| Debug on failure | N/A | **Debug subagent** -- fresh context investigation with web search (max 2 rounds) |
 | Learnings propagation | N/A | **Implementation Notes** in tasks.md injected into subsequent implementer prompts |
-| Skills platforms | Claude Code, Codex | **8 current platforms**: Claude, Codex, Cursor, Copilot, Devin Local / CLI, OpenCode, Gemini CLI, Antigravity; deprecated Cascade retained |
+| Skills platforms | Claude Code, Codex | **8 platforms**: Claude, Codex, Cursor, Copilot, Windsurf, OpenCode, Gemini CLI, Antigravity |
 
 ### Key migration steps
 
@@ -134,7 +134,7 @@ npx @brujo2020/open-sdd@1.1.5 --lang ja       # legacy i18n flags still work
 
 4. **Use `/sdd-spec-batch`** for multi-feature work -- when your roadmap contains multiple specs, `/sdd-spec-batch` creates them in parallel and runs a cross-spec review to catch contradictions.
 
-5. **Migrate from legacy modes** -- commands modes (`--claude`, `--cursor`, `--copilot`, `--opencode`, `--gemini`) are deprecated; use the corresponding `--*-skills` flag. `--codex` is already blocked. For both `--windsurf` and `--windsurf-skills`, migrate to `--devin` using the [Cascade migration steps](agent-compatibility.md#migrating-windsurf--cascade-to-devin).
+5. **Migrate from legacy modes** -- all non-skills modes (`--claude`, `--cursor`, `--copilot`, `--windsurf`, `--opencode`, `--gemini`) are deprecated and will be removed. `--codex` is already blocked. Use the corresponding `--*-skills` flag.
 
 6. **Leverage `brief.md` for session continuity** -- after discovery, you can close the session and resume later. The brief file preserves the feature context so you do not need to re-explain scope.
 
@@ -198,5 +198,5 @@ actually resolves.
 ## 8. Takeaways
 
 - **Stay on 1.1.5** if you just need the legacy workflow—pin the version and continue as before.
-- **Use section 5 for current skills mode**. The v2 instructions above are retained for projects intentionally staying on that historical version.
+- **Move to 2.0.0** if you want unified templates, Supporting References, research/design separation, and minimal maintenance via rules.
 - Future features and fixes target v2+, so upgrading unlocks the full spec-driven development experience.

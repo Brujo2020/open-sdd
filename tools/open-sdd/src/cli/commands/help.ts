@@ -23,6 +23,7 @@ import { SUPPORTED_LOCALES } from '../i18n.js';
 import { agentList, getAgentDefinition } from '../../agents/registry.js';
 import { EXECUTABLE_CHAIN, getExecutableGate } from '../../core/gateCatalog.js';
 import { RIGOR_LEVELS, RIGOR_ASPECTS } from '../../core/rigor.js';
+import { HOST_INTEGRATIONS } from '../../core/integrations.js';
 import { colors, formatHeading } from '../ui/colors.js';
 
 // ---------------------------------------------------------------------------------------------
@@ -672,7 +673,8 @@ const HELP_SECTIONS: { group: HelpGroup; heading: string; staticLines?: string[]
   {
     group: 'adoption',
     heading: 'Adoption (the integration matrix and the importers):',
-    after: ['  hosts: claude-code, cursor, copilot, codex, gemini-cli, windsurf, opencode, antigravity, zed, cline'],
+    // Derived from the integrations matrix so the list never drifts from what `integrate` accepts.
+    after: [`  hosts: ${HOST_INTEGRATIONS.map((host) => host.id).join(', ')}`],
   },
   { group: 'daily', heading: 'Daily drivers (read-only reports: none of these runs the gate chain):' },
   { group: 'reversibility', heading: 'Reversibility (the tool is reversible — tenet 12):' },

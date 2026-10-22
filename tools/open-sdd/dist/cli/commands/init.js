@@ -57,6 +57,10 @@ const flagValue = (args, name) => {
     const next = args[index + 1];
     return next && !next.startsWith('-') ? next : '';
 };
+/** Banderas de init que consumen el token siguiente como valor (nunca es el positional). */
+const VALUE_FLAGS = new Set(['--agent', '--level', '--lang', '--sdd-dir']);
+/** El primer argumento posicional real: ni una bandera ni el valor de una bandera con valor. */
+const positionalArg = (args) => args.find((arg, index) => !arg.startsWith('-') && !VALUE_FLAGS.has(args[index - 1] ?? ''));
 const readIfExists = async (p) => readFile(p, 'utf8').catch(() => null);
 // ---------------------------------------------------------------------------------------------
 // Detección del agente anfitrión
@@ -79,6 +83,9 @@ const HOST_DIRS = [
     { dir: '.qwen', agent: 'qwen-code', label: 'Qwen Code', host: 'Qwen Code' },
     { dir: '.opencode', agent: 'opencode-skills', label: 'OpenCode', host: 'OpenCode' },
     { dir: '.codex', agent: 'codex-skills', label: 'Codex CLI', host: 'Codex CLI' },
+    { dir: '.axet-plugin', agent: 'axet-skills', label: 'Axet Plugin', host: 'Axet Plugin' },
+    { dir: '.cline', agent: 'cline-skills', label: 'Cline', host: 'Cline' },
+    { dir: '.clinerules', agent: 'cline-skills', label: 'Cline', host: 'Cline' },
 ];
 /** Archivos de instrucciones: marcadores débiles, compartidos por varios anfitriones. */
 const DOC_MARKERS = [
@@ -684,7 +691,7 @@ export const isProjectInitInvocation = (args, cwd) => {
     // Cualquier bandera propia del inicializador de proyecto decide sin ambigüedad.
     if (args.some((arg) => PROJECT_FLAGS.has(arg) || arg.startsWith('--sdd-dir=')))
         return true;
-    const positional = args.find((arg) => !arg.startsWith('-'));
+    const positional = positionalArg(args);
     if (positional === undefined)
         return true;
     if (positional === '.' || positional === '..')
@@ -692,12 +699,36 @@ export const isProjectInitInvocation = (args, cwd) => {
     // Un directorio existente es un objetivo; un slug inexistente es un nombre de feature (heredado).
     return existsSync(path.resolve(cwd, positional));
 };
+/**
+ * `--agent a,b`: valida todos los ids antes de escribir nada y luego ejecuta un init por agente.
+ * Los artefactos comunes (rigor, constitución, hook) son idempotentes: la segunda pasada los conserva.
+ */
 const handleProjectInit = async (args, io, cwd) => {
+    const requested = flagValue(args, 'agent');
+    if (requested === undefined || !requested.includes(','))
+        return handleSingleProjectInit(args, io, cwd);
+    const ids = requested.split(',').map((id) => id.trim()).filter((id) => id.length > 0);
+    const unknown = ids.filter((id) => !agentList.includes(id));
+    if (unknown.length > 0) {
+        io.error(colors.red(`Error: agente(s) desconocido(s): ${unknown.join(', ')}. Admitidos: ${agentList.join(', ')}. No se escribió nada.`));
+        return 1;
+    }
+    const index = args.findIndex((arg) => arg === '--agent' || arg.startsWith('--agent='));
+    const rest = args.filter((_, i) => i !== index && !(args[index] === '--agent' && i === index + 1));
+    let exit = 0;
+    for (const id of ids) {
+        const code = await handleSingleProjectInit([...rest, '--agent', id], io, cwd);
+        if (code !== 0)
+            exit = code;
+    }
+    return exit;
+};
+const handleSingleProjectInit = async (args, io, cwd) => {
     const json = args.includes('--json');
     const write = args.includes('--write');
     const skills = args.includes('--skills');
     const mcp = args.includes('--mcp');
-    const positional = args.find((arg) => !arg.startsWith('-'));
+    const positional = positionalArg(args);
     const flag = (name) => flagValue(args, name);
     let plan;
     try {
@@ -894,6 +925,7 @@ const HOST_SKILL_AGENT = {
     qoder: 'qoder-skills',
     zcode: 'zcode-skills',
     codebuddy: 'codebuddy-skills',
+    cline: 'cline-skills',
 };
 /** `~/x`, `%USERPROFILE%\x` y `%APPDATA%\x` son rutas reales que hay que expandir antes de escribir. */
 const expandConfigPath = (declared, cwd) => {

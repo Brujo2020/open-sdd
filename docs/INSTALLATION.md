@@ -84,7 +84,7 @@ npx @brujo2020/open-sdd@latest --lang es -y
 
 ## Choosing an agent
 
-18 agent definitions ship; 8 are skills-based and carry all 21 skills. The authoritative table
+18 agent definitions ship; 8 are skills-based and carry the full shared skill set (27 today; `assure claims` checks the trees match). The authoritative table
 (labels, `--agent` ids, alias flags and install directories) is in the
 [README](../README.md#supported-host-agents). The most common skills variants:
 

@@ -557,7 +557,7 @@ export const agentDefinitions = {
     },
     'agents-skills': {
         label: 'Cross-tool Agent Skills',
-        description: 'Installs the 22 sdd skills ONCE in `.agents/skills/sdd-*/`, the cross-tool path that this project verified for Roo Code, Kilo Code, Junie, MiMoCode, Crush, Amp, Kimi Code, Warp, Devin, Factory Droid, Augment, Goose, OpenHands and DeepSeek Harness — one neutral tree instead of one copy per host — plus shared settings in `{{SDD_DIR}}/settings/` and an AGENTS.md quickstart.',
+        description: 'Installs the shared sdd skills ONCE in `.agents/skills/sdd-*/`, the cross-tool path that this project verified for Roo Code, Kilo Code, Junie, MiMoCode, Crush, Amp, Kimi Code, Warp, Devin, Factory Droid, Augment, Goose, OpenHands and DeepSeek Harness — one neutral tree instead of one copy per host — plus shared settings in `{{SDD_DIR}}/settings/` and an AGENTS.md quickstart.',
         aliasFlags: ['--agents-skills'],
         layout: {
             commandsDir: '.agents/skills',
@@ -573,7 +573,7 @@ export const agentDefinitions = {
     },
     'trae-skills': {
         label: 'Trae Skills',
-        description: 'Installs the 22 sdd skills in `.trae/skills/sdd-*/` from the SHARED neutral tree (Trae also documents `.agents/skills/`, but ships it OFF by default, so its own directory is the one that works), plus shared settings in `{{SDD_DIR}}/settings/`.',
+        description: 'Installs the shared sdd skills in `.trae/skills/sdd-*/` from the SHARED neutral tree (Trae also documents `.agents/skills/`, but ships it OFF by default, so its own directory is the one that works), plus shared settings in `{{SDD_DIR}}/settings/`.',
         aliasFlags: ['--trae-skills'],
         layout: {
             commandsDir: '.trae/skills',
@@ -589,7 +589,7 @@ export const agentDefinitions = {
     },
     'qoder-skills': {
         label: 'Qoder Skills',
-        description: 'Installs the 22 sdd skills in `.qoder/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. Rules live in `.qoder/rules/` with a documented 100,000-character budget.',
+        description: 'Installs the shared sdd skills in `.qoder/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. Rules live in `.qoder/rules/` with a documented 100,000-character budget.',
         aliasFlags: ['--qoder-skills', '--lingma-skills'],
         layout: {
             commandsDir: '.qoder/skills',
@@ -605,7 +605,7 @@ export const agentDefinitions = {
     },
     'zcode-skills': {
         label: 'ZCode Skills',
-        description: 'Installs the 22 sdd skills in `.zcode/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. The project path is SOURCE-VERIFIED (the vendor resolver computes it; its docs state only the user scope).',
+        description: 'Installs the shared sdd skills in `.zcode/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. The project path is SOURCE-VERIFIED (the vendor resolver computes it; its docs state only the user scope).',
         aliasFlags: ['--zcode-skills'],
         layout: {
             commandsDir: '.zcode/skills',
@@ -621,7 +621,7 @@ export const agentDefinitions = {
     },
     'codebuddy-skills': {
         label: 'CodeBuddy Skills',
-        description: 'Installs the 22 sdd skills in `.codebuddy/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. Native instructions live in CODEBUDDY.md.',
+        description: 'Installs the shared sdd skills in `.codebuddy/skills/sdd-*/` from the SHARED neutral tree, plus shared settings in `{{SDD_DIR}}/settings/`. Native instructions live in CODEBUDDY.md.',
         aliasFlags: ['--codebuddy-skills'],
         layout: {
             commandsDir: '.codebuddy/skills',
@@ -634,6 +634,38 @@ export const agentDefinitions = {
             steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
         },
         manifestId: 'codebuddy-skills',
+    },
+    'cline-skills': {
+        label: 'Cline Skills',
+        description: 'Installs the shared sdd skills in `.cline/skills/sdd-*/` (the project skills directory docs.cline.bot recommends), plus shared settings in `{{SDD_DIR}}/settings/` and an AGENTS.md quickstart.',
+        aliasFlags: ['--cline-skills', '--cline'],
+        layout: {
+            commandsDir: '.cline/skills',
+            agentDir: '.cline',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-spec-quick <what-to-build>`',
+            steering: '`/sdd-steering`',
+            steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
+        },
+        manifestId: 'cline-skills',
+    },
+    'axet-skills': {
+        label: 'Axet Plugin Skills',
+        description: 'Installs the shared sdd skills in `.axet-plugin/skills/sdd-*/` (Axet Plugin, a Cline fork), plus shared settings in `{{SDD_DIR}}/settings/` and an AGENTS.md quickstart. Axet Rules and Workflows are not written: their workspace paths are not verified.',
+        aliasFlags: ['--axet-skills', '--axet'],
+        layout: {
+            commandsDir: '.axet-plugin/skills',
+            agentDir: '.axet-plugin',
+            docFile: 'AGENTS.md',
+        },
+        commands: {
+            spec: '`/sdd-spec-quick <what-to-build>`',
+            steering: '`/sdd-steering`',
+            steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
+        },
+        manifestId: 'axet-skills',
     },
 };
 export const getAgentDefinition = (agent) => {

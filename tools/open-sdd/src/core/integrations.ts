@@ -383,8 +383,8 @@ export const HOST_INTEGRATIONS: HostIntegration[] = [
   {
     id: 'cline',
     label: 'Cline',
-    skills: { layout: '.clinerules/sdd-*.md', mode: 'prompt-file' },
-    invocation: '@.clinerules/sdd-brownfield.md',
+    skills: { layout: '.cline/skills/sdd-*/SKILL.md', mode: 'skills' },
+    invocation: '/sdd-brownfield',
     mcp: {
       configPaths: {
         linux:
@@ -398,11 +398,12 @@ export const HOST_INTEGRATIONS: HostIntegration[] = [
       snippet: mcpServersSnippet,
       verified: true,
     },
-    detect: ['.clinerules/', '.clinerules'],
+    detect: ['.cline/', '.clinerules/', '.clinerules'],
     notes: [
       VERIFIED_JSON_MCP_SERVERS,
       'Ruta de usuario (extensión de VS Code, id `saoudrizwan.claude-dev`): `cline_mcp_settings.json` dentro de `globalStorage`. Cline admite claves extra por servidor (`disabled`, `autoApprove`); el snippet no las emite porque son opcionales.',
-      'Cline no tiene comandos de barra: sus reglas viven en `.clinerules/` y se adjuntan con una mención. No hay instalador de skills para Cline en el registro de agentes, así que `--write` solo registra el MCP.',
+      'Skills VERIFICADAS en `.cline/skills/<nombre>/SKILL.md` (ruta de proyecto recomendada; también lee `.clinerules/skills/` y `.claude/skills/`), con `name` igual al directorio y `description`; se invocan solas por descripción o con `/<nombre>`. Documentación: https://docs.cline.bot/customization/skills (leída 2026-10-21). El agente `cline-skills` las instala; su fork Axet Plugin lee `.axet-plugin/skills/` y lo instala el agente `axet-skills` (`--axet`), sin fila MCP aquí porque falta el id de su extensión.',
+      'Las reglas viven en `.cline/rules/` o `.clinerules/`; no se escriben: las skills ya llevan el flujo y AGENTS.md el arranque.',
     ],
   },
   {
