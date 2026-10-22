@@ -131,6 +131,14 @@ docs.cline.bot recommends. `--axet` installs them in `.axet-plugin/skills/sdd-*/
 read as a rule. `init` picks either host by itself when `.cline/`, `.clinerules/` or `.axet-plugin/` exists.
 For VS Code's *Run Task*: `open-sdd integrate vscode-tasks --write`.
 
+**Axet completion gate.** `open-sdd integrate axet-hook --write` writes `.axetrules/hooks/PreToolUse`.
+When the agent calls `attempt_completion`, the hook runs the same check as the commit gate
+(`gates run C1 C2 C3 --staged --strict`). While that check fails, Axet receives `cancel: true`
+together with the gate's output, so the task cannot close. Axet treats a hook that exits non-zero
+as allowing the action, so the script always exits 0 and signals the block in its JSON answer.
+If the CLI is missing, the hook blocks too. To turn it on, enable hooks in Axet's global settings.
+This behaviour was established by reading the Axet 3.0.0 code; it has not been observed in a live session.
+
 The full table (ids, aliases, install directories) is the README's
 [Supported host agents](../README.md) section and
 `tools/open-sdd/src/agents/registry.ts`.

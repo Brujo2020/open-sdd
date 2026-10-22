@@ -24,8 +24,9 @@
  * Los textos visibles son español, como el resto del CLI.
  */
 import { planVscodeTasks } from '../../core/vscodeTasks.js';
+import { AXET_HOOK_PATH, planAxetHook } from '../../core/axetHook.js';
 import { findRepoRoot } from '../../core/status.js';
-import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
@@ -1318,6 +1319,34 @@ const printIntegrationMatrix = (io) => {
     io.log('');
     return 0;
 };
+/** `integrate axet-hook [--write] [--force]`: the Axet completion gate (REQ-W2-014). */
+const handleAxetHook = async (args, io, cwd) => {
+    const root = await findRepoRoot(cwd);
+    const cliPath = await resolveCliExecutable(root);
+    if (cliPath === null) {
+        io.error(colors.red(`No se encontró el CLI de open-sdd: instálalo en el proyecto (${INSTALL_COMMAND}) y repite.`));
+        return 1;
+    }
+    const file = path.join(root, AXET_HOOK_PATH);
+    const plan = planAxetHook(await readIfExists(file), cliPath, args.includes('--force'));
+    if (plan.action === 'refused') {
+        io.error(colors.red(plan.reason));
+        return 1;
+    }
+    if (plan.action === 'keep') {
+        io.log(`${AXET_HOOK_PATH} ya está al día.`);
+        return 0;
+    }
+    if (!args.includes('--write')) {
+        io.log(`Plan: ${plan.action === 'create' ? 'crear' : 'actualizar'} ${AXET_HOOK_PATH} (bloquea attempt_completion mientras el commit gate falle; CLI: ${cliPath}). Sin --write no se escribe nada.`);
+        return 0;
+    }
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, plan.content, { encoding: 'utf8', mode: 0o755 });
+    await chmod(file, 0o755).catch(() => undefined);
+    io.log(`${AXET_HOOK_PATH}: escrito. Actívalo en Axet con el ajuste global de hooks («hooks enabled»).`);
+    return 0;
+};
 /** `integrate vscode-tasks [--write]`: SDD entries in `.vscode/tasks.json`, merge-only (REQ-W2-013). */
 const handleVscodeTasks = async (args, io, cwd) => {
     const root = await findRepoRoot(cwd);
@@ -1345,6 +1374,8 @@ export const handleIntegrateCommand = async (args, io, cwd = process.cwd()) => {
         return printIntegrationMatrix(io);
     if (args[0] === 'vscode-tasks')
         return handleVscodeTasks(args, io, cwd);
+    if (args[0] === 'axet-hook')
+        return handleAxetHook(args, io, cwd);
     const json = args.includes('--json');
     const write = args.includes('--write') && !args.includes('--dry-run');
     const hostArg = args.find((arg) => !arg.startsWith('-'));

@@ -8,8 +8,10 @@
   into its `custom` section. Workflows live in `.axetrules/workflows/` (named after the file, `.md`
   included), rules in `.axetrules/` plus `AGENTS.md`, hooks in `.axetrules/hooks/` (Cline events:
   TaskStart…TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit, PreCompact). The agent writes
-  only skills + AGENTS.md: workflows would list every command twice. A TaskComplete gate hook is a
-  candidate for a later wave.
+  only skills + AGENTS.md: workflows would list every command twice. `TaskComplete` is not cancellable in the bundle; `PreToolUse` is, so the completion gate (REQ-W2-014)
+  is a `PreToolUse` script that acts only on `attempt_completion`. A hook that exits non-zero is logged
+  and ignored (`cancel:false`), so the script always exits 0 and blocks through its JSON — fail-closed.
+  Evidence is the bundle's code, not a behavioural sentinel run in a live Axet session.
 - **Cline path.** `.cline/skills/` is the recommended project directory (docs.cline.bot/customization/skills,
   fetched 2026-10-21). The existing `integrate cline` keeps its MCP registration; its skills layout moves
   from `.clinerules/sdd-*.md` prompt files to `.cline/skills/sdd-*/SKILL.md`.

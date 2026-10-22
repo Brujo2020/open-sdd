@@ -67,3 +67,11 @@ improvements, the first being Cline and its fork Axet.plugin as installable skil
 ### REQ-W2-013 — Editor tasks
 
 - Statement: WHEN `integrate vscode-tasks --write` is given, the [integration] shall add SDD tasks to `.vscode/tasks.json` and keep every pre-existing task entry present.
+
+### REQ-W2-014 — Axet cannot declare done while the commit gate fails
+
+- Statement: WHEN `integrate axet-hook --write` is given, the [integration] shall write an executable `.axetrules/hooks/PreToolUse` script.
+- Statement: WHEN Axet calls the hook with `toolName` `attempt_completion` and the commit gate exits non-zero, the [hook] shall print `{"cancel":true}` with the gate output as `errorMessage` and exit 0.
+- Statement: If the CLI cannot be started, then the [hook] shall print `{"cancel":true}` and exit 0.
+- Statement: WHEN the hook receives any other tool, the [hook] shall print `{"cancel":false}` within 1 second.
+- Statement: If `.axetrules/hooks/PreToolUse` exists and was not written by open-sdd, then the [integration] shall refuse and leave the file unchanged.

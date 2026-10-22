@@ -459,6 +459,7 @@ export const COMMANDS = [
             '  integrate [host] [--write] [--json] [--dry-run]  Register the MCP server, install its skills and its Stop hook',
             '  integrate --list                                 The whole matrix: skills layout, invocation syntax, MCP path, verified?',
             '  integrate vscode-tasks [--write]                 SDD tasks in .vscode/tasks.json (Run Task), merge-only',
+            '  integrate axet-hook [--write] [--force]          Axet: block attempt_completion while the commit gate fails',
         ],
         examples: ['open-sdd integrate --list', 'open-sdd integrate claude-code --write'],
     },
