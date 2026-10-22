@@ -97,6 +97,12 @@ describe('REQ-W2-014 — what each Axet hook does', () => {
     expect(fire(root, 'PostToolUse', edit).json).toEqual({ cancel: false });
   });
 
+  it('PostToolUse does not repeat the verdict TaskStart already gave in the same task', async () => {
+    const root = await project();
+    fire(root, 'TaskStart', { taskId: 'task-same' });
+    expect(fire(root, 'PostToolUse', { taskId: 'task-same', postToolUse: { toolName: 'write_to_file' } }).json).toEqual({ cancel: false });
+  });
+
   it('TaskComplete reports in the chat and never cancels', async () => {
     const root = await project();
     const result = fire(root, 'TaskComplete', { taskComplete: { taskMetadata: {} } });

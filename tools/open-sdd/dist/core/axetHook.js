@@ -123,7 +123,10 @@ async function main() {
     answer({ cancel: false });
   }
 
+  // One verdict file per task, so PostToolUse does not repeat what TaskStart already said.
+  const state = path.join(os.tmpdir(), 'open-sdd-axet-' + String(payload.taskId || 'none').replace(/[^\\w-]/g, '') + '.json');
   if (EVENT === 'TaskStart') {
+    try { fs.writeFileSync(state, JSON.stringify({ verdict })); } catch (error) { /* best effort */ }
     answer({
       cancel: false,
       contextModification: [
@@ -137,7 +140,6 @@ async function main() {
   }
 
   // PostToolUse: speak only when the verdict changes, so a red gate is not repeated after every edit.
-  const state = path.join(os.tmpdir(), 'open-sdd-axet-' + String(payload.taskId || 'none').replace(/[^\\w-]/g, '') + '.json');
   let previous = '';
   try { previous = JSON.parse(fs.readFileSync(state, 'utf8')).verdict || ''; } catch (error) { previous = ''; }
   try { fs.writeFileSync(state, JSON.stringify({ verdict })); } catch (error) { /* best effort */ }
