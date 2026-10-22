@@ -207,9 +207,9 @@
 
 - id: CLM-027
   section: "§6.4"
-  statement_es: 'El repositorio envía 189 ficheros SKILL.md (9 árboles × 21 skills: 8 variantes de agente más el árbol neutro compartido `_shared`) bajo tools/open-sdd/templates/agents/.'
-  statement_en: 'The repository ships 189 SKILL.md files (9 trees × 21 skills: 8 agent variants plus the shared neutral `_shared` tree) under tools/open-sdd/templates/agents/.'
-  verifier: 'test "$(find tools/open-sdd/templates/agents -name SKILL.md | wc -l | tr -d " ")" = 189'
+  statement_es: 'Cada árbol de skills bajo tools/open-sdd/templates/agents/ (las variantes de agente y el árbol neutro `_shared`) envía exactamente el mismo conjunto de skills que `_shared`, y ningún SKILL.md vive fuera de un árbol `*/skills/`.'
+  statement_en: 'Every skills tree under tools/open-sdd/templates/agents/ (the agent variants and the shared neutral `_shared` tree) ships exactly the same skill set as `_shared`, and no SKILL.md lives outside a `*/skills/` tree.'
+  verifier: 'r=$(ls tools/open-sdd/templates/agents/_shared/skills); for d in tools/open-sdd/templates/agents/*/skills; do test "$(ls $d)" = "$r" || exit 1; done; n=$(ls -d tools/open-sdd/templates/agents/*/skills | wc -l); test "$(find tools/open-sdd/templates/agents -name SKILL.md | wc -l)" -eq $((n * $(echo "$r" | wc -l)))'
   expectation: pass
 
 - id: CLM-028
