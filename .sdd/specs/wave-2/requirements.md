@@ -68,15 +68,21 @@ improvements, the first being Cline and its fork Axet.plugin as installable skil
 
 - Statement: WHEN `integrate vscode-tasks --write` is given, the [integration] shall add SDD tasks to `.vscode/tasks.json` and keep every pre-existing task entry present.
 
-### REQ-W2-014 — Axet cannot declare done while the commit gate fails
+### REQ-W2-014 — Axet's agent sees the commit gate's verdict while it works
 
-- Statement: WHEN `integrate axet-hook --write` is given, the [integration] shall write an executable `.axetrules/hooks/PreToolUse` script.
-- Statement: WHEN Axet calls the hook with `toolName` `attempt_completion` and the commit gate exits non-zero, the [hook] shall print `{"cancel":true}` with the gate output as `errorMessage` and exit 0.
-- Statement: If the CLI cannot be started, then the [hook] shall print `{"cancel":true}` and exit 0.
-- Statement: WHEN the hook receives any other tool, the [hook] shall print `{"cancel":false}` within 1 second.
-- Statement: If `.axetrules/hooks/PreToolUse` exists and was not written by open-sdd, then the [integration] shall refuse and leave the file unchanged.
+- Statement: WHEN an Axet task starts, the [TaskStart hook] shall add the SDD contract and the commit gate's current verdict to the agent's context.
+- Statement: WHEN a file-changing or command tool finishes and the gate's verdict differs from the last one reported in that task, the [PostToolUse hook] shall add the new verdict to the agent's context.
+- Statement: WHEN an Axet task completes, the [TaskComplete hook] shall print the gate's verdict in the chat.
+- Statement: The [Axet hooks] shall run the gate with the project root as working directory and answer `cancel: false`.
+- Statement: If the gate CLI cannot be started, then the [Axet hooks] shall report the gate as unavailable with the error.
 
 ### REQ-W2-015 — Axet's slash menu offers every sdd skill
 
 - Statement: WHEN `--axet` is given, the [installer] shall write one extensionless workflow per shared skill in `.axetrules/workflows/`, named exactly as the skill.
 - Statement: The [workflow] shall instruct the agent to follow `.axet-plugin/skills/<skill>/SKILL.md` with the text typed after the command as its input.
+
+### REQ-W2-016 — One command from one origin installs Axet support
+
+- Statement: WHEN `--axet` is given, the [installer] shall write the skills, the workflows, AGENTS.md, the settings and the three hooks in one run.
+- Statement: The [Axet hooks] shall resolve the CLI from `$OPEN_SDD_CLI`, then the project's `node_modules`, then `npx --yes <origin>`, where the origin is the package spec the installer was run from.
+

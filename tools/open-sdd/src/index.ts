@@ -1,3 +1,5 @@
+import { AXET_HOOKS_DIR, applyAxetHooks, detectInstallSource, planAxetHooks } from './core/axetHook.js';
+import { fileURLToPath } from 'node:url';
 import { handleInsightCommand } from './cli/commands/insight.js';
 import path from 'node:path';
 import { stat } from 'node:fs/promises';
@@ -214,6 +216,17 @@ const runPlanExecution = async (
     const total = result.written + result.skipped;
     io.log(formatSuccess(`  ${result.written}/${total} files written`) + (result.skipped > 0 ? colors.yellow(`, ${result.skipped} skipped`) : ''));
     io.log('');
+    if (resolvedConfig.agent === 'axet-skills') {
+      // Axet: the hooks carry the gate into its loop and point back at THIS install's origin, so
+      // one command from one source installs skills, workflows and hooks alike (REQ-W2-016).
+      const root = execOpts?.cwd ?? process.cwd();
+      const source = process.env.OPEN_SDD_SOURCE || detectInstallSource(fileURLToPath(import.meta.url), VERSION);
+      const hooks = planAxetHooks(root, source, resolvedConfig.effectiveOverwrite === 'force');
+      const outcome = await applyAxetHooks(hooks);
+      io.log(colors.dim(`  hooks Axet (${AXET_HOOKS_DIR}): ${[...outcome.written, ...outcome.kept].join(', ') || '—'} · origen ${source}`));
+      for (const reason of outcome.refused) io.log(formatWarning(`  ${reason}`));
+      io.log('');
+    }
     printCompletionGuide(resolvedConfig.agent, io, resolvedConfig.kiroDir);
     return 0;
   } catch (error) {

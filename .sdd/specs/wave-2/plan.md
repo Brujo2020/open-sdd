@@ -9,10 +9,13 @@
   included), rules in `.axetrules/` plus `AGENTS.md`, hooks in `.axetrules/hooks/` (Cline events:
   TaskStart…TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit, PreCompact). The slash menu (`b3e`) lists builtin commands and
   workflows only — skills are never in it (confirmed when the user saw no `/sdd` entries) — so the
-  agent also writes one extensionless workflow per skill (`/sdd-spec-init`), each pointing at its skill. `TaskComplete` is not cancellable in the bundle; `PreToolUse` is, so the completion gate (REQ-W2-014)
-  is a `PreToolUse` script that acts only on `attempt_completion`. A hook that exits non-zero is logged
-  and ignored (`cancel:false`), so the script always exits 0 and blocks through its JSON — fail-closed.
-  Evidence is the bundle's code, not a behavioural sentinel run in a live Axet session.
+  agent also writes one extensionless workflow per skill (`/sdd-spec-init`), each pointing at its skill. No hook can block a completion: `runPreToolUseIfEnabled` returns early for
+  `attempt_completion`, PostToolUse skips it, `TaskComplete` runs after the completion is shown, is
+  not cancellable and its answer is ignored, and `cancel:true` cancels the whole task. So the hooks
+  are level A steering (TaskStart and PostToolUse inject the verdict as `<hook_context>`, TaskComplete
+  prints it) and the commit hook stays the floor. Hooks run without a cwd, so the root comes from the
+  hook's own path; the CLI comes from `$OPEN_SDD_CLI`, the project's node_modules or `npx --yes <origin>`,
+  the origin being the spec npx recorded in `~/.npm/_npx/<hash>/package.json`.
 - **Cline path.** `.cline/skills/` is the recommended project directory (docs.cline.bot/customization/skills,
   fetched 2026-10-21). The existing `integrate cline` keeps its MCP registration; its skills layout moves
   from `.clinerules/sdd-*.md` prompt files to `.cline/skills/sdd-*/SKILL.md`.

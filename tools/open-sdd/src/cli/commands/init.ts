@@ -25,7 +25,7 @@
  */
 
 import { planVscodeTasks } from '../../core/vscodeTasks.js';
-import { AXET_HOOK_PATH, planAxetHook } from '../../core/axetHook.js';
+import { AXET_HOOKS_DIR, applyAxetHooks, detectInstallSource, planAxetHooks } from '../../core/axetHook.js';
 import { findRepoRoot } from '../../core/status.js';
 import { chmod, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -33,7 +33,8 @@ import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { colors } from '../ui/colors.js';
-import { INSTALL_COMMAND } from '../packageIdentity.js';
+import { INSTALL_COMMAND, VERSION } from '../packageIdentity.js';
+import { fileURLToPath } from 'node:url';
 import type { CliIO } from '../io.js';
 import { agentList, getAgentDefinition, type AgentType } from '../../agents/registry.js';
 import {
@@ -1657,32 +1658,24 @@ const printIntegrationMatrix = (io: CliIO): number => {
   return 0;
 };
 
-/** `integrate axet-hook [--write] [--force]`: the Axet completion gate (REQ-W2-014). */
-const handleAxetHook = async (args: string[], io: CliIO, cwd: string): Promise<number> => {
+/** `integrate axet-hooks [--write] [--force] [--source <spec>]`: Axet TaskStart/PostToolUse/TaskComplete (REQ-W2-014). */
+const handleAxetHooks = async (args: string[], io: CliIO, cwd: string): Promise<number> => {
   const root = await findRepoRoot(cwd);
-  const cliPath = await resolveCliExecutable(root);
-  if (cliPath === null) {
-    io.error(colors.red(`No se encontró el CLI de open-sdd: instálalo en el proyecto (${INSTALL_COMMAND}) y repite.`));
+  const source = flagValue(args, 'source') || detectInstallSource(fileURLToPath(import.meta.url), VERSION);
+  const plans = planAxetHooks(root, source, args.includes('--force'));
+  const refused = plans.filter((plan) => plan.action === 'refused');
+  if (refused.length > 0) {
+    for (const plan of refused) io.error(colors.red(plan.reason ?? plan.event));
     return 1;
-  }
-  const file = path.join(root, AXET_HOOK_PATH);
-  const plan = planAxetHook(await readIfExists(file), cliPath, args.includes('--force'));
-  if (plan.action === 'refused') {
-    io.error(colors.red(plan.reason));
-    return 1;
-  }
-  if (plan.action === 'keep') {
-    io.log(`${AXET_HOOK_PATH} ya está al día.`);
-    return 0;
   }
   if (!args.includes('--write')) {
-    io.log(`Plan: ${plan.action === 'create' ? 'crear' : 'actualizar'} ${AXET_HOOK_PATH} (bloquea attempt_completion mientras el commit gate falle; CLI: ${cliPath}). Sin --write no se escribe nada.`);
+    for (const plan of plans) io.log(`  ${plan.action.padEnd(7)} ${path.relative(root, plan.file)}`);
+    io.log(`Origen del CLI en los hooks: ${source}. Sin --write no se escribe nada.`);
     return 0;
   }
-  await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(file, plan.content, { encoding: 'utf8', mode: 0o755 });
-  await chmod(file, 0o755).catch(() => undefined);
-  io.log(`${AXET_HOOK_PATH}: escrito. Actívalo en Axet con el ajuste global de hooks («hooks enabled»).`);
+  const outcome = await applyAxetHooks(plans);
+  io.log(`${AXET_HOOKS_DIR}: escritos ${outcome.written.join(', ') || '—'}; conservados ${outcome.kept.join(', ') || '—'}${outcome.retired.length > 0 ? `; retirado ${outcome.retired.join(', ')}` : ''}. Origen: ${source}.`);
+  io.log('Actívalos en Axet: ajustes → hooks enabled. Son nivel A (guían al agente); quien bloquea es el commit gate.');
   return 0;
 };
 
@@ -1716,7 +1709,7 @@ export const handleIntegrateCommand = async (
 ): Promise<number> => {
   if (args.includes('--list')) return printIntegrationMatrix(io);
   if (args[0] === 'vscode-tasks') return handleVscodeTasks(args, io, cwd);
-  if (args[0] === 'axet-hook') return handleAxetHook(args, io, cwd);
+  if (args[0] === 'axet-hooks' || args[0] === 'axet-hook') return handleAxetHooks(args, io, cwd);
 
   const json = args.includes('--json');
   const write = args.includes('--write') && !args.includes('--dry-run');

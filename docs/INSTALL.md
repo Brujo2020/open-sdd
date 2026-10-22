@@ -132,13 +132,20 @@ and so on, and all it does is tell the agent to follow the matching skill. Axet 
 as a rule. `init` picks either host by itself when `.cline/`, `.clinerules/` or `.axet-plugin/` exists.
 For VS Code's *Run Task*: `open-sdd integrate vscode-tasks --write`.
 
-**Axet completion gate.** `open-sdd integrate axet-hook --write` writes `.axetrules/hooks/PreToolUse`.
-When the agent calls `attempt_completion`, the hook runs the same check as the commit gate
-(`gates run C1 C2 C3 --staged --strict`). While that check fails, Axet receives `cancel: true`
-together with the gate's output, so the task cannot close. Axet treats a hook that exits non-zero
-as allowing the action, so the script always exits 0 and signals the block in its JSON answer.
-If the CLI is missing, the hook blocks too. To turn it on, enable hooks in Axet's global settings.
-This behaviour was established by reading the Axet 3.0.0 code; it has not been observed in a live session.
+**Axet in one command, from one origin.** Run `npx -y <origin> --axet` once in the project, where
+`<origin>` is `github:Brujo2020/open-sdd#<branch>`, or `@brujo2020/open-sdd` once it is published. That
+single command installs the skills, the `/sdd-*` workflows, `AGENTS.md`, the settings and three hooks
+in `.axetrules/hooks/`:
+- `TaskStart` tells the agent the SDD contract and the current commit-gate verdict.
+- `PostToolUse` re-runs the gate after edits and commands, and tells the agent only when the verdict changes.
+- `TaskComplete` prints the verdict in the chat.
+
+Each hook finds the CLI in `$OPEN_SDD_CLI`, then in the project's `node_modules`, then through
+`npx --yes <origin>` (the same origin you installed from). Because of that, committing `.axet-plugin/`
+and `.axetrules/` is enough for a teammate. To turn the hooks on, enable hooks in Axet's global settings.
+Axet does not let any hook block `attempt_completion`, and `cancel: true` would cancel the whole task, so
+these hooks steer the agent rather than lock it. The commit gate is what refuses. This behaviour was read
+from the Axet 3.0.0 code.
 
 The full table (ids, aliases, install directories) is the README's
 [Supported host agents](../README.md) section and
