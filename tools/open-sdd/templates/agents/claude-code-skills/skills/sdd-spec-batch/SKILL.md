@@ -60,7 +60,6 @@ For each wave, dispatch all features in the wave as **parallel subagents** via t
 
 ```
 Create a complete specification for feature "{feature-name}".
-Bind the feature argument in each phase to "{feature-name}" (including `$1` or `{feature}` references). This batch uses the existing fast-track mode: supply `-y` to design and tasks before entering their approval checks. Required phase review gates still apply.
 
 1. Read the brief at {{SDD_DIR}}/specs/{feature-name}/brief.md for feature context
 2. Read the roadmap at {{SDD_DIR}}/steering/roadmap.md for project context

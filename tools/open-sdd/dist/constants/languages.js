@@ -12,4 +12,5 @@ export const supportedLanguages = [
     'ko',
     'ar',
     'el',
+    'vi',
 ];

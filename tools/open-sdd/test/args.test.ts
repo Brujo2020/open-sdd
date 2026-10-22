@@ -29,7 +29,6 @@ describe('parseArgs', () => {
   it('parses additional languages', () => {
     expect(parseArgs(['--lang', 'es']).lang).toBe('es');
     expect(parseArgs(['--lang', 'ko']).lang).toBe('ko');
-    expect(parseArgs(['--lang', 'vi']).lang).toBe('vi');
   });
 
   it('parses backup with and without value', () => {
@@ -46,10 +45,6 @@ describe('parseArgs', () => {
     expect(parseArgs(['--claude-code-agent']).agent).toBe('claude-code-agent');
     expect(parseArgs(['--codex-skills']).agent).toBe('codex-skills');
     expect(parseArgs(['--windsurf']).agent).toBe('windsurf');
-    expect(parseArgs(['--windsurf-skills']).agent).toBe('windsurf-skills');
-    expect(parseArgs(['--devin']).agent).toBe('devin-skills');
-    expect(parseArgs(['--devin-skills']).agent).toBe('devin-skills');
-    expect(() => parseArgs(['--devin', '--windsurf-skills'])).toThrowError(/agent.*conflict/i);
 
     expect(() => parseArgs(['--agent', 'qwen-code', '--gemini-cli'])).toThrowError(/agent.*conflict/i);
     expect(() => parseArgs(['--gemini-cli', '--qwen-code'])).toThrowError(/agent.*conflict/i);

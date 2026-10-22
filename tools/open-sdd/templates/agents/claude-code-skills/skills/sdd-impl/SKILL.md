@@ -56,7 +56,15 @@ Otherwise, load all necessary context:
 - `{{SDD_DIR}}/specs/{feature}/spec.json`, `requirements.md`, `design.md`, `tasks.md`
 - Core steering context: `product.md`, `tech.md`, `structure.md`
 - Additional steering files only when directly relevant to the selected task's boundary, runtime prerequisites, integrations, domain rules, security/performance constraints, or team conventions that affect implementation or validation
-- Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
+- Relevant local agent skills or playbooks only when they clearly match the task's host environment or use case; read the specific artifact(s) you need, not entire directories
+
+#### Parallel Research
+
+The following research areas are independent and can be executed in parallel:
+1. **Spec context loading**: spec.json, requirements.md, design.md, tasks.md
+2. **Steering, playbooks, & patterns**: Core steering, task-relevant extra steering, matching local agent skills/playbooks, and existing code patterns
+
+After all parallel research completes, synthesize implementation brief before starting.
 
 #### Preflight
 
@@ -109,9 +117,7 @@ Otherwise, load all necessary context:
 - Process one sub-task (e.g., 1.1) per iteration if `--parallel` is omitted.
 - Each iteration follows: dispatch implementer → review → commit → re-read tasks.md → next.
 
-**Context management**: Re-read `tasks.md` before each iteration. Carry forward the task outcome, commit/evidence references, unresolved constraints, and relevant Implementation Notes; do not repeat completed worker transcripts in later handoffs.
-
-**Delegation scope**: Use native subagents for these task-local steps, passing the focused inputs below rather than the full parent conversation. Independent feature/PR chats and their worktrees are managed through the host; do not create a standalone chat for each implementation or review step.
+**Context management**: At the start of each iteration, re-read `tasks.md` to determine the next actionable sub-task. Do NOT rely on accumulated memory of previous iterations. After completing each iteration, retain only a one-line summary (e.g., "1.1: READY_FOR_REVIEW, 3 files changed") and discard the full status report and reviewer details.
 
 For each task (one at a time):
 
@@ -122,11 +128,9 @@ For each task (one at a time):
   - Paths to spec files: requirements.md, design.md, tasks.md
   - Exact requirement and design section numbers this task must satisfy (using source numbering, NOT invented `REQ-*` aliases)
   - Task-relevant steering context and parent-discovered validation commands (tests/build/smoke as relevant)
-  - Selected skill/playbook paths and concise task-relevant guidance, including required checks; inline necessary guidance when the worker cannot access those paths
   - Whether the task is behavioral (Feature Flag Protocol) or non-behavioral
   - **Previous learnings**: Include any `## Implementation Notes` entries from tasks.md that are relevant to this task's boundary or dependencies (e.g., "better-sqlite3 requires separate rebuild for Electron"). This prevents the same mistakes from recurring.
 - The implementer subagent will read the spec files and build its own Task Brief (acceptance criteria, completion definition, design constraints, verification method) before implementation
-- Preserve this task context, including selected skill guidance, on every implementer re-dispatch (context requests, review remediation, and debug retries); append the new context or feedback.
 - Dispatch via **Agent tool** as a fresh subagent
 
 **b) Handle implementer status**:
@@ -139,7 +143,6 @@ For each task (one at a time):
 **c) Review the task**:
 - If review mode is `required`:
   - Read `templates/reviewer-prompt.md` from this skill's directory
-  - Resolve `../kiro-review/SKILL.md` relative to this skill's directory and pass its absolute path as `REVIEW_PROTOCOL_PATH`
   - Construct a review prompt with:
     - The task description and relevant spec section numbers
     - Paths to spec files (requirements.md, design.md) so the reviewer can read them directly
@@ -176,6 +179,8 @@ For each task (one at a time):
 
 **g) Debug subagent** (triggered by BLOCKED, NEEDS_CONTEXT unresolved, or REJECTED after 2 remediation rounds):
 
+The debug subagent runs in a **fresh context** — it receives only the error information, not the failed implementation history. This avoids the context pollution that causes infinite retry loops.
+
 - Read `templates/debugger-prompt.md` from this skill's directory
 - Construct a debug prompt with:
   - The error description / blocker reason / reviewer rejection findings
@@ -188,10 +193,10 @@ For each task (one at a time):
 - Dispatch via **Agent tool** as a fresh subagent
 
 **Handle debug report**:
-- Require a `## Debug Report` and parse its exact `- NEXT_ACTION:` field (`RETRY_TASK | BLOCK_TASK | STOP_FOR_HUMAN`). If the protocol or a valid report is missing, stop this feature and report the missing input; do not guess a next action or dispatch another implementer.
+- Parse `NEXT_ACTION` from the debug report's exact structured field.
 - If `NEXT_ACTION: STOP_FOR_HUMAN` → append `_Blocked: <ROOT_CAUSE>_` to tasks.md, stop the feature run, and report that human review is required before continuing
 - If `NEXT_ACTION: BLOCK_TASK` → append `_Blocked: <ROOT_CAUSE>_` to tasks.md, skip to next task
-- If `NEXT_ACTION: RETRY_TASK` → preserve the current worktree; do NOT reset or discard unrelated changes. Spawn a **new** implementer subagent with the original task context (including selected skill guidance), the debug report's `FIX_PLAN`, `NOTES`, and the current `git diff`, and require it to repair the task with explicit edits only
+- If `NEXT_ACTION: RETRY_TASK` → preserve the current worktree; do NOT reset or discard unrelated changes. Spawn a **new** implementer subagent with the debug report's `FIX_PLAN`, `NOTES`, and the current `git diff`, and require it to repair the task with explicit edits only
   - If the new implementer succeeds (READY_FOR_REVIEW → reviewer APPROVED) → normal flow
   - If the new implementer also fails → repeat debug cycle (max 2 debug rounds total). After 2 failed debug rounds → append `_Blocked: debug attempted twice, still failing — <ROOT_CAUSE>_` to tasks.md, skip
 - **Max 2 debug rounds per task**. Each round: fresh debug subagent → fresh implementer. If still failing after 2 rounds, the task is blocked.

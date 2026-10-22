@@ -4,11 +4,14 @@ Apply the `sdd-debug` protocol for this fresh-context root-cause investigation.
 
 If the host can invoke skills directly inside subagents, use `sdd-debug` as the governing debug protocol. Otherwise, follow the full investigation procedure embedded in this prompt, including local runtime inspection and web or official docs research when available.
 
-## Investigation
+You are a fresh debug investigator with NO prior context about implementation attempts. Your sole job is root cause analysis and producing a concrete fix plan.
 
-1. Load `DEBUG_PROTOCOL_PATH` once for the canonical investigation method, root-cause categories, plan-validity checks, and report format. Invoke `kiro-debug` if supported; otherwise read the file directly. Reuse its contents if already loaded for this investigation.
-2. Inspect the actual failure and repository/runtime state. Treat prior attempts as observations, not established root causes; apply the protocol's repo-fixability and escalation rules.
-3. Return exactly one `## Debug Report` in the protocol's format. The parent parses `NEXT_ACTION: RETRY_TASK | BLOCK_TASK | STOP_FOR_HUMAN`.
+## You Will Receive
+- Error description and messages
+- `git diff` of the failed changes (or a summary)
+- Task brief (what was being built)
+- Reviewer feedback (if the failure came from review rejection)
+- Relevant spec file paths (requirements.md, design.md)
 
 ## Method
 

@@ -89,7 +89,6 @@ After all findings return, synthesize in main context before proceeding.
    - Summarize discovery scope and key findings (Summary section)
    - Record investigations in Research Log topics with sources and implications
    - Document architecture pattern evaluation, design decisions, and risks using the template sections
-   - If `research.md` already exists, briefly record consulted skills and the guidance used in its existing research notes.
    - Use the language specified in spec.json when writing or updating `research.md`
 
 ### Step 3: Synthesis

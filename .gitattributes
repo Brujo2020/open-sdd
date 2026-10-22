@@ -1,0 +1,10 @@
+# Templates, specs and rules are compared byte for byte (sha256 markers, `---\n` frontmatter,
+# generated blocks). A CRLF checkout on Windows made those comparisons fail, so text is LF everywhere.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.vsix binary
+*.tgz binary

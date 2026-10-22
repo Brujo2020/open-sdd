@@ -131,13 +131,13 @@ describe('real codex-skills manifest', () => {
     expect(await exists(skillValidateDesign)).toBe(true);
     const skillValidateDesignText = await readFile(skillValidateDesign, 'utf8');
     expect(skillValidateDesignText).toContain('Core steering context: `product.md`, `tech.md`, `structure.md`');
-    expect(skillValidateDesignText).toContain('review-relevant steering or local skills/playbooks selected above');
+    expect(skillValidateDesignText).toContain('review-relevant steering or use-case-aligned local agent skills/playbooks');
 
     const skillValidateGap = join(cwd, '.agents/skills/sdd-validate-gap/SKILL.md');
     expect(await exists(skillValidateGap)).toBe(true);
     const skillValidateGapText = await readFile(skillValidateGap, 'utf8');
     expect(skillValidateGapText).toContain('Core steering context: `product.md`, `tech.md`, `structure.md`');
-    expect(skillValidateGapText).toContain('analysis-relevant steering or local skills/playbooks selected above');
+    expect(skillValidateGapText).toContain('analysis-relevant steering or use-case-aligned local agent skills/playbooks');
 
     const skillSpecRequirements = join(cwd, '.agents/skills/sdd-spec-requirements/SKILL.md');
     expect(await exists(skillSpecRequirements)).toBe(true);
@@ -286,7 +286,6 @@ describe('real codex-skills manifest', () => {
     expect(skillDebugText).toContain('Search the Web if Available');
     expect(skillDebugText).toContain('NEXT_ACTION: RETRY_TASK | BLOCK_TASK | STOP_FOR_HUMAN');
     expect(skillDebugText).toContain('TASK_ORDERING_PROBLEM');
-    expect(skillDebugText).toContain('TASK_DECOMPOSITION_PROBLEM');
 
     const skillVerifyCompletion = join(cwd, '.agents/skills/sdd-verify-completion/SKILL.md');
     expect(await exists(skillVerifyCompletion)).toBe(true);

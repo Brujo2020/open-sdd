@@ -50,7 +50,7 @@ describe('real antigravity-skills manifest', () => {
     expect(code).toBe(0);
     const out = ctx.logs.join('\n');
     expect(out).toMatch(/Plan \(dry-run\)/);
-    expect(out).toContain('[templateDir] skills: templates/agents/antigravity-skills/skills -> .agents/skills');
+    expect(out).toContain('[templateDir] skills: templates/agents/antigravity-skills/skills -> .agent/skills');
     expect(out).toContain('[templateFile] doc_main: templates/agents/antigravity-skills/docs/AGENTS.md -> ./AGENTS.md');
     expect(out).toContain('[templateDir] settings_templates: templates/shared/settings/templates -> .sdd/settings/templates');
   });
@@ -127,13 +127,13 @@ describe('real antigravity-skills manifest', () => {
     expect(await exists(skillValidateDesign)).toBe(true);
     const skillValidateDesignText = await readFile(skillValidateDesign, 'utf8');
     expect(skillValidateDesignText).toContain('Core steering context: `product.md`, `tech.md`, `structure.md`');
-    expect(skillValidateDesignText).toContain('review-relevant steering or local skills/playbooks selected above');
+    expect(skillValidateDesignText).toContain('review-relevant steering or use-case-aligned local agent skills/playbooks');
 
     const skillValidateGap = join(cwd, '.agent/skills/sdd-validate-gap/SKILL.md');
     expect(await exists(skillValidateGap)).toBe(true);
     const skillValidateGapText = await readFile(skillValidateGap, 'utf8');
     expect(skillValidateGapText).toContain('Core steering context: `product.md`, `tech.md`, `structure.md`');
-    expect(skillValidateGapText).toContain('analysis-relevant steering or local skills/playbooks selected above');
+    expect(skillValidateGapText).toContain('analysis-relevant steering or use-case-aligned local agent skills/playbooks');
 
     const skillSpecRequirements = join(cwd, '.agent/skills/sdd-spec-requirements/SKILL.md');
     expect(await exists(skillSpecRequirements)).toBe(true);
@@ -186,7 +186,7 @@ describe('real antigravity-skills manifest', () => {
     // Skills without shared-rules should NOT have rules/ directories
     const noRulesSkills = ['sdd-spec-init', 'sdd-spec-status', 'sdd-spec-quick', 'sdd-spec-batch', 'sdd-impl', 'sdd-validate-impl', 'sdd-discovery'];
     for (const skill of noRulesSkills) {
-      expect(await exists(join(cwd, `.agents/skills/${skill}/rules`))).toBe(false);
+      expect(await exists(join(cwd, `.agent/skills/${skill}/rules`))).toBe(false);
     }
 
     expect(ctx.logs.join('\n')).toMatch(/\d+\/\d+ files written/);
@@ -227,7 +227,7 @@ describe('real antigravity-skills manifest', () => {
     ];
 
     for (const skill of expectedSkills) {
-      const skillPath = join(cwd, `.agents/skills/${skill}/SKILL.md`);
+      const skillPath = join(cwd, `.agent/skills/${skill}/SKILL.md`);
       expect(await exists(skillPath)).toBe(true);
     }
 
