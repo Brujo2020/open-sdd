@@ -41,7 +41,7 @@ clear the shell's command cache, which still points at the old binary:
 rm -f "$(npm prefix -g)/bin/sdd" "$(npm prefix -g)/bin/sdd-open"   # left behind, both dangling
 npm install -g @brujo2020/open-sdd@latest
 hash -r                       # zsh: rehash — or open a new terminal
-open-sdd --version            # must print v3.4.0, not the 2.x banner
+open-sdd --version            # must print v3.5.0, not the 2.x banner
 ```
 
 A stale global is not cosmetic: the installed commit hook resolves its CLI through `PATH`, so an old
@@ -71,6 +71,76 @@ bash scripts/demo-60s.sh
 It injects four real incoherences — an untraced requirement, a completed task with no evidence, an
 unfilled `{{…}}` marker, a declared contract that does not exist — and exits non-zero if the tool
 misses any of them.
+
+## Every flow at a glance
+
+[![open-sdd: every flow — install, pick your situation, specify, implement, verify](docs/diagrams/open-sdd-flows.png)](docs/diagrams/open-sdd-flows.excalidraw)
+
+Read it left to right: pick your situation, follow the arrows. Every `/command` is a skill in your
+agent's chat. Underneath, the commit gate, the PR checks and (in Axet) the hooks run on their own. The
+editable source is [`docs/diagrams/open-sdd-flows.excalidraw`](docs/diagrams/open-sdd-flows.excalidraw):
+open it at [excalidraw.com](https://excalidraw.com) → *Open*. The same map in Mermaid, which GitHub renders:
+
+<details>
+<summary>Mermaid version</summary>
+
+```mermaid
+flowchart LR
+  I(["1 · Instala<br/>npx -y @brujo2020/open-sdd --axet<br/>(o --claude, --cursor…)"])
+
+  I --> A1["Idea difusa"] --> C1["/sdd-discovery<br/>→ brief.md + roadmap"]
+  I --> A2["Feature clara"]
+  I --> A3["Código existente"] --> C3["/sdd-getspecs<br/>brownfield constitution · delta"]
+  I --> A4["Varias features"] --> C4["/sdd-spec-batch<br/>por olas de dependencia"]
+  I --> A5["Un bug"] --> C5["/sdd-bugfix"]
+  I --> A6["Spike / prueba rápida"] --> C6["/sdd-tiny<br/>→ /sdd-promote si crece"]
+  I --> A7["Refactor / legacy"] --> C7["/sdd-characterize<br/>→ /sdd-refactor"]
+  I --> A8["Solo pensar"] --> C8["/sdd-plan-only<br/>no cambia nada"]
+
+  subgraph SPEC["3 · Especifica"]
+    Q1["Rápido<br/>/sdd-spec-quick<br/>1 aprobación al final"]
+    Q2["Paso a paso · aprobación por fase<br/>/sdd-spec-init → /sdd-spec-requirements<br/>→ /sdd-spec-design → /sdd-spec-tasks"]
+  end
+  C1 & A2 & C3 --> Q1 & Q2
+  C4 --> Q2
+
+  SHORT["Flujos cortos<br/>spec mínima → código → prueba"]
+  C5 & C6 & C7 & C8 --> SHORT
+
+  subgraph IMPL["4 · Implementa"]
+    M1["/sdd-impl &lt;feature&gt;<br/>autónomo: subagente por tarea + review"]
+    M2["/sdd-impl &lt;feature&gt; 1,2<br/>manual: solo esas tareas"]
+  end
+  Q1 --> M1
+  Q2 --> M1
+  Q2 -.-> M2
+
+  V["5 · Verifica y cierra<br/>/sdd-validate-impl → /sdd-verify-completion<br/>→ /sdd-audit → open-sdd archive"]
+  M1 & M2 & SHORT --> V --> DONE(["Listo"])
+
+  classDef start fill:#a5d8ff,stroke:#1971c2,color:#1e1e1e
+  classDef idea fill:#ffec99,stroke:#f08c00,color:#1e1e1e
+  classDef spec fill:#b2f2bb,stroke:#2f9e44,color:#1e1e1e
+  classDef impl fill:#a5d8ff,stroke:#1971c2,color:#1e1e1e
+  classDef verify fill:#d0bfff,stroke:#7048e8,color:#1e1e1e
+  classDef short fill:#e9ecef,stroke:#868e96,color:#1e1e1e,stroke-dasharray:5 5
+  classDef bug fill:#ffc9c9,stroke:#e03131,color:#1e1e1e
+  class I start
+  class A1,A4 idea
+  class A2,Q1,Q2 spec
+  class A3 idea
+  class A5 bug
+  class M1,M2 impl
+  class V,DONE verify
+  class SHORT,A6,A7,A8 short
+```
+
+</details>
+
+**Axet Plugin in one command:** `npx -y @brujo2020/open-sdd --axet` installs the skills, the `/sdd-*`
+workflows that Axet's `/` menu lists, and the hooks that put the gate's verdict in the agent's context
+(open Axet's ⚖ panel once so it picks up the workflows). For Cline, `--cline` installs the skills in
+`.cline/skills/`. Details in [docs/INSTALL.md](docs/INSTALL.md).
 
 ## What you get
 

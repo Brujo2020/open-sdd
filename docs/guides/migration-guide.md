@@ -180,7 +180,7 @@ wrong with the install: clear the cache and it reports the new version.
 
 ```bash
 hash -r          # bash   (zsh: rehash, or simply open a new terminal)
-open-sdd --version && sdd --version && sdd-open --version   # all three must print v3.4.0
+open-sdd --version && sdd --version && sdd-open --version   # all three must print v3.5.0
 ```
 
 **Why this matters more than a cosmetic version string.** The installed commit hook resolves its CLI
