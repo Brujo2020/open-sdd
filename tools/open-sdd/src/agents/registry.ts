@@ -734,6 +734,11 @@ export const agentDefinitions = {
       steering: '`/sdd-steering`',
       steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
     },
+    completionGuide: {
+      prependSteps: [
+        'In Axet, open the ⚖ (Rules & Workflows) panel once — or start any task: Axet re-reads `.axetrules/workflows/` only then, so `/sdd-*` stays out of the `/` menu until it does (reloading the window is not enough).',
+      ],
+    },
     manifestId: 'axet-skills',
   },
 } as const satisfies Record<string, AgentDefinition>;

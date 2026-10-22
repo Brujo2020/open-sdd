@@ -128,7 +128,7 @@ Known agent flags include `--claude-skills`, `--codex-skills`, `--cursor-skills`
 docs.cline.bot recommends. `--axet` installs them in `.axet-plugin/skills/sdd-*/SKILL.md` and adds one workflow per skill in
 `.axetrules/workflows/sdd-*`. Axet Plugin is NTT DATA's Cline fork, and its `/` menu lists workflows
 but never skills. Each workflow file has no extension, so it shows up as `/sdd-spec-init`, `/sdd-impl`
-and so on, and all it does is tell the agent to follow the matching skill. Axet also reads `AGENTS.md`
+and so on, and all it does is tell the agent to follow the matching skill. Axet only re-reads that folder when you open its ⚖ (Rules & Workflows) panel or start a task; reloading the window is not enough, so open ⚖ once after installing. Axet also reads `AGENTS.md`
 as a rule. `init` picks either host by itself when `.cline/`, `.clinerules/` or `.axet-plugin/` exists.
 For VS Code's *Run Task*: `open-sdd integrate vscode-tasks --write`.
 
