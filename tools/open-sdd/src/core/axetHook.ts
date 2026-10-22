@@ -201,8 +201,14 @@ export const applyAxetHooks = async (plans: AxetHookFilePlan[]): Promise<AxetHoo
     if (plan.action === 'keep') outcome.kept.push(plan.event);
     else if (plan.action === 'refused') outcome.refused.push(plan.reason ?? plan.event);
     else if (plan.action === 'retire') {
-      await rm(plan.file, { force: true });
-      outcome.retired.push(plan.event);
+      // A folder that forbids deletes must not abort the install: the legacy hook is inert (Axet never
+      // runs PreToolUse for attempt_completion), so it is reported for manual removal instead.
+      try {
+        await rm(plan.file, { force: true });
+        outcome.retired.push(plan.event);
+      } catch (error) {
+        outcome.refused.push(`${AXET_HOOKS_DIR}/${plan.event}: no se pudo retirar (${(error as NodeJS.ErrnoException).code ?? String(error)}); es inerte, bórralo a mano.`);
+      }
     } else if (plan.content !== undefined) {
       await mkdir(path.dirname(plan.file), { recursive: true });
       await writeFile(plan.file, plan.content, { encoding: 'utf8', mode: 0o755 });
