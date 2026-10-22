@@ -122,30 +122,11 @@ repository**.
 
 Known agent flags include `--claude-skills`, `--codex-skills`, `--cursor-skills`,
 `--copilot-skills`, `--gemini-skills`, `--windsurf-skills`, `--opencode-skills`,
-`--antigravity`, `--cline` and `--axet`. Several at once: `open-sdd init . --agent cline-skills,axet-skills --skills --write`.
+`--antigravity` and `--cline`. Several at once: `open-sdd init . --agent claude-code-skills,cline-skills --skills --write`.
 
-**Cline and Axet Plugin.** `--cline` installs the skills in `.cline/skills/sdd-*/SKILL.md`, the directory
-docs.cline.bot recommends. `--axet` installs them in `.axet-plugin/skills/sdd-*/SKILL.md` and adds one workflow per skill in
-`.axetrules/workflows/sdd-*`. Axet Plugin is NTT DATA's Cline fork, and its `/` menu lists workflows
-but never skills. Each workflow file has no extension, so it shows up as `/sdd-spec-init`, `/sdd-impl`
-and so on, and all it does is tell the agent to follow the matching skill. Axet only re-reads that folder when you open its ⚖ (Rules & Workflows) panel or start a task; reloading the window is not enough, so open ⚖ once after installing. Axet also reads `AGENTS.md`
-as a rule. `init` picks either host by itself when `.cline/`, `.clinerules/` or `.axet-plugin/` exists.
+**Cline.** `--cline` installs the skills in `.cline/skills/sdd-*/SKILL.md`, the directory docs.cline.bot
+recommends, plus `AGENTS.md`. `init` picks Cline by itself when `.cline/` or `.clinerules/` exists.
 For VS Code's *Run Task*: `open-sdd integrate vscode-tasks --write`.
-
-**Axet in one command, from one origin.** Run `npx -y <origin> --axet` once in the project, where
-`<origin>` is `github:Brujo2020/open-sdd#<branch>`, or `@brujo2020/open-sdd` once it is published. That
-single command installs the skills, the `/sdd-*` workflows, `AGENTS.md`, the settings and three hooks
-in `.axetrules/hooks/`:
-- `TaskStart` tells the agent the SDD contract and the current commit-gate verdict.
-- `PostToolUse` re-runs the gate after edits and commands, and tells the agent only when the verdict changes.
-- `TaskComplete` prints the verdict in the chat.
-
-Each hook finds the CLI in `$OPEN_SDD_CLI`, then in the project's `node_modules`, then through
-`npx --yes <origin>` (the same origin you installed from). Because of that, committing `.axet-plugin/`
-and `.axetrules/` is enough for a teammate. To turn the hooks on, enable hooks in Axet's global settings.
-Axet does not let any hook block `attempt_completion`, and `cancel: true` would cancel the whole task, so
-these hooks steer the agent rather than lock it. The commit gate is what refuses. This behaviour was read
-from the Axet 3.0.0 code.
 
 The full table (ids, aliases, install directories) is the README's
 [Supported host agents](../README.md) section and
@@ -308,3 +289,10 @@ isolated side.
 
 Everything the console does — `status`, `gates`, `delta validate`, `brownfield …`, the 60-second demo
 — runs offline. `npx` and `npm install` from the registry are the only steps that need the network.
+
+## Appendix: private hosts
+
+`--axet` installs the skills, the `/sdd-*` workflows and the gate hooks for a private Cline fork. It is
+not listed in `--help`. After installing, open the host's Rules & Workflows panel once so it picks up
+the workflows, and enable hooks in its settings.
+

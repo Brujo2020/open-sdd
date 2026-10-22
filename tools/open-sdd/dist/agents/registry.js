@@ -652,8 +652,8 @@ export const agentDefinitions = {
         manifestId: 'cline-skills',
     },
     'axet-skills': {
-        label: 'Axet Plugin Skills',
-        description: 'Installs the shared sdd skills in `.axet-plugin/skills/sdd-*/` (Axet Plugin 3.x by NTT DATA, a Cline fork) and one workflow per skill in `.axetrules/workflows/sdd-*` (extensionless, so Axet\'s `/` menu shows `/sdd-spec-init`, `/sdd-impl`, …: that menu lists workflows only, never skills), plus shared settings in `{{SDD_DIR}}/settings/` and AGENTS.md.',
+        label: 'Cline fork (private) Skills',
+        description: 'Installs the shared sdd skills, one workflow per skill and the gate hooks for a private Cline fork.',
         aliasFlags: ['--axet-skills', '--axet'],
         layout: {
             commandsDir: '.axet-plugin/skills',
@@ -665,6 +665,7 @@ export const agentDefinitions = {
             steering: '`/sdd-steering`',
             steeringCustom: '`/sdd-steering-custom <what-to-create-custom-steering-document>`',
         },
+        hidden: true,
         completionGuide: {
             prependSteps: [
                 'In Axet, open the ⚖ (Rules & Workflows) panel once — or start any task: Axet re-reads `.axetrules/workflows/` only then, so `/sdd-*` stays out of the `/` menu until it does (reloading the window is not enough).',
@@ -681,6 +682,8 @@ export const getAgentDefinition = (agent) => {
     return definition;
 };
 export const agentList = Object.keys(agentDefinitions);
+/** The agents help, pickers and error messages advertise: every agent except the hidden ones. */
+export const listedAgentList = agentList.filter((id) => !agentDefinitions[id].hidden);
 /**
  * Install an agent declared OUTSIDE the repository, so `init --agent <id> --write` works for a host
  * nobody may publish. Returns false when the id is already taken: a local file never shadows a shipped

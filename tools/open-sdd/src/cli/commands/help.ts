@@ -20,7 +20,7 @@
 import type { CliIO } from '../io.js';
 import { INSTALL_COMMAND } from '../packageIdentity.js';
 import { SUPPORTED_LOCALES } from '../i18n.js';
-import { agentList, getAgentDefinition } from '../../agents/registry.js';
+import { listedAgentList as agentList, getAgentDefinition } from '../../agents/registry.js';
 import { EXECUTABLE_CHAIN, getExecutableGate } from '../../core/gateCatalog.js';
 import { RIGOR_LEVELS, RIGOR_ASPECTS } from '../../core/rigor.js';
 import { HOST_INTEGRATIONS } from '../../core/integrations.js';
@@ -502,7 +502,6 @@ export const COMMANDS: CommandDoc[] = [
       '  integrate [host] [--write] [--json] [--dry-run]  Register the MCP server, install its skills and its Stop hook',
       '  integrate --list                                 The whole matrix: skills layout, invocation syntax, MCP path, verified?',
       '  integrate vscode-tasks [--write]                 SDD tasks in .vscode/tasks.json (Run Task), merge-only',
-      '  integrate axet-hooks [--write] [--source <spec>] Axet hooks: the gate verdict in the agent\'s context and in the chat',
     ],
     examples: ['open-sdd integrate --list', 'open-sdd integrate claude-code --write'],
   },

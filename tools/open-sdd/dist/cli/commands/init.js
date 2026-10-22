@@ -34,7 +34,7 @@ import path from 'node:path';
 import { colors } from '../ui/colors.js';
 import { INSTALL_COMMAND, VERSION } from '../packageIdentity.js';
 import { fileURLToPath } from 'node:url';
-import { agentList, getAgentDefinition } from '../../agents/registry.js';
+import { agentList, listedAgentList, getAgentDefinition } from '../../agents/registry.js';
 import { DEFAULT_RIGOR_LEVEL, RIGOR_LEVELS, constitutionRequired, effectiveGates, isRigorLevel, } from '../../core/rigor.js';
 import { initSpec, resolveSddDir } from '../../core/specManager.js';
 import { formatHeading, formatSuccess } from '../ui/colors.js';
@@ -237,7 +237,7 @@ export const planInit = async (input) => {
     let agent;
     if (input.agent !== undefined) {
         if (!agentList.includes(input.agent)) {
-            throw new Error(`Agente desconocido: "${input.agent}". Admitidos: ${agentList.join(', ')} (o sus alias ${agentList
+            throw new Error(`Agente desconocido: "${input.agent}". Admitidos: ${listedAgentList.join(', ')} (o sus alias ${listedAgentList
                 .flatMap((id) => getAgentDefinition(id).aliasFlags)
                 .join(', ')}).`);
         }
@@ -714,7 +714,7 @@ const handleProjectInit = async (args, io, cwd) => {
     const ids = requested.split(',').map((id) => id.trim()).filter((id) => id.length > 0);
     const unknown = ids.filter((id) => !agentList.includes(id));
     if (unknown.length > 0) {
-        io.error(colors.red(`Error: agente(s) desconocido(s): ${unknown.join(', ')}. Admitidos: ${agentList.join(', ')}. No se escribió nada.`));
+        io.error(colors.red(`Error: agente(s) desconocido(s): ${unknown.join(', ')}. Admitidos: ${listedAgentList.join(', ')}. No se escribió nada.`));
         return 1;
     }
     const index = args.findIndex((arg) => arg === '--agent' || arg.startsWith('--agent='));

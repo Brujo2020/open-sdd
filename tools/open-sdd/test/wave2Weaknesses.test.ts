@@ -101,7 +101,9 @@ describe('REQ-W2-002 / 009 — init --agent', () => {
     const ctx = makeIO();
     expect(await handleInitCommand(['--agent', 'nope'], ctx.io, dir)).toBe(1);
     expect(ctx.errs.join('\n')).toMatch(/Agente desconocido: "nope"/);
-    expect(ctx.errs.join('\n')).toContain('axet-skills');
+    expect(ctx.errs.join('\n')).toContain('cline-skills');
+    // A hidden agent installs but is never advertised.
+    expect(ctx.errs.join('\n')).not.toContain('axet');
     expect(ctx.errs.join('\n')).not.toMatch(/no existe/);
   });
 

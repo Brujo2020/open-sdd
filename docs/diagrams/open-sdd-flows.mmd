@@ -1,5 +1,5 @@
 flowchart LR
-  I(["1 · Instala<br/>npx -y @brujo2020/open-sdd --axet<br/>(o --claude, --cursor…)"])
+  I(["1 · Instala<br/>npx -y @brujo2020/open-sdd init . --write<br/>detecta tu agente · constitución + skills + commit gate"])
 
   I --> A1["Idea difusa"] --> C1["/sdd-discovery<br/>→ brief.md + roadmap"]
   I --> A2["Feature clara"]
@@ -31,6 +31,9 @@ flowchart LR
   V["5 · Verifica y cierra<br/>/sdd-validate-impl → /sdd-verify-completion<br/>→ /sdd-audit → open-sdd archive"]
   M1 & M2 & SHORT --> V --> DONE(["Listo"])
 
+  CONST["Constitución<br/>.sdd/steering/constitution.md<br/>principios con evidencia · un humano la ratifica"]
+  CONST -. valida .-> Q1 & Q2 & SHORT
+
   classDef start fill:#a5d8ff,stroke:#1971c2,color:#1e1e1e
   classDef idea fill:#ffec99,stroke:#f08c00,color:#1e1e1e
   classDef spec fill:#b2f2bb,stroke:#2f9e44,color:#1e1e1e
@@ -46,3 +49,5 @@ flowchart LR
   class M1,M2 impl
   class V,DONE verify
   class SHORT,A6,A7,A8 short
+  classDef const fill:#ffd8a8,stroke:#e8590c,color:#1e1e1e
+  class CONST const

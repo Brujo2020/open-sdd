@@ -8,11 +8,10 @@ All notable changes to this project will be documented in this file.
 
 ## [3.5.0] — 2026-10-22
 
-### Axet Plugin and Cline as first-class hosts, in one command from one origin
-- `--axet` (agent `axet-skills`) installs, in one run, the shared skills in `.axet-plugin/skills/`, one workflow per skill in `.axetrules/workflows/`, `AGENTS.md`, the settings and three hooks in `.axetrules/hooks/`. Axet's `/` menu lists workflows and never skills, so the workflows are what make `/sdd-spec-init`, `/sdd-impl` and the rest autocomplete. This was confirmed in a real Axet session.
-- Axet hooks, built on the contract read from the Axet 3.0.0 VSIX: `TaskStart` gives the agent the SDD contract and the commit gate's verdict, `PostToolUse` re-runs the gate after edits and commands and speaks only when the verdict changes, and `TaskComplete` prints the verdict in the chat. No hook can block `attempt_completion` in Axet, and `cancel:true` cancels the whole task, so these hooks steer the agent and the commit gate stays the floor. The hooks find the project root from their own location (Axet spawns them without a cwd). They take the CLI from `$OPEN_SDD_CLI`, then `node_modules`, then `npx --yes <origin>`, where the origin is the spec npx recorded for this install. `integrate axet-hooks [--write] [--source <spec>]` reinstalls them.
-- `--cline` (agent `cline-skills`) installs the skills in `.cline/skills/`; `integrate cline` uses the same layout (docs.cline.bot). `init` autodetects `.axet-plugin/`, `.cline/` and `.clinerules/`.
+### Hosts
+- `--cline` (agent `cline-skills`) installs the skills in `.cline/skills/`, and `integrate cline` uses the same layout (docs.cline.bot). `init` autodetects `.cline/` and `.clinerules/`.
 - `init --agent a,b` installs several hosts in one run and writes nothing if any id is unknown. An unknown `--agent` now lists the valid ids instead of being read as the target path.
+- Agents can be declared `hidden`: they install and are autodetected, but they never appear in help, the picker or error listings.
 
 ### New read-only views
 - `trace <feature> [--mermaid]`: requirement → task links; exits 1 while a requirement is uncovered.
@@ -31,7 +30,7 @@ All notable changes to this project will be documented in this file.
 
 ### Docs
 - `docs/diagrams/`: every flow on one page, as an editable Excalidraw file, Mermaid and a PNG preview, linked from the README.
-- New tests: registry ↔ manifest ↔ template-tree consistency, committed `dist/` equal to a fresh build, and Axet hooks executed for real.
+- New tests: registry ↔ manifest ↔ template-tree consistency, committed `dist/` equal to a fresh build, and agent hooks executed for real.
 
 ### SDD modes and the modules from SteelForge — see docs/guides/sdd-modes.md
 - `open-sdd modes`: the six flows, the module matrix per rigor level (with `explore` as a throwaway mode outside the governed ladder) and, with `--projects`, which skills to use — and which to avoid — for each kind of project.

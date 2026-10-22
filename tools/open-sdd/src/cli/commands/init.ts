@@ -36,7 +36,7 @@ import { colors } from '../ui/colors.js';
 import { INSTALL_COMMAND, VERSION } from '../packageIdentity.js';
 import { fileURLToPath } from 'node:url';
 import type { CliIO } from '../io.js';
-import { agentList, getAgentDefinition, type AgentType } from '../../agents/registry.js';
+import { agentList, listedAgentList, getAgentDefinition, type AgentType } from '../../agents/registry.js';
 import {
   DEFAULT_RIGOR_LEVEL,
   RIGOR_LEVELS,
@@ -400,7 +400,7 @@ export const planInit = async (input: PlanInitInput): Promise<InitPlan> => {
   if (input.agent !== undefined) {
     if (!(agentList as readonly string[]).includes(input.agent)) {
       throw new Error(
-        `Agente desconocido: "${input.agent}". Admitidos: ${agentList.join(', ')} (o sus alias ${agentList
+        `Agente desconocido: "${input.agent}". Admitidos: ${listedAgentList.join(', ')} (o sus alias ${listedAgentList
           .flatMap((id) => getAgentDefinition(id).aliasFlags)
           .join(', ')}).`,
       );
@@ -912,7 +912,7 @@ const handleProjectInit = async (args: string[], io: CliIO, cwd: string): Promis
   const ids = requested.split(',').map((id) => id.trim()).filter((id) => id.length > 0);
   const unknown = ids.filter((id) => !(agentList as readonly string[]).includes(id));
   if (unknown.length > 0) {
-    io.error(colors.red(`Error: agente(s) desconocido(s): ${unknown.join(', ')}. Admitidos: ${agentList.join(', ')}. No se escribió nada.`));
+    io.error(colors.red(`Error: agente(s) desconocido(s): ${unknown.join(', ')}. Admitidos: ${listedAgentList.join(', ')}. No se escribió nada.`));
     return 1;
   }
   const index = args.findIndex((arg) => arg === '--agent' || arg.startsWith('--agent='));
